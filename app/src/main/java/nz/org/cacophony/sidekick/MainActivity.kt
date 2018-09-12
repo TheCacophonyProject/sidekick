@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.net.nsd.NsdManager
 import android.os.Bundle
+import android.provider.Browser
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -38,9 +39,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onDeviceClick(d: Device) {
-        val urlIntent = Intent(Intent.ACTION_VIEW)
         // FIXME port
-        urlIntent.data = Uri.parse("http://${d.hostname}/")
+        var uri = Uri.parse("http://${d.hostname}/")
+        val urlIntent = Intent(Intent.ACTION_VIEW, uri)
+
+        // Single browse tab per device.
+        urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "${TAG}-${d.name}")
+
         startActivity(urlIntent)
     }
 
