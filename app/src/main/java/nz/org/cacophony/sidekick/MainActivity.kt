@@ -1,11 +1,14 @@
 package nz.org.cacophony.sidekick
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +26,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        deviceListAdapter = DeviceListAdapter()
+        deviceListAdapter = DeviceListAdapter { h -> onDeviceClick(h) }
 
         val recyclerLayoutManager = LinearLayoutManager(this)
         recyclerView = findViewById<RecyclerView>(R.id.device_list).apply {
@@ -37,10 +40,17 @@ class MainActivity : AppCompatActivity() {
         discoveryListener.startDiscovery()
     }
 
+    fun onDeviceClick(hostname: String) {
+        val urlIntent = Intent(Intent.ACTION_VIEW)
+        // FIXME port
+        urlIntent.data = Uri.parse("http://$hostname/")
+        startActivity(urlIntent)
+    }
+
     // FIXME handle application state transitions
 }
 
-class DeviceListAdapter: RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
+class DeviceListAdapter(private val onClick: (hostname: String) -> Unit): RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
     val deviceNames = sortedSetOf<String>()
 
     class DeviceViewHolder(v: View) : RecyclerView.ViewHolder(v) {
@@ -56,6 +66,8 @@ class DeviceListAdapter: RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder
 
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         holder.deviceNameView.text = deviceNames.elementAt(position)
+        // FIXME: should pass name too
+        holder.deviceNameView.setOnClickListener { clickListener(position) }
     }
 
     override fun getItemCount() = deviceNames.size
@@ -71,4 +83,9 @@ class DeviceListAdapter: RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder
         notifyDataSetChanged()
     }
 
+    fun clickListener(position: Int) {
+        val hostname = deviceNames.elementAt(position)
+        Log.i(TAG, "click for " + hostname)
+        onClick(hostname)
+    }
 }
