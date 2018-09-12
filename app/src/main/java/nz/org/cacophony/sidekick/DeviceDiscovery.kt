@@ -6,7 +6,7 @@ import android.util.Log
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 
-class DeviceListener(private val nsdManager: NsdManager, private val deviceList: DeviceListAdapter): NsdManager.DiscoveryListener {
+class DeviceListener(private val nsdManager: NsdManager, private val devices: DeviceList): NsdManager.DiscoveryListener {
 
     fun startDiscovery() {
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, this)
@@ -20,7 +20,7 @@ class DeviceListener(private val nsdManager: NsdManager, private val deviceList:
     override fun onServiceFound(service: NsdServiceInfo) {
         // A service was found! Do something with it.
         Log.d(TAG, "Service discovery success: $service")
-        nsdManager.resolveService(service, DeviceResolver(deviceList))
+        nsdManager.resolveService(service, DeviceResolver(devices))
     }
 
     override fun onServiceLost(service: NsdServiceInfo) {
@@ -28,7 +28,7 @@ class DeviceListener(private val nsdManager: NsdManager, private val deviceList:
         if (service.host == null) {
             return
         }
-        deviceList.removeDevice(service.host.hostName)
+        devices.remove(toDevice(service))
     }
 
     override fun onDiscoveryStopped(serviceType: String) {
@@ -46,7 +46,7 @@ class DeviceListener(private val nsdManager: NsdManager, private val deviceList:
     }
 }
 
-class DeviceResolver(private val deviceList: DeviceListAdapter): NsdManager.ResolveListener {
+class DeviceResolver(private val devices: DeviceList): NsdManager.ResolveListener {
     override fun onResolveFailed(service: NsdServiceInfo?, errorCode: Int) {
         Log.e(TAG, "Resolution failed: Error code:$errorCode")
     }
@@ -57,6 +57,8 @@ class DeviceResolver(private val deviceList: DeviceListAdapter): NsdManager.Reso
         }
         Log.i(TAG, "Host: ${service.host}")
         Log.i(TAG, "Port: ${service.port}")
-        deviceList.addDevice(service.host.hostName)
+        devices.add(toDevice(service))
     }
 }
+
+fun toDevice(service: NsdServiceInfo) = Device(service.host.hostName, service.port)
