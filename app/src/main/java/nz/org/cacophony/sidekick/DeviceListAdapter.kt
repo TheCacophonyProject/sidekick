@@ -4,6 +4,7 @@ import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 
 
@@ -11,6 +12,7 @@ class DeviceListAdapter(private val devices: DeviceList, private val onClick: (d
     : RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
 
     class DeviceViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        val rowView = v.findViewById(R.id.row) as LinearLayout
         val deviceNameView = v.findViewById(R.id.device_name) as TextView
     }
 
@@ -24,7 +26,7 @@ class DeviceListAdapter(private val devices: DeviceList, private val onClick: (d
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = devices.elementAt(position)
         holder.deviceNameView.text = device.name
-        holder.deviceNameView.setOnClickListener { onClick(device) }
+        holder.rowView.setOnClickListener { onClick(device) }
     }
 
     override fun getItemCount() = devices.size
