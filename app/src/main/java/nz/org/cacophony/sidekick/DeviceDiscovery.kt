@@ -18,17 +18,13 @@ class DeviceListener(private val nsdManager: NsdManager, private val devices: De
     }
 
     override fun onServiceFound(service: NsdServiceInfo) {
-        // A service was found! Do something with it.
-        Log.d(TAG, "Service discovery success: $service")
+        Log.i(TAG, "Service found: $service")
         nsdManager.resolveService(service, DeviceResolver(devices))
     }
 
     override fun onServiceLost(service: NsdServiceInfo) {
-        Log.e(TAG, "service lost: $service")
-        if (service.host == null) {
-            return
-        }
-        devices.remove(toDevice(service))
+        Log.i(TAG, "Service lost: $service")
+        devices.remove(service.serviceName)
     }
 
     override fun onDiscoveryStopped(serviceType: String) {
@@ -36,29 +32,27 @@ class DeviceListener(private val nsdManager: NsdManager, private val devices: De
     }
 
     override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-        Log.e(TAG, "Discovery failed: Error code:$errorCode")
+        Log.e(TAG, "Discovery start failed: Error code:$errorCode")
         nsdManager.stopServiceDiscovery(this)
     }
 
     override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-        Log.e(TAG, "Discovery failed: Error code:$errorCode")
+        Log.e(TAG, "Discovery stop failed: Error code:$errorCode")
         nsdManager.stopServiceDiscovery(this)
     }
 }
 
 class DeviceResolver(private val devices: DeviceList): NsdManager.ResolveListener {
     override fun onResolveFailed(service: NsdServiceInfo?, errorCode: Int) {
-        Log.e(TAG, "Resolution failed: Error code:$errorCode")
+        Log.w(TAG, "Resolution failed: Error code:$errorCode")
     }
 
-    override fun onServiceResolved(service: NsdServiceInfo?) {
-        if (service == null) {
+    override fun onServiceResolved(svc: NsdServiceInfo?) {
+        if (svc == null) {
             return
         }
-        Log.i(TAG, "Host: ${service.host}")
-        Log.i(TAG, "Port: ${service.port}")
-        devices.add(toDevice(service))
+        Log.i(TAG, "Resolved ${svc.serviceName}: ${svc.host}:${svc.port}")
+        devices.add(Device(svc.serviceName, svc.host.hostName, svc.port))
     }
 }
 
-fun toDevice(service: NsdServiceInfo) = Device(service.host.hostName, service.port)
