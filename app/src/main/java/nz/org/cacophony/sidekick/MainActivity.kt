@@ -39,8 +39,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onDeviceClick(d: Device) {
-        // FIXME port
-        var uri = Uri.parse("http://${d.hostname}/")
+        var uri = Uri.parse("http://${d.hostname}:${d.port}/")
         val urlIntent = Intent(Intent.ACTION_VIEW, uri)
 
         // Single browse tab per device.
