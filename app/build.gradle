@@ -7,7 +7,7 @@ apply plugin: 'kotlin-android-extensions'
 android {
     compileSdkVersion 26
     defaultConfig {
-        applicationId "nz.org.cacophony.hello_kotlin"
+        applicationId "nz.org.cacophony.sidekick"
         minSdkVersion 16
         targetSdkVersion 26
         versionCode 1
