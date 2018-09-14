@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+    android:id="@+id/row"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="0sp"
-    android:padding="4sp"
-    android:id="@+id/row"
-    android:focusable="true"
-    android:clickable="true"
     android:background="?android:attr/selectableItemBackground"
-    >
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:padding="4sp">
 
     <TextView
         android:id="@+id/device_name"
@@ -17,9 +16,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top|start"
         android:layout_margin="0dp"
-        android:padding="6sp"
-        android:textSize="20sp"
         android:layout_weight="1"
-        />
+        android:padding="6sp"
+        android:textSize="20sp" />
 
 </LinearLayout>
