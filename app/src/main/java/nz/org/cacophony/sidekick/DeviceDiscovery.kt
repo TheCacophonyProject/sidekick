@@ -6,10 +6,14 @@ import android.util.Log
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 
-class DeviceListener(private val nsdManager: NsdManager, private val devices: DeviceList): NsdManager.DiscoveryListener {
+class DeviceListener( private val nsdManager: NsdManager, private val devices: DeviceList ): NsdManager.DiscoveryListener {
 
     fun startDiscovery() {
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, this)
+    }
+
+    fun stopDiscovery() {
+        nsdManager.stopServiceDiscovery(this)
     }
 
     // Called as soon as service discovery begins.
@@ -19,7 +23,7 @@ class DeviceListener(private val nsdManager: NsdManager, private val devices: De
 
     override fun onServiceFound(service: NsdServiceInfo) {
         Log.i(TAG, "Service found: $service")
-        nsdManager.resolveService(service, DeviceResolver(devices))
+        startResolve(service)
     }
 
     override fun onServiceLost(service: NsdServiceInfo) {
@@ -40,19 +44,27 @@ class DeviceListener(private val nsdManager: NsdManager, private val devices: De
         Log.e(TAG, "Discovery stop failed: Error code:$errorCode")
         nsdManager.stopServiceDiscovery(this)
     }
-}
 
-class DeviceResolver(private val devices: DeviceList): NsdManager.ResolveListener {
-    override fun onResolveFailed(service: NsdServiceInfo?, errorCode: Int) {
-        Log.w(TAG, "Resolution failed: Error code:$errorCode")
-    }
+    private fun startResolve(service: NsdServiceInfo) {
+        val resolveListener = object : NsdManager.ResolveListener {
+            override fun onServiceResolved(svc: NsdServiceInfo?) {
+                if (svc == null) return
+                Log.i(TAG, "Resolved ${svc.serviceName}: ${svc.host.hostAddress}:${svc.port} (${svc.host.hostName})")
+                devices.add(Device(svc.serviceName, svc.host.hostAddress, svc.port))
+            }
 
-    override fun onServiceResolved(svc: NsdServiceInfo?) {
-        if (svc == null) {
-            return
+            override fun onResolveFailed(svc: NsdServiceInfo?, errorCode: Int) {
+                if (svc == null) return
+                when (errorCode) {
+                    NsdManager.FAILURE_ALREADY_ACTIVE -> startResolve(svc)
+                            NsdManager.FAILURE_INTERNAL_ERROR -> Log.e(TAG, "FAILURE_INTERNAL_ERROR for resolution of ${svc}")
+                    NsdManager.FAILURE_MAX_LIMIT -> Log.e(TAG, "FAILURE_MAX_LIMIT for resolution of ${svc}")
+                    else -> Log.e(TAG, "Error {$errorCode} for resolution of ${svc}")
+                }
+            }
         }
-        Log.i(TAG, "Resolved ${svc.serviceName}: ${svc.host}:${svc.port}")
-        devices.add(Device(svc.serviceName, svc.host.hostName, svc.port))
+        nsdManager.resolveService(service, resolveListener)
     }
+
 }
 

@@ -17,7 +17,9 @@ class DeviceList {
         }
     }
 
-    fun elementAt(i: Int) = devices.values.elementAt(i)
+    fun elementAt(i: Int): Device {
+        return devices.values.elementAt(i)
+    }
 
     val size get() = devices.size
 
