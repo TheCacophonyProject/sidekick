@@ -2,6 +2,7 @@ package nz.org.cacophony.sidekick
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.PorterDuff
 import android.net.Uri
 import android.net.nsd.NsdManager
 import android.os.Bundle
@@ -12,6 +13,7 @@ import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.ProgressBar
 import java.net.URL
 
 const val TAG = "cacophony-manager"
@@ -27,6 +29,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        setProgressBarColor()
+
         devices = DeviceList()
         deviceListAdapter = DeviceListAdapter(devices) { h -> onDeviceClick(h) }
         devices.setOnChanged { notifyDeviceListChanged() }
@@ -40,6 +44,14 @@ class MainActivity : AppCompatActivity() {
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         discovery = DiscoveryManager(nsdManager, devices)
+    }
+
+    private fun setProgressBarColor() {
+        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+        progressBar.indeterminateDrawable.setColorFilter(
+                resources.getColor(R.color.colorPrimary),
+                PorterDuff.Mode.SRC_ATOP
+        )
     }
 
     private fun onDeviceClick(d: Device) {
