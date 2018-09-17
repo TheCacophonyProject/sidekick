@@ -6,19 +6,54 @@ import android.util.Log
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 
-class DeviceListener( private val nsdManager: NsdManager, private val devices: DeviceList ): NsdManager.DiscoveryListener {
+// FIXME needs to be thread-safe
+class DiscoveryManager(private val nsdManager: NsdManager, private val devices: DeviceList ) {
+    private var listener: DeviceListener? = null
 
-    fun startDiscovery() {
-        nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, this)
+    fun restart(clear: Boolean = false) {
+        stop()
+        if (clear) {
+            devices.clear()
+        }
+        start()
     }
 
-    fun stopDiscovery() {
-        nsdManager.stopServiceDiscovery(this)
+    private fun start() {
+        Log.d(TAG, "Starting discovery")
+        listener = DeviceListener(devices) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
-    // Called as soon as service discovery begins.
+    fun stop() {
+        if (listener != null) {
+            Log.d(TAG, "Stopping discovery")
+            nsdManager.stopServiceDiscovery(listener)
+            listener = null
+        }
+    }
+}
+
+
+
+class DeviceListener(
+        private val devices: DeviceList,
+        private val resolveService:(svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
+): NsdManager.DiscoveryListener {
+
     override fun onDiscoveryStarted(regType: String) {
-        Log.d(TAG, "Service discovery started")
+        Log.d(TAG, "Discovery started")
+    }
+
+    override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
+        Log.e(TAG, "Discovery start failed with $errorCode")
+    }
+
+    override fun onDiscoveryStopped(serviceType: String) {
+        Log.i(TAG, "Discovery stopped")
+    }
+
+    override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
+        Log.e(TAG, "Discovery stop failed with $errorCode")
     }
 
     override fun onServiceFound(service: NsdServiceInfo) {
@@ -29,20 +64,6 @@ class DeviceListener( private val nsdManager: NsdManager, private val devices: D
     override fun onServiceLost(service: NsdServiceInfo) {
         Log.i(TAG, "Service lost: $service")
         devices.remove(service.serviceName)
-    }
-
-    override fun onDiscoveryStopped(serviceType: String) {
-        Log.i(TAG, "Discovery stopped: $serviceType")
-    }
-
-    override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-        Log.e(TAG, "Discovery start failed: Error code:$errorCode")
-        nsdManager.stopServiceDiscovery(this)
-    }
-
-    override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-        Log.e(TAG, "Discovery stop failed: Error code:$errorCode")
-        nsdManager.stopServiceDiscovery(this)
     }
 
     private fun startResolve(service: NsdServiceInfo) {
@@ -63,8 +84,7 @@ class DeviceListener( private val nsdManager: NsdManager, private val devices: D
                 }
             }
         }
-        nsdManager.resolveService(service, resolveListener)
+        resolveService(service, resolveListener)
     }
-
 }
 
