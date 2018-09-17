@@ -6,25 +6,28 @@ import android.util.Log
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 
-// FIXME needs to be thread-safe
 class DiscoveryManager(private val nsdManager: NsdManager, private val devices: DeviceList ) {
     private var listener: DeviceListener? = null
 
+    @Synchronized
     fun restart(clear: Boolean = false) {
-        stop()
-        if (clear) {
-            devices.clear()
-        }
-        start()
+        stopListener()
+        if (clear) devices.clear()
+        startListener()
     }
 
-    private fun start() {
+    @Synchronized
+    fun stop() {
+        stopListener()
+    }
+
+    private fun startListener() {
         Log.d(TAG, "Starting discovery")
         listener = DeviceListener(devices) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
-    fun stop() {
+    private fun stopListener() {
         if (listener != null) {
             Log.d(TAG, "Stopping discovery")
             nsdManager.stopServiceDiscovery(listener)

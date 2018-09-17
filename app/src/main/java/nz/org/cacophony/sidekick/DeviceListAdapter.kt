@@ -29,5 +29,5 @@ class DeviceListAdapter(private val devices: DeviceList, private val onClick: (d
         holder.rowView.setOnClickListener { onClick(device) }
     }
 
-    override fun getItemCount() = devices.size
+    override fun getItemCount() = devices.size()
 }
