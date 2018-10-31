@@ -18,20 +18,33 @@
 
 package nz.org.cacophony.sidekick
 
+import android.app.Activity
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
+import kotlin.concurrent.thread
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 
-class DiscoveryManager(private val nsdManager: NsdManager, private val devices: DeviceList ) {
+class DiscoveryManager(
+        private val nsdManager: NsdManager,
+        private val devices: DeviceList,
+        private val activity: Activity) {
     private var listener: DeviceListener? = null
 
     @Synchronized
     fun restart(clear: Boolean = false) {
-        stopListener()
-        if (clear) devices.clear()
-        startListener()
+        thread(start = true) {
+            stopListener()
+            if (clear) {
+                for ((name, device) in devices.getMap()) {
+                    if (!device.testConnection(3000)) {
+                        devices.remove(name)
+                    }
+                }
+            }
+            startListener()
+        }
     }
 
     @Synchronized
@@ -41,7 +54,7 @@ class DiscoveryManager(private val nsdManager: NsdManager, private val devices: 
 
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
-        listener = DeviceListener(devices) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
@@ -54,11 +67,11 @@ class DiscoveryManager(private val nsdManager: NsdManager, private val devices: 
     }
 }
 
-
-
 class DeviceListener(
         private val devices: DeviceList,
+        private val activity: Activity,
         private val resolveService:(svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
+
 ): NsdManager.DiscoveryListener {
 
     override fun onDiscoveryStarted(regType: String) {
@@ -92,16 +105,24 @@ class DeviceListener(
             override fun onServiceResolved(svc: NsdServiceInfo?) {
                 if (svc == null) return
                 Log.i(TAG, "Resolved ${svc.serviceName}: ${svc.host.hostAddress}:${svc.port} (${svc.host.hostName})")
-                devices.add(Device(svc.serviceName, svc.host.hostAddress, svc.port))
+                val db = RecordingRoomDatabase.getDatabase(activity.applicationContext)
+                val recDao = db.recordingDao()
+                if (!devices.has(svc.serviceName)) {
+                    val device = Device(svc.serviceName, svc.host.hostAddress, svc.port, activity, devices.getOnChanged(), recDao)
+                    //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
+                    if (device.testConnection(3000)) {
+                        devices.add(device)
+                    }
+                }
             }
 
             override fun onResolveFailed(svc: NsdServiceInfo?, errorCode: Int) {
                 if (svc == null) return
                 when (errorCode) {
                     NsdManager.FAILURE_ALREADY_ACTIVE -> startResolve(svc)
-                            NsdManager.FAILURE_INTERNAL_ERROR -> Log.e(TAG, "FAILURE_INTERNAL_ERROR for resolution of ${svc}")
-                    NsdManager.FAILURE_MAX_LIMIT -> Log.e(TAG, "FAILURE_MAX_LIMIT for resolution of ${svc}")
-                    else -> Log.e(TAG, "Error {$errorCode} for resolution of ${svc}")
+                            NsdManager.FAILURE_INTERNAL_ERROR -> Log.e(TAG, "FAILURE_INTERNAL_ERROR for resolution of $svc")
+                    NsdManager.FAILURE_MAX_LIMIT -> Log.e(TAG, "FAILURE_MAX_LIMIT for resolution of $svc")
+                    else -> Log.e(TAG, "Error {$errorCode} for resolution of $svc")
                 }
             }
         }

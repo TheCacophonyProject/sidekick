@@ -6,21 +6,39 @@
     android:layout_height="match_parent"
     tools:context="nz.org.cacophony.sidekick.MainActivity">
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/device_list"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="674dp"
-        android:padding="8dp"
-        android:scrollbars="vertical"
-        app:layout_constraintTop_toBottomOf="@id/progressBar"
-        tools:layout_editor_absoluteX="2dp" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="15dp"
-        android:indeterminate="true"
-        android:visibility="visible"
-        tools:layout_editor_absoluteX="8dp" />
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="15dp"
+            android:indeterminate="true"
+            android:visibility="visible"
+            tools:layout_editor_absoluteX="8dp" />
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scan for devices" />
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Download All Recordings"/>
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/device_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:scrollbars="vertical"
+            android:layout_weight="1"
+            tools:layout_editor_absoluteY="47dp" />
+
+    </LinearLayout>
+
 </android.support.constraint.ConstraintLayout>

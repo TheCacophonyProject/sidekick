@@ -18,20 +18,23 @@
 
 package nz.org.cacophony.sidekick
 
+import android.graphics.Color
 import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
-
-class DeviceListAdapter(private val devices: DeviceList, private val onClick: (d: Device) -> Unit)
+class DeviceListAdapter(private val devices: DeviceList)
     : RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
 
     class DeviceViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        val rowView = v.findViewById(R.id.row) as LinearLayout
         val deviceNameView = v.findViewById(R.id.device_name) as TextView
+        val clickDevice = v.findViewById(R.id.device_info) as LinearLayout
+        val recordingCountView = v.findViewById(R.id.recording_download_count) as TextView
+        val downloadRecordingsButton = v.findViewById(R.id.download_recordings) as Button
     }
 
     override fun onCreateViewHolder(parent: ViewGroup,
@@ -44,7 +47,27 @@ class DeviceListAdapter(private val devices: DeviceList, private val onClick: (d
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = devices.elementAt(position)
         holder.deviceNameView.text = device.name
-        holder.rowView.setOnClickListener { onClick(device) }
+        holder.clickDevice.setOnClickListener { device.openInterface() }
+        holder.downloadRecordingsButton.setOnClickListener { device.startDownloadRecordings() }
+        holder.recordingCountView.text = device.recordingsString
+        if (device.downloading) {
+            holder.downloadRecordingsButton.text = "Downloading"
+        } else {
+            holder.downloadRecordingsButton.text = "Download"
+        }
+        if (device.numRecToDownload == 0 || device.downloading) {
+            holder.downloadRecordingsButton.isClickable = false
+            holder.downloadRecordingsButton.alpha = .5f
+        } else {
+            holder.downloadRecordingsButton.isClickable = true
+            holder.downloadRecordingsButton.alpha = 1f
+        }
+        if (position%2 == 0) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#FFFFFF"))
+        }
+        else {
+            holder.itemView.setBackgroundColor(Color.parseColor("#f4f4f4"))
+        }
     }
 
     override fun getItemCount() = devices.size()
