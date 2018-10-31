@@ -21,9 +21,9 @@ class LoginScreen : AppCompatActivity() {
 
     fun login(v : View) {
         thread(start = true) {
-            val nameOrEmailEditText = v.findViewById<EditText>(R.id.username_email_login)
-            val passwordEditText = v.findViewById<EditText>(R.id.password_login)
-            val apiUrlEditText = v.findViewById<EditText>(R.id.api_url_input)
+            val nameOrEmailEditText = findViewById<EditText>(R.id.username_email_login)
+            val passwordEditText = findViewById<EditText>(R.id.password_login)
+            val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
             if (CacophonyAPI.newUser(applicationContext, nameOrEmailEditText.text.toString(), passwordEditText.text.toString(), apiUrlEditText.text.toString())) {
                 nameOrEmailEditText.post {
                     nameOrEmailEditText.text.clear()
