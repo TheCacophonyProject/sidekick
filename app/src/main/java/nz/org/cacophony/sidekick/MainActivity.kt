@@ -31,6 +31,9 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.ProgressBar
 import kotlin.concurrent.thread
+import android.content.Intent
+
+
 
 const val TAG = "cacophony-manager"
 
@@ -66,6 +69,13 @@ class MainActivity : AppCompatActivity() {
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         discovery = DiscoveryManager(nsdManager, deviceList, this)
+    }
+
+    override fun onBackPressed() {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
     }
 
     private fun setProgressBarColor() {
