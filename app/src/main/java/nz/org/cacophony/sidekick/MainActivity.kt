@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deviceListAdapter: DeviceListAdapter
     private lateinit var discovery: DiscoveryManager
     private lateinit var deviceList: DeviceList
+    private lateinit var recDao: RecordingDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
@@ -48,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         //TODO remove this after testing..
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
-            val recDao = db.recordingDao()
+            recDao = db.recordingDao()
             recDao.deleteAll()
         }
 
@@ -79,6 +80,17 @@ class MainActivity : AppCompatActivity() {
         for ((_, device) in deviceList.getMap()) {
             device.startDownloadRecordings()
         }
+    }
+
+    fun uploadRecordings(v: View) {
+        thread(start = true) {
+            val recordingsToUpload = recDao.getRecordingsToUpload()
+            for (rec in recordingsToUpload) {
+                CacophonyAPI.uploadRecording(applicationContext, recordingsToUpload[0])
+                break
+            }
+        }
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

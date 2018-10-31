@@ -11,6 +11,7 @@ import javax.net.ssl.HttpsURLConnection
 import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONObject
+import java.io.File
 
 
 class CacophonyAPI(context :Context) {
@@ -90,6 +91,32 @@ class CacophonyAPI(context :Context) {
                 else -> {
                     throw IllegalArgumentException("unsupported protocol");
                 }
+            }
+        }
+
+        fun uploadRecording(c: Context, recording: Recording) {
+            val data = JSONObject()
+            data.put("type", "thermalRaw")
+            data.put("duration", 321) //TODO remove this when server can get the duration from the file
+            try {
+                val con = getCon(getServerURL(c), "/api/v1/recordings/${recording.deviceName}")
+                val multipart = MultipartUtility(con, "UTF-8", getJWT(c))
+                multipart.addFormField("data", data.toString())
+                multipart.addFilePart("file", File(recording.recordingPath))
+
+                val responseStringList = multipart.finish()
+
+                var responseString = ""
+                for (line in responseStringList) {
+                    Log.i(TAG, "line: $line")
+                    responseString += line
+                }
+
+                Log.i(TAG, "SERVER REPLIED:");
+                Log.i(TAG, responseString)
+
+            } catch (e: Exception) {
+                Log.e(TAG, e.toString())
             }
         }
 

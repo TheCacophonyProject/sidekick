@@ -40,4 +40,6 @@ public interface RecordingDao {
     @Query("SELECT name from Recording WHERE device_name = :deviceName")
     List<String> getRecordingNamesFromDevice(String deviceName);
 
+    @Query("SELECT * from Recording WHERE not uploaded")
+    List<Recording> getRecordingsToUpload();
 }
