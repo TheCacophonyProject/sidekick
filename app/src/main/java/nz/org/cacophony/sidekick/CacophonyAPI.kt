@@ -28,6 +28,7 @@ class CacophonyAPI(context :Context) {
                 saveJWT(c, jwt)
                 saveNameOrEmail(c, nameOrEmail)
                 savePassword(c, password)
+                saveServerURL(c, serverURL)
                 return true
             }
             return false
