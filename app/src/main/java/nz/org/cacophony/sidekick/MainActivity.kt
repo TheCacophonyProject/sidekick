@@ -76,6 +76,11 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    fun logout(v: View) {
+        CacophonyAPI.logout(applicationContext)
+        finish()
+    }
+
     fun downloadAll(v : View) {
         for ((_, device) in deviceList.getMap()) {
             device.startDownloadRecordings()
