@@ -11,6 +11,8 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+
+
         <EditText
             android:id="@+id/username_email_login"
             android:layout_width="wrap_content"
@@ -51,6 +53,34 @@
             android:layout_gravity="center"
             tools:layout_editor_absoluteX="138dp"
             tools:layout_editor_absoluteY="230dp" />
+
+        <LinearLayout
+            android:layout_marginTop="50dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="API: "/>
+
+            <EditText
+                android:id="@+id/api_url_input"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="12"
+                android:inputType="textUri"
+                android:text="https://api.cacophony.org.nz"
+                android:layout_gravity="center"
+                tools:layout_editor_absoluteX="84dp"
+                tools:layout_editor_absoluteY="104dp" />
+
+
+
+        </LinearLayout>
+
 
     </LinearLayout>
 
