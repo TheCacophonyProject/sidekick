@@ -28,6 +28,7 @@ import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ProgressBar
 import kotlin.concurrent.thread
 
@@ -37,14 +38,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var deviceListAdapter: DeviceListAdapter
     private lateinit var discovery: DiscoveryManager
-    private lateinit var devicesService: DeviceList
+    private lateinit var deviceList: DeviceList
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setProgressBarColor()
-
         //TODO remove this after testing..
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
@@ -52,9 +52,9 @@ class MainActivity : AppCompatActivity() {
             recDao.deleteAll()
         }
 
-        devicesService = DeviceList()
-        deviceListAdapter = DeviceListAdapter(devicesService)
-        devicesService.setOnChanged { notifyDeviceListChanged() }
+        deviceList = DeviceList()
+        deviceListAdapter = DeviceListAdapter(deviceList)
+        deviceList.setOnChanged { notifyDeviceListChanged() }
 
         val recyclerLayoutManager = LinearLayoutManager(this)
         recyclerView = findViewById<RecyclerView>(R.id.device_list).apply {
@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, devicesService, this)
+        discovery = DiscoveryManager(nsdManager, deviceList, this)
     }
 
     private fun setProgressBarColor() {
@@ -73,6 +73,12 @@ class MainActivity : AppCompatActivity() {
                 resources.getColor(R.color.colorPrimary),
                 PorterDuff.Mode.SRC_ATOP
         )
+    }
+
+    fun downloadAll(v : View) {
+        for ((_, device) in deviceList.getMap()) {
+            device.startDownloadRecordings()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
