@@ -83,17 +83,10 @@ class CacophonyAPI(context :Context) {
 
         private fun getCon(domain: String, path: String): HttpURLConnection {
             val url = URL(domain + path)
-            when (url.protocol) {
-                "http" -> {
-                    return url.openConnection() as HttpURLConnection
-                }
-                "https" -> {
-                    return url.openConnection() as HttpsURLConnection
-                }
-                else -> {
-                    throw IllegalArgumentException("unsupported protocol");
-                }
+            if (url.protocol !in arrayOf("http", "https")) {
+                throw IllegalArgumentException("unsupported protocol");
             }
+            return url.openConnection() as HttpURLConnection
         }
 
         fun uploadRecording(c: Context, recording: Recording) {
