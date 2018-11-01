@@ -7,7 +7,6 @@ import java.io.InputStreamReader
 import java.lang.Exception
 import java.net.HttpURLConnection
 import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONObject
@@ -25,25 +24,44 @@ class CacophonyAPI(context :Context) {
         private var jwtKey :String = "JWT"
 
 
-        fun newUser(c :Context, nameOrEmail: String, password: String, serverURL: String): Boolean {
-            val jwt = getNewJWT(c, nameOrEmail, password, serverURL)
-            if (jwt != "") {
-                saveJWT(c, jwt)
-                saveNameOrEmail(c, nameOrEmail)
-                savePassword(c, password)
-                saveServerURL(c, serverURL)
-                return true
+        fun login(c :Context, nameOrEmail: String, password: String, serverURL: String) {
+            val jsonParam = JSONObject()
+            jsonParam.put("nameOrEmail", nameOrEmail)
+            jsonParam.put("password", password)
+            val con = getCon(serverURL, "/authenticate_user")
+            con.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+            con.setRequestProperty("Accept", "application/json");
+            con.requestMethod = "POST"
+            val outputStream = DataOutputStream(con.outputStream);
+            outputStream.writeBytes(jsonParam.toString());
+            outputStream.flush()
+            outputStream.close()
+            Log.i(TAG, con.responseCode.toString())
+            Log.i(TAG, con.responseMessage)
+            when(con.responseCode) {
+                401 -> {
+                    throw Exception("Invalid password")
+                }
+                422 -> {
+                    val serverAnswer = BufferedReader(InputStreamReader(con.errorStream))
+                    val response = JSONObject(serverAnswer.readLine())
+                    serverAnswer.close()
+                    throw Exception(response.getString("message"))
+                }
+                200 -> {
+                    val serverAnswer = BufferedReader(InputStreamReader(con.inputStream))
+                    val response = JSONObject(serverAnswer.readLine())
+                    serverAnswer.close()
+                    saveJWT(c, response.getString("token"))
+                    saveNameOrEmail(c, nameOrEmail)
+                    savePassword(c, password)
+                    saveServerURL(c, serverURL)
+                }
+                else -> {
+                    Log.i(TAG, con.responseMessage)
+                    throw Exception("Unknown error with connecting to server.")
+                }
             }
-            return false
-        }
-
-        fun login(c :Context) :Boolean {
-            val jwt = getNewJWT(c, getNameOrEmail(c), getPassword(c), getServerURL(c))
-            if (jwt != "") {
-                saveJWT(c, jwt)
-                return true
-            }
-            return false
         }
 
         fun logout(c: Context) {
@@ -51,34 +69,6 @@ class CacophonyAPI(context :Context) {
             saveNameOrEmail(c, "")
             savePassword(c, "")
             saveServerURL(c, "")
-        }
-
-        private fun getNewJWT(c: Context, nameOrEmail: String, password: String, serverURL: String): String {
-            try {
-                val jsonParam = JSONObject()
-                jsonParam.put("nameOrEmail", nameOrEmail)
-                jsonParam.put("password", password)
-                val con = getCon(serverURL, "/authenticate_user")
-                con.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-                con.setRequestProperty("Accept", "application/json");
-                con.requestMethod = "POST"
-                val os = DataOutputStream(con.outputStream);
-                os.writeBytes(jsonParam.toString());
-                os.flush()
-
-                val serverAnswer = BufferedReader(InputStreamReader(con.inputStream))
-                val response = JSONObject(serverAnswer.readLine())
-                os.close()
-                serverAnswer.close()
-                Log.i(TAG, response.toString())
-                if (!response.getBoolean("success")) {
-                    return ""
-                }
-                return response.getString("token")
-            } catch (e: Exception) {
-                Log.e(TAG, e.toString())
-                return ""
-            }
         }
 
         private fun getCon(domain: String, path: String): HttpURLConnection {
