@@ -17,6 +17,8 @@ import java.io.File
 class CacophonyAPI(context :Context) {
 
     companion object {
+        private const val DEFAULT_API_SERVER :String = "https://api.cacophony.org.nz"
+
         private var passwordKey :String = "PASSWORD"
         private var nameOrEmailKey :String = "USERNAME"
         private var serverURLKey :String = "SERVER_URL"
@@ -145,7 +147,7 @@ class CacophonyAPI(context :Context) {
         }
 
         fun getServerURL(c :Context) : String {
-            return getPrefs(c).getString(serverURLKey, "")
+            return getPrefs(c).getString(serverURLKey, DEFAULT_API_SERVER)
         }
 
         fun saveServerURL(c :Context, serverURL: String){
