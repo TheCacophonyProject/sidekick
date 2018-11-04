@@ -36,8 +36,6 @@ class CacophonyAPI(context :Context) {
             outputStream.writeBytes(jsonParam.toString());
             outputStream.flush()
             outputStream.close()
-            Log.i(TAG, con.responseCode.toString())
-            Log.i(TAG, con.responseMessage)
             when(con.responseCode) {
                 401 -> {
                     throw Exception("Invalid password")
@@ -96,9 +94,6 @@ class CacophonyAPI(context :Context) {
                     Log.i(TAG, "line: $line")
                     responseString += line
                 }
-
-                Log.i(TAG, "SERVER REPLIED:");
-                Log.i(TAG, responseString)
 
             } catch (e: Exception) {
                 Log.e(TAG, e.toString())
