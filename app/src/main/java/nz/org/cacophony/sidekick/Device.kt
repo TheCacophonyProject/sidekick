@@ -58,12 +58,9 @@ class Device(
             Log.e(TAG, e.toString())
             return
         }
-
+        deviceRecordings = emptyArray<String>()
         for (i in 0 until recJSON.length()) {
-            val rec = recJSON.get(i) as String
-            if (rec !in deviceRecordings) {
-                deviceRecordings = deviceRecordings.plus(rec)
-            }
+            deviceRecordings = deviceRecordings.plus(recJSON.get(i) as String)
         }
         updateRecordingCount()
 
