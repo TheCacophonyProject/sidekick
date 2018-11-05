@@ -59,7 +59,7 @@ class Device(
             return
         }
 
-        for (i in 0..(recJSON.length()-1)) {
+        for (i in 0 until recJSON.length()) {
             val rec = recJSON.get(i) as String
             if (rec !in deviceRecordings) {
                 deviceRecordings = deviceRecordings.plus(rec)
