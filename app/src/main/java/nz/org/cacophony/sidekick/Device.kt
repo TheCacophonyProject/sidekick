@@ -117,14 +117,14 @@ class Device(
             val downloadedRecordings = dao.getRecordingNamesFromDevice(name)
             Log.i(TAG, "recordings $deviceRecordings")
 
-            for (recordinName in deviceRecordings) {
-                Log.i(TAG, recordinName)
-                if (recordinName !in downloadedRecordings) {
-                    Log.i(TAG, "Downloading recording $recordinName")
+            for (recordingName in deviceRecordings) {
+                Log.i(TAG, recordingName)
+                if (recordingName !in downloadedRecordings) {
+                    Log.i(TAG, "Downloading recording $recordingName")
                     try {
-                        downloadRecording(recordinName)
-                        val outFile = File(getDeviceDir(), recordinName)
-                        val recording = Recording(name, outFile.toString(), recordinName)
+                        downloadRecording(recordingName)
+                        val outFile = File(getDeviceDir(), recordingName)
+                        val recording = Recording(name, outFile.toString(), recordingName)
                         dao.insert(recording)
                         updateRecordingCount()
                     } catch (e: Exception) {
@@ -133,7 +133,7 @@ class Device(
                     }
 
                 } else {
-                    Log.i(TAG, "Already downloaded $recordinName")
+                    Log.i(TAG, "Already downloaded $recordingName")
                 }
             }
             downloading = false
