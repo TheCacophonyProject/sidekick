@@ -51,6 +51,6 @@ public class Recording {
 
     @Override
     public String toString() {
-        return "{ id: " + id + ", deviceName: " + deviceName + ", recordingPath: " + recordingPath + " }";
+        return "{ id: " + id + ", deviceName: " + deviceName + ", recordingPath: " + recordingPath + ", uploaded: " + uploaded + " }";
     }
 }

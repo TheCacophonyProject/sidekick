@@ -32,7 +32,7 @@ import android.view.View
 import android.widget.ProgressBar
 import kotlin.concurrent.thread
 import android.content.Intent
-
+import java.io.File
 
 
 const val TAG = "cacophony-manager"
@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
             recDao = db.recordingDao()
-            recDao.deleteAll()
+            recDao.deleteAll() //TODO this after testing..
         }
 
         deviceList = DeviceList()
@@ -98,14 +98,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun uploadRecordings(v: View) {
+        //TODO feedback to users when uploads fail
         thread(start = true) {
             val recordingsToUpload = recDao.getRecordingsToUpload()
             for (rec in recordingsToUpload) {
-                CacophonyAPI.uploadRecording(applicationContext, recordingsToUpload[0])
-                break
+                if (CacophonyAPI.uploadRecording(applicationContext, rec)) {
+                    recDao.setAsUploaded(rec.id)
+                    File(rec.recordingPath).delete()
+                }
             }
         }
-
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

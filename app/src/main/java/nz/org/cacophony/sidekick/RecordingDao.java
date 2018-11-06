@@ -42,4 +42,7 @@ public interface RecordingDao {
 
     @Query("SELECT * from Recording WHERE not uploaded")
     List<Recording> getRecordingsToUpload();
+
+    @Query("UPDATE Recording SET uploaded = 1 WHERE id = :id")
+    void setAsUploaded(Integer id);
 }

@@ -77,7 +77,8 @@ class CacophonyAPI(context :Context) {
             return url.openConnection() as HttpURLConnection
         }
 
-        fun uploadRecording(c: Context, recording: Recording) {
+        fun uploadRecording(c: Context, recording: Recording) : Boolean {
+            //TODO Let the errors bubble up to the user
             val data = JSONObject()
             data.put("type", "thermalRaw")
             data.put("duration", 321) //TODO remove this when server can get the duration from the file
@@ -94,9 +95,10 @@ class CacophonyAPI(context :Context) {
                     Log.i(TAG, "line: $line")
                     responseString += line
                 }
-
+                return true
             } catch (e: Exception) {
                 Log.e(TAG, e.toString())
+                return false
             }
         }
 
