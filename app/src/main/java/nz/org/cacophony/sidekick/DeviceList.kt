@@ -57,6 +57,7 @@ class DeviceList {
         this.onChanged = onChanged
     }
 
+    @Synchronized
     fun getOnChanged(): ((() -> Unit)?) {
         return this.onChanged
     }
@@ -65,10 +66,12 @@ class DeviceList {
         onChanged?.invoke()
     }
 
+    @Synchronized
     fun has(name: String) :Boolean {
         return devices.containsKey(name)
     }
 
+    @Synchronized
     fun getMap() : Map<String, Device> {
         return devices
     }
