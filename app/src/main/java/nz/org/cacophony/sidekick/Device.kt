@@ -24,7 +24,7 @@ class Device(
         private val dao: RecordingDao) {
     private var deviceRecordings = emptyArray<String>()
     var recordingsString = "Searching..."
-    var downloading = false
+    @Volatile var downloading = false
     var numRecToDownload = 0
 
     init {
@@ -35,25 +35,40 @@ class Device(
         }
     }
 
-    private fun updateRecordings() {
+    fun updateRecordings() {
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(name)
 
         for (rec in uploadedRecordings) {
             Log.i(TAG, "Uploaded recording: $rec")
             if (rec.name in deviceRecordings) {
-                //TODO delete from device
+                //TODO have error message show when deletion fails
+                if (deleteRecording(rec.name)) {
+                    dao.deleteRecording(rec.id)
+                }
+            } else {
+                dao.deleteRecording(rec.id)
             }
-            //TODO delete from database `dao.deleteRecording(rec.id)`
         }
         updateRecordingsList()
+    }
+
+    // Delete recording from device and Database. Recording file is deleted when uploaded to the server
+    private fun deleteRecording(name: String) : Boolean {
+        val httpResponse = apiRequest("DELETE", "/api/recording/$name")
+        if (httpResponse.connection.responseCode == 200) {
+            Log.i(TAG, "deleted recording '$name' from '$hostname'")
+            return true;
+        }
+        Log.i(TAG, "failed to delete recording '$name' from '$hostname'")
+        return false;
     }
 
     // Get list of recordings on the device
     private fun updateRecordingsList() {
         val recJSON : JSONArray
         try {
-            recJSON = JSONArray(apiRequest("GET", "/api/recordings"))
+            recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)  //TODO check response from apiRequest
         } catch(e :Exception) {
             Log.e(TAG, e.toString())
             return
@@ -154,7 +169,7 @@ class Device(
         return "Basic YWRtaW46ZmVhdGhlcnM="
     }
 
-    private fun apiRequest(method: String, path: String): String {
+    private fun apiRequest(method: String, path: String): HttpResponse {
         val url = URL("http", hostname, port, path)
         val con = url.openConnection() as HttpURLConnection
         con.requestMethod = method
@@ -183,7 +198,7 @@ class Device(
             Log.i(TAG, "Error with apiRequest")
         }
         Log.i(TAG, response)
-        return response
+        return HttpResponse(con, response)
     }
 
     fun openInterface() {
@@ -204,3 +219,5 @@ class Device(
         return result
     }
 }
+
+data class HttpResponse (val connection : HttpURLConnection, val responseString : String)

@@ -107,12 +107,18 @@ class DeviceListener(
                 Log.i(TAG, "Resolved ${svc.serviceName}: ${svc.host.hostAddress}:${svc.port} (${svc.host.hostName})")
                 val db = RecordingRoomDatabase.getDatabase(activity.applicationContext)
                 val recDao = db.recordingDao()
-                if (!devices.has(svc.serviceName)) {
-                    val device = Device(svc.serviceName, svc.host.hostAddress, svc.port, activity, devices.getOnChanged(), recDao)
+                val device = devices.getMap().get(svc.serviceName)
+                if (device == null) {
+                    val newDevice = Device(svc.serviceName, svc.host.hostAddress, svc.port, activity, devices.getOnChanged(), recDao)
                     //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
-                    if (device.testConnection(3000)) {
-                        devices.add(device)
+                    if (newDevice.testConnection(3000)) {
+                        devices.add(newDevice)
                     }
+                    devices.getMap().get(svc.serviceName)!!.updateRecordings()
+                } else if (device.testConnection(3000)) {
+                    device.updateRecordings()
+                } else {
+                    devices.remove(svc.serviceName) // Device service was still found but could not connect to device
                 }
             }
 

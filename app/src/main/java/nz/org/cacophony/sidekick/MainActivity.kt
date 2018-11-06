@@ -49,11 +49,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setProgressBarColor()
-        //TODO remove this after testing..
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
             recDao = db.recordingDao()
-            recDao.deleteAll() //TODO this after testing..
         }
 
         deviceList = DeviceList()
