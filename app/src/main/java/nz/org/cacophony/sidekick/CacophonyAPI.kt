@@ -11,6 +11,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONObject
 import java.io.File
+import okhttp3.*
+import org.json.JSONException
 
 
 class CacophonyAPI(context :Context) {
@@ -22,41 +24,47 @@ class CacophonyAPI(context :Context) {
         private var nameOrEmailKey :String = "USERNAME"
         private var serverURLKey :String = "SERVER_URL"
         private var jwtKey :String = "JWT"
-
+        private val client :OkHttpClient = OkHttpClient()
 
         fun login(c :Context, nameOrEmail: String, password: String, serverURL: String) {
-            val jsonParam = JSONObject()
-            jsonParam.put("nameOrEmail", nameOrEmail)
-            jsonParam.put("password", password)
-            val con = getCon(serverURL, "/authenticate_user")
-            con.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-            con.setRequestProperty("Accept", "application/json");
-            con.requestMethod = "POST"
-            val outputStream = DataOutputStream(con.outputStream);
-            outputStream.writeBytes(jsonParam.toString());
-            outputStream.flush()
-            outputStream.close()
-            when(con.responseCode) {
+            val body = FormBody.Builder()
+                    .addEncoded("nameOrEmail", nameOrEmail)
+                    .addEncoded("password", password)
+                    .build()
+
+            val request = Request.Builder()
+                    .url("$serverURL/authenticate_user")
+                    .post(body)
+                    .build()
+
+            val response = client.newCall(request).execute()
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e : JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+            }
+
+            when(response.code()) {
                 401 -> {
                     throw Exception("Invalid password")
                 }
                 422 -> {
-                    val serverAnswer = BufferedReader(InputStreamReader(con.errorStream))
-                    val response = JSONObject(serverAnswer.readLine())
-                    serverAnswer.close()
-                    throw Exception(response.getString("message"))
+                    throw Exception(responseBodyJSON.getString("message"))
                 }
                 200 -> {
-                    val serverAnswer = BufferedReader(InputStreamReader(con.inputStream))
-                    val response = JSONObject(serverAnswer.readLine())
-                    serverAnswer.close()
-                    saveJWT(c, response.getString("token"))
+                    saveJWT(c, responseBodyJSON.getString("token"))
                     saveNameOrEmail(c, nameOrEmail)
                     savePassword(c, password)
                     saveServerURL(c, serverURL)
                 }
                 else -> {
-                    Log.i(TAG, con.responseMessage)
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
                     throw Exception("Unknown error with connecting to server.")
                 }
             }
@@ -66,7 +74,6 @@ class CacophonyAPI(context :Context) {
             saveJWT(c, "")
             saveNameOrEmail(c, "")
             savePassword(c, "")
-            saveServerURL(c, "")
         }
 
         private fun getCon(domain: String, path: String): HttpURLConnection {
@@ -127,7 +134,11 @@ class CacophonyAPI(context :Context) {
         }
 
         fun getServerURL(c :Context) : String {
-            return getPrefs(c).getString(serverURLKey, DEFAULT_API_SERVER)
+            val serverURL = getPrefs(c).getString(serverURLKey, DEFAULT_API_SERVER)
+            if (serverURL == "") {
+                return DEFAULT_API_SERVER
+            }
+            return serverURL
         }
 
         fun saveServerURL(c :Context, serverURL: String){
