@@ -22,10 +22,10 @@ class Device(
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
         private val dao: RecordingDao) {
-    private var deviceRecordings = emptyArray<String>()
-    var recordingsString = "Searching..."
+    @Volatile var deviceRecordings = emptyArray<String>()
+    @Volatile var recordingsString = "Searching..."
     @Volatile var downloading = false
-    var numRecToDownload = 0
+    @Volatile var numRecToDownload = 0
 
     init {
         Log.i(TAG, "Created new device: $name")
