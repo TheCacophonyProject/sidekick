@@ -201,7 +201,7 @@ class Device(
         return HttpResponse(con, response)
     }
 
-    fun openInterface() {
+    fun openManagementInterface() {
         val uri = Uri.parse(URL("http", hostname, port, "/").toString())
         Log.d(TAG, "opening browser to: $uri")
         val urlIntent = Intent(Intent.ACTION_VIEW, uri)

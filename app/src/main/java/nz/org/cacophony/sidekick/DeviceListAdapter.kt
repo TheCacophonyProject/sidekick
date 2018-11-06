@@ -47,7 +47,7 @@ class DeviceListAdapter(private val devices: DeviceList)
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = devices.elementAt(position)
         holder.deviceNameView.text = device.name
-        holder.clickDevice.setOnClickListener { device.openInterface() }
+        holder.clickDevice.setOnClickListener { device.openManagementInterface() }
         holder.downloadRecordingsButton.setOnClickListener { device.startDownloadRecordings() }
         holder.recordingCountView.text = device.recordingsString
         if (device.downloading) {
