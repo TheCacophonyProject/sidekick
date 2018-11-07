@@ -161,7 +161,7 @@ class Device(
     private fun downloadRecording(recordingName: String) : Boolean {
         val request = Request.Builder()
                 .url(URL("http", hostname, port, "/api/recording/$recordingName"))
-                .addHeader("Authorization", getAuthString()+"adasdas")
+                .addHeader("Authorization", getAuthString())
                 .get()
                 .build()
 
