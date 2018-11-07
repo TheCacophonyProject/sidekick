@@ -9,6 +9,7 @@ import android.util.Log
 import android.widget.Toast
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 import org.json.JSONArray
 import java.io.*
 import java.lang.Exception
@@ -16,6 +17,7 @@ import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.URL
 import kotlin.concurrent.thread
+import okio.Okio
 
 
 class Device(
@@ -141,17 +143,13 @@ class Device(
                 Log.i(TAG, recordingName)
                 if (recordingName !in downloadedRecordings) {
                     Log.i(TAG, "Downloading recording $recordingName")
-                    try {
-                        downloadRecording(recordingName)
+                    if (downloadRecording(recordingName)) {
                         val outFile = File(getDeviceDir(), recordingName)
                         val recording = Recording(name, outFile.toString(), recordingName)
                         dao.insert(recording)
-                        updateRecordingCount()
-                    } catch (e: Exception) {
-                        Log.i(TAG, e.toString())
-                        Log.i(TAG, "failed to download recording")
                     }
-
+                    updateRecordingCount()
+                    //TODO note in the db if the recording failed
                 } else {
                     Log.i(TAG, "Already downloaded $recordingName")
                 }
@@ -160,24 +158,30 @@ class Device(
         }
     }
 
-    private fun downloadRecording(id: String) {
-        val url = URL("http", hostname, port, "/api/recording/$id")
-        val con = url.openConnection() as HttpURLConnection
-        con.requestMethod = "GET"
-        con.setRequestProperty("Authorization", getAuthString())
+    private fun downloadRecording(recordingName: String) : Boolean {
+        val request = Request.Builder()
+                .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                .addHeader("Authorization", getAuthString()+"adasdas")
+                .get()
+                .build()
 
-        val outFile = File(getDeviceDir(), id)
-
-        Log.i(TAG, "url: $url")
-        Log.i(TAG, "outFile: ${outFile.absolutePath}")
-        val input = con.inputStream
-        val output = FileOutputStream(outFile)
-        input.use { _ ->
-            output.use { _ ->
-                input.copyTo(output)
-            }
+        val response = client.newCall(request).execute()
+        if (response.isSuccessful) {
+            val downloadedFile = File(getDeviceDir(), recordingName)
+            val sink = Okio.buffer(Okio.sink(downloadedFile))
+            sink.writeAll((response.body() as ResponseBody).source())
+            sink.close()
+            response.close()
+            return true
         }
-        Log.i(TAG, "finished")
+        val code = response.code()
+        Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
+        if (code == 403) {
+            makeToast("Not authorized to download recordings from '$name'", Toast.LENGTH_LONG)
+        } else {
+            makeToast("Failed to recording '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+        }
+        return false
     }
 
     private fun getDeviceDir(): File {
