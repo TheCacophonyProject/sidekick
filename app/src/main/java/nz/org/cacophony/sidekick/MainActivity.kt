@@ -32,7 +32,10 @@ import android.view.View
 import android.widget.ProgressBar
 import kotlin.concurrent.thread
 import android.content.Intent
+import android.widget.Button
+import android.widget.Toast
 import java.io.File
+import java.lang.Exception
 
 
 const val TAG = "cacophony-manager"
@@ -43,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var discovery: DiscoveryManager
     private lateinit var deviceList: DeviceList
     private lateinit var recDao: RecordingDao
+    @Volatile var uploading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
@@ -96,16 +100,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun uploadRecordings(v: View) {
-        //TODO feedback to users when uploads fail
+        if (uploading) { return }
+        uploading = true
+        val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
+        uploadButton.text = "Uploading"
+        uploadButton.isClickable = false
+        uploadButton.alpha = .5f
+
         thread(start = true) {
             val recordingsToUpload = recDao.getRecordingsToUpload()
             for (rec in recordingsToUpload) {
-                if (CacophonyAPI.uploadRecording(applicationContext, rec)) {
+                try {
+                    CacophonyAPI.uploadRecording(applicationContext, rec)
                     recDao.setAsUploaded(rec.id)
                     File(rec.recordingPath).delete()
+                } catch (e : Exception) {
+                    if (e.message == null) {
+                        makeToast("Unknown error with uploading recordings")
+                    } else {
+                        makeToast(e.message!!)
+                    }
                 }
             }
+            if (recordingsToUpload.size == 0) {
+                makeToast("No recordings to upload")
+            } else {
+                makeToast("Finished uploading recordings")
+            }
+            uploadButton.post {
+                uploadButton.text = "Upload Recordings"
+                uploadButton.isClickable = true
+                uploadButton.alpha = 1f
+            }
+            uploading = false
         }
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -139,6 +168,12 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "onPause")
         super.onPause()
         discovery.stop()
+    }
+
+    fun makeToast(message : String, length : Int = Toast.LENGTH_LONG) {
+        runOnUiThread {
+            Toast.makeText(applicationContext, message, length).show()
+        }
     }
 }
 

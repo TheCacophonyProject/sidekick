@@ -84,28 +84,49 @@ class CacophonyAPI(context :Context) {
             return url.openConnection() as HttpURLConnection
         }
 
-        fun uploadRecording(c: Context, recording: Recording) : Boolean {
-            //TODO Let the errors bubble up to the user
+
+        fun uploadRecording(c: Context, recording: Recording) {
             val data = JSONObject()
             data.put("type", "thermalRaw")
             data.put("duration", 321) //TODO remove this when server can get the duration from the file
-            try {
-                val con = getCon(getServerURL(c), "/api/v1/recordings/${recording.deviceName}")
-                val multipart = MultipartUtility(con, "UTF-8", getJWT(c))
-                multipart.addFormField("data", data.toString())
-                multipart.addFilePart("file", File(recording.recordingPath))
+            val recordingFile = File(recording.recordingPath)
 
-                val responseStringList = multipart.finish()
+            val formBody = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("file", recording.name, RequestBody.create(MediaType.parse("text/plain"), recordingFile))
+                    .addFormDataPart("data", data.toString())
+                    .build()
 
-                var responseString = ""
-                for (line in responseStringList) {
-                    Log.i(TAG, "line: $line")
-                    responseString += line
+            val request = Request.Builder()
+                    .url("${getServerURL(c)}/api/v1/recordings/${recording.deviceName}")
+                    .addHeader("Authorization", getJWT(c))
+                    .post(formBody)
+                    .build()
+
+            val response = client.newCall(request).execute()
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e : JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
                 }
-                return true
-            } catch (e: Exception) {
-                Log.e(TAG, e.toString())
-                return false
+            }
+
+            when(response.code()) {
+                422 -> {
+                    throw Exception(responseBodyJSON.getString("message"))
+                }
+                200 -> {
+                    return
+                }
+                else -> {
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
+                    throw Exception("Unknown error with connecting to server.")
+                }
             }
         }
 

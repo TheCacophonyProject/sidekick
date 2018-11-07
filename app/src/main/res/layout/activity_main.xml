@@ -36,6 +36,7 @@
             android:text="Logout"/>
 
         <Button
+            android:id="@+id/upload_recordings_button"
             android:onClick="uploadRecordings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
