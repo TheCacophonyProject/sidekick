@@ -151,6 +151,11 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    fun refreshDevices(v: View) {
+        Log.d(TAG, "refresh")
+        discovery.restart(clear = true)
+    }
+
     private fun notifyDeviceListChanged() {
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
