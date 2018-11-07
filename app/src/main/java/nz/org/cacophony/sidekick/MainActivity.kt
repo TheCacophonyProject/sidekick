@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast)
     }
 
     override fun onBackPressed() {

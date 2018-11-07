@@ -29,7 +29,8 @@ const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
-        private val activity: Activity) {
+        private val activity: Activity,
+        private val makeToast: (m: String, i : Int) -> Unit) {
     private var listener: DeviceListener? = null
 
     @Synchronized
@@ -54,7 +55,7 @@ class DiscoveryManager(
 
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
-        listener = DeviceListener(devices, activity) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity, makeToast) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
@@ -70,8 +71,8 @@ class DiscoveryManager(
 class DeviceListener(
         private val devices: DeviceList,
         private val activity: Activity,
+        private val makeToast: (m: String, i : Int) -> Unit,
         private val resolveService:(svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
-
 ): NsdManager.DiscoveryListener {
 
     override fun onDiscoveryStarted(regType: String) {
@@ -109,7 +110,7 @@ class DeviceListener(
                 val recDao = db.recordingDao()
                 val device = devices.getMap().get(svc.serviceName)
                 if (device == null) {
-                    val newDevice = Device(svc.serviceName, svc.host.hostAddress, svc.port, activity, devices.getOnChanged(), recDao)
+                    val newDevice = Device(svc.serviceName, svc.host.hostAddress, svc.port, activity, devices.getOnChanged(), makeToast,  recDao)
                     //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
                     if (newDevice.testConnection(3000)) {
                         devices.add(newDevice)

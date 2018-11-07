@@ -6,6 +6,9 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.Browser
 import android.util.Log
+import android.widget.Toast
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.json.JSONArray
 import java.io.*
 import java.lang.Exception
@@ -21,11 +24,13 @@ class Device(
         private val port: Int,
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
+        private val makeToast: (m: String, i : Int) -> Unit,
         private val dao: RecordingDao) {
     @Volatile var deviceRecordings = emptyArray<String>()
     @Volatile var recordingsString = "Searching..."
     @Volatile var downloading = false
     @Volatile var numRecToDownload = 0
+    private val client :OkHttpClient = OkHttpClient()
 
     init {
         Log.i(TAG, "Created new device: $name")
@@ -38,7 +43,10 @@ class Device(
     fun updateRecordings() {
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(name)
-
+        if (!testConnection(3000)) {
+            makeToast("Failed to connect to device '$name'", Toast.LENGTH_LONG)
+            return
+        }
         for (rec in uploadedRecordings) {
             Log.i(TAG, "Uploaded recording: $rec")
             if (rec.name in deviceRecordings) {
@@ -54,14 +62,26 @@ class Device(
     }
 
     // Delete recording from device and Database. Recording file is deleted when uploaded to the server
-    private fun deleteRecording(name: String) : Boolean {
-        val httpResponse = apiRequest("DELETE", "/api/recording/$name")
-        if (httpResponse.connection.responseCode == 200) {
-            Log.i(TAG, "deleted recording '$name' from '$hostname'")
-            return true;
+    private fun deleteRecording(recordingName: String) : Boolean {
+        val request = Request.Builder()
+                .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                .addHeader("Authorization", getAuthString())
+                .delete()
+                .build()
+
+        val response = client.newCall(request).execute()
+
+        if (response.isSuccessful) {
+            return true
         }
-        Log.i(TAG, "failed to delete recording '$name' from '$hostname'")
-        return false;
+        val code = response.code()
+        Log.i(TAG, "Delete recording '$recordingName' on '$name' failed with code $code")
+        if (code == 403) {
+            makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
+        } else {
+            makeToast("Failed to delete '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+        }
+        return false
     }
 
     // Get list of recordings on the device
