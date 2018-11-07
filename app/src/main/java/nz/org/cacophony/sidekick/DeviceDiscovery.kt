@@ -35,17 +35,18 @@ class DiscoveryManager(
 
     @Synchronized
     fun restart(clear: Boolean = false) {
-        thread(start = true) {
-            stopListener()
-            if (clear) {
-                for ((name, device) in devices.getMap()) {
+        stopListener()
+        if (clear) {
+            val deviceMap = devices.getMap()
+            for ((name, device) in deviceMap) {
+                thread(start = true) {
                     if (!device.testConnection(3000)) {
                         devices.remove(name)
                     }
                 }
             }
-            startListener()
         }
+        startListener()
     }
 
     @Synchronized
