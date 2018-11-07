@@ -36,6 +36,7 @@ import android.widget.Button
 import android.widget.Toast
 import java.io.File
 import java.lang.Exception
+import android.os.PowerManager
 
 
 const val TAG = "cacophony-manager"
@@ -100,6 +101,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun uploadRecordings(v: View) {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
+        mWakeLock.acquire(5*60*1000)
         if (uploading) { return }
         uploading = true
         val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
@@ -133,8 +137,8 @@ class MainActivity : AppCompatActivity() {
                 uploadButton.alpha = 1f
             }
             uploading = false
+            mWakeLock.release()
         }
-
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
