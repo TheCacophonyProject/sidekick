@@ -19,20 +19,25 @@
 package nz.org.cacophony.sidekick
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.PorterDuff
-import android.net.Uri
 import android.net.nsd.NsdManager
 import android.os.Bundle
-import android.provider.Browser
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ProgressBar
-import java.net.URL
+import kotlin.concurrent.thread
+import android.content.Intent
+import android.widget.Button
+import android.widget.Toast
+import java.io.File
+import java.lang.Exception
+import android.os.PowerManager
+
 
 const val TAG = "cacophony-manager"
 
@@ -40,18 +45,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var deviceListAdapter: DeviceListAdapter
     private lateinit var discovery: DiscoveryManager
-    private lateinit var devices: DeviceList
+    private lateinit var deviceList: DeviceList
+    private lateinit var recDao: RecordingDao
+    @Volatile var uploading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         setProgressBarColor()
+        thread(start = true) {
+            val db = RecordingRoomDatabase.getDatabase(applicationContext)
+            recDao = db.recordingDao()
+        }
 
-        devices = DeviceList()
-        deviceListAdapter = DeviceListAdapter(devices) { h -> onDeviceClick(h) }
-        devices.setOnChanged { notifyDeviceListChanged() }
+        deviceList = DeviceList()
+        deviceListAdapter = DeviceListAdapter(deviceList)
+        deviceList.setOnChanged { notifyDeviceListChanged() }
 
         val recyclerLayoutManager = LinearLayoutManager(this)
         recyclerView = findViewById<RecyclerView>(R.id.device_list).apply {
@@ -61,7 +71,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, devices)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast)
+    }
+
+    override fun onBackPressed() {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
     }
 
     private fun setProgressBarColor() {
@@ -72,28 +89,75 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun onDeviceClick(d: Device) {
-        val uri = Uri.parse(URL("http", d.hostname, d.port, "/").toString())
-        Log.d(TAG, "opening browser to: ${uri}")
+    fun logout(v: View) {
+        CacophonyAPI.logout(applicationContext)
+        finish()
+    }
 
-        val urlIntent = Intent(Intent.ACTION_VIEW, uri)
-        urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "${TAG}-${d.name}")  // Single browse tab per device.
-        startActivity(urlIntent)
+    fun downloadAll(v : View) {
+        for ((_, device) in deviceList.getMap()) {
+            device.startDownloadRecordings()
+        }
+    }
+
+    fun uploadRecordings(v: View) {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
+        mWakeLock.acquire(5*60*1000)
+        if (uploading) { return }
+        uploading = true
+        val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
+        uploadButton.text = "Uploading"
+        uploadButton.isClickable = false
+        uploadButton.alpha = .5f
+
+        thread(start = true) {
+            val recordingsToUpload = recDao.getRecordingsToUpload()
+            for (rec in recordingsToUpload) {
+                try {
+                    CacophonyAPI.uploadRecording(applicationContext, rec)
+                    recDao.setAsUploaded(rec.id)
+                    File(rec.recordingPath).delete()
+                } catch (e : Exception) {
+                    if (e.message == null) {
+                        makeToast("Unknown error with uploading recordings")
+                    } else {
+                        makeToast(e.message!!)
+                    }
+                }
+            }
+            if (recordingsToUpload.size == 0) {
+                makeToast("No recordings to upload")
+            } else {
+                makeToast("Finished uploading recordings")
+            }
+            uploadButton.post {
+                uploadButton.text = "Upload Recordings"
+                uploadButton.isClickable = true
+                uploadButton.alpha = 1f
+            }
+            uploading = false
+            mWakeLock.release()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         // Put refresh button into action bar
-        getMenuInflater().inflate(R.menu.refresh, menu);
+        menuInflater.inflate(R.menu.refresh, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val id = item.getItemId();
-        if (id == R.id.refresh_button) {
+        if (item.itemId == R.id.refresh_button) {
             Log.d(TAG, "refresh")
             discovery.restart(clear = true)
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    fun refreshDevices(v: View) {
+        Log.d(TAG, "refresh")
+        discovery.restart(clear = true)
     }
 
     private fun notifyDeviceListChanged() {
@@ -113,6 +177,12 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "onPause")
         super.onPause()
         discovery.stop()
+    }
+
+    fun makeToast(message : String, length : Int = Toast.LENGTH_LONG) {
+        runOnUiThread {
+            Toast.makeText(applicationContext, message, length).show()
+        }
     }
 }
 

@@ -18,8 +18,6 @@
 
 package nz.org.cacophony.sidekick
 
-class Device(val name: String, val hostname: String, val port: Int)
-
 class DeviceList {
     private val devices = sortedMapOf<String, Device>()
     private var onChanged: (() -> Unit)? = null
@@ -59,8 +57,23 @@ class DeviceList {
         this.onChanged = onChanged
     }
 
+    @Synchronized
+    fun getOnChanged(): ((() -> Unit)?) {
+        return this.onChanged
+    }
+
     private fun notifyChange() {
         onChanged?.invoke()
+    }
+
+    @Synchronized
+    fun has(name: String) :Boolean {
+        return devices.containsKey(name)
+    }
+
+    @Synchronized
+    fun getMap() : Map<String, Device> {
+        return devices
     }
 }
 
