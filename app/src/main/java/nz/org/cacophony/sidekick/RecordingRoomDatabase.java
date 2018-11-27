@@ -39,9 +39,7 @@ public abstract class RecordingRoomDatabase extends RoomDatabase {
         @Override
         public void onOpen(@NonNull SupportSQLiteDatabase db) {
             super.onOpen(db);
-            // If you want to keep the data through app restarts,
-            // comment out the following line.
-            //new PopulateDbAsync(INSTANCE).execute();
+            new PopulateDbAsync(INSTANCE).execute();
         }
     };
 
