@@ -27,7 +27,8 @@ class Device(
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
         private val makeToast: (m: String, i : Int) -> Unit,
-        private val dao: RecordingDao) {
+        private val dao: RecordingDao,
+        private val hasWritePermission: () -> Boolean) {
     @Volatile var deviceRecordings = emptyArray<String>()
     @Volatile var recordingsString = "Searching..."
     @Volatile var downloading = false
@@ -36,7 +37,7 @@ class Device(
 
     init {
         Log.i(TAG, "Created new device: $name")
-        getDeviceDir().mkdirs()
+        makeDeviceDir()
         thread(start = true) {
             updateRecordings()
         }
@@ -131,6 +132,14 @@ class Device(
         if (downloading) {
             return
         }
+        if (!hasWritePermission()) {
+            makeToast("App doesn't have permission to write to storage. Canceling download.", Toast.LENGTH_LONG)
+            return
+        }
+        if (!makeDeviceDir()) {
+            makeToast("Failed to write to local storage. Canceling download.", Toast.LENGTH_SHORT)
+            return
+        }
         thread(start = true) {
             downloading = true
             updateRecordings()
@@ -186,6 +195,10 @@ class Device(
 
     private fun getDeviceDir(): File {
         return File("${Environment.getExternalStorageDirectory()}/cacophony-sidekick/$name")
+    }
+
+    private fun makeDeviceDir() : Boolean {
+        return getDeviceDir().isDirectory || getDeviceDir().mkdirs()
     }
 
     private fun getAuthString(): String {

@@ -32,11 +32,13 @@ import android.view.View
 import android.widget.ProgressBar
 import kotlin.concurrent.thread
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.Button
 import android.widget.Toast
 import java.io.File
 import java.lang.Exception
 import android.os.PowerManager
+import android.support.v4.content.ContextCompat
 
 
 const val TAG = "cacophony-manager"
@@ -58,6 +60,9 @@ class MainActivity : AppCompatActivity() {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
             recDao = db.recordingDao()
         }
+        if (!hasWritePermission()) {
+            makeToast("Application needs write permission to download files", Toast.LENGTH_LONG)
+        }
 
         deviceList = DeviceList()
         deviceListAdapter = DeviceListAdapter(deviceList)
@@ -71,7 +76,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::hasWritePermission)
     }
 
     override fun onBackPressed() {
@@ -183,6 +188,12 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             Toast.makeText(applicationContext, message, length).show()
         }
+    }
+
+    fun hasWritePermission() : Boolean {
+        val permission = ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        return permission == PackageManager.PERMISSION_GRANTED
     }
 }
 
