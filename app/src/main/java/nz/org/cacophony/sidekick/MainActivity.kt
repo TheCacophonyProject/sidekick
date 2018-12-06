@@ -18,6 +18,7 @@
 
 package nz.org.cacophony.sidekick
 
+import android.Manifest
 import android.content.Context
 import android.graphics.PorterDuff
 import android.net.nsd.NsdManager
@@ -38,10 +39,12 @@ import android.widget.Toast
 import java.io.File
 import java.lang.Exception
 import android.os.PowerManager
+import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 
 
 const val TAG = "cacophony-manager"
+const val REQUEST_WRITE_EXTERNAL_STORAGE = 1
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
@@ -193,7 +196,26 @@ class MainActivity : AppCompatActivity() {
     fun hasWritePermission() : Boolean {
         val permission = ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        return permission == PackageManager.PERMISSION_GRANTED
+        if (permission == PackageManager.PERMISSION_GRANTED) {
+            return true
+        }
+        ActivityCompat.requestPermissions(this,
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                REQUEST_WRITE_EXTERNAL_STORAGE)
+        return false
+    }
+
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        when (requestCode) {
+            REQUEST_WRITE_EXTERNAL_STORAGE -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    makeToast("External write permission granted.")
+                } else {
+                    makeToast("Will not be able to download recordings without write permission.")
+                }
+                return
+            }
+        }
     }
 }
-
