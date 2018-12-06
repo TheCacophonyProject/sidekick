@@ -18,6 +18,7 @@
 
 package nz.org.cacophony.sidekick
 
+import android.Manifest
 import android.content.Context
 import android.graphics.PorterDuff
 import android.net.nsd.NsdManager
@@ -32,14 +33,18 @@ import android.view.View
 import android.widget.ProgressBar
 import kotlin.concurrent.thread
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.Button
 import android.widget.Toast
 import java.io.File
 import java.lang.Exception
 import android.os.PowerManager
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 
 
 const val TAG = "cacophony-manager"
+const val REQUEST_WRITE_EXTERNAL_STORAGE = 1
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
@@ -58,6 +63,9 @@ class MainActivity : AppCompatActivity() {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
             recDao = db.recordingDao()
         }
+        if (!hasWritePermission()) {
+            makeToast("Application needs write permission to download files", Toast.LENGTH_LONG)
+        }
 
         deviceList = DeviceList()
         deviceListAdapter = DeviceListAdapter(deviceList)
@@ -71,7 +79,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::hasWritePermission)
     }
 
     override fun onBackPressed() {
@@ -184,5 +192,30 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(applicationContext, message, length).show()
         }
     }
-}
 
+    fun hasWritePermission() : Boolean {
+        val permission = ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (permission == PackageManager.PERMISSION_GRANTED) {
+            return true
+        }
+        ActivityCompat.requestPermissions(this,
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                REQUEST_WRITE_EXTERNAL_STORAGE)
+        return false
+    }
+
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        when (requestCode) {
+            REQUEST_WRITE_EXTERNAL_STORAGE -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    makeToast("External write permission granted.")
+                } else {
+                    makeToast("Will not be able to download recordings without write permission.")
+                }
+                return
+            }
+        }
+    }
+}
