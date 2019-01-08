@@ -13,11 +13,9 @@ import okhttp3.ResponseBody
 import org.json.JSONArray
 import java.io.*
 import java.lang.Exception
-import java.net.HttpURLConnection
-import java.net.InetAddress
-import java.net.URL
 import kotlin.concurrent.thread
 import okio.Okio
+import java.net.*
 
 
 class Device(
@@ -66,23 +64,28 @@ class Device(
 
     // Delete recording from device and Database. Recording file is deleted when uploaded to the server
     private fun deleteRecording(recordingName: String) : Boolean {
-        val request = Request.Builder()
-                .url(URL("http", hostname, port, "/api/recording/$recordingName"))
-                .addHeader("Authorization", getAuthString())
-                .delete()
-                .build()
+        try {
+            val request = Request.Builder()
+                    .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                    .addHeader("Authorization", getAuthString())
+                    .delete()
+                    .build()
 
-        val response = client.newCall(request).execute()
+            val response = client.newCall(request).execute()
 
-        if (response.isSuccessful) {
-            return true
-        }
-        val code = response.code()
-        Log.i(TAG, "Delete recording '$recordingName' on '$name' failed with code $code")
-        if (code == 403) {
-            makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
-        } else {
-            makeToast("Failed to delete '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            if (response.isSuccessful) {
+                return true
+            }
+            val code = response.code()
+            Log.i(TAG, "Delete recording '$recordingName' on '$name' failed with code $code")
+            if (code == 403) {
+                makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
+            } else {
+                makeToast("Failed to delete '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            }
+
+        } catch (e : Exception) {
+            Log.e(TAG, "Exception when deleting recording from device: $e")
         }
         return false
     }
@@ -93,7 +96,7 @@ class Device(
         try {
             recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)  //TODO check response from apiRequest
         } catch(e :Exception) {
-            Log.e(TAG, e.toString())
+            Log.e(TAG, "Exception when updating recording list: $e")
             return
         }
         deviceRecordings = emptyArray<String>()
@@ -156,6 +159,8 @@ class Device(
                         val outFile = File(getDeviceDir(), recordingName)
                         val recording = Recording(name, outFile.toString(), recordingName)
                         dao.insert(recording)
+                    } else {
+                        if (!testManagementConnection(showToast = true)) break
                     }
                     updateRecordingCount()
                     //TODO note in the db if the recording failed
@@ -168,27 +173,32 @@ class Device(
     }
 
     private fun downloadRecording(recordingName: String) : Boolean {
-        val request = Request.Builder()
-                .url(URL("http", hostname, port, "/api/recording/$recordingName"))
-                .addHeader("Authorization", getAuthString())
-                .get()
-                .build()
+        try {
+            val request = Request.Builder()
+                    .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                    .addHeader("Authorization", getAuthString())
+                    .get()
+                    .build()
 
-        val response = client.newCall(request).execute()
-        if (response.isSuccessful) {
-            val downloadedFile = File(getDeviceDir(), recordingName)
-            val sink = Okio.buffer(Okio.sink(downloadedFile))
-            sink.writeAll((response.body() as ResponseBody).source())
-            sink.close()
-            response.close()
-            return true
-        }
-        val code = response.code()
-        Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
-        if (code == 403) {
-            makeToast("Not authorized to download recordings from '$name'", Toast.LENGTH_LONG)
-        } else {
-            makeToast("Failed to recording '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val downloadedFile = File(getDeviceDir(), recordingName)
+                val sink = Okio.buffer(Okio.sink(downloadedFile))
+                sink.writeAll((response.body() as ResponseBody).source())
+                sink.close()
+                response.close()
+                return true
+            }
+            val code = response.code()
+            Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
+            if (code == 403) {
+                makeToast("Not authorized to download recordings from '$name'", Toast.LENGTH_LONG)
+            } else {
+                makeToast("Failed to download recording '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            }
+        } catch (e: Exception) {
+            makeToast("Error with downloading recording from '$name'", Toast.LENGTH_LONG)
+            Log.e(TAG, "Exception when downloading recording: $e")
         }
         return false
     }
@@ -254,6 +264,19 @@ class Device(
             Log.e(TAG, "Error in testing device connection: $e")
         }
         return result
+    }
+
+    private fun testManagementConnection(timeout: Int = 3000, showToast : Boolean = false) : Boolean {
+        try {
+            val socket = Socket()
+            socket.connect(InetSocketAddress(hostname, port), timeout)
+            socket.close()
+        } catch (e: Exception) {
+            Log.e(TAG, e.toString())
+            if (showToast) makeToast("Failed to connect to '$name' management interface.", Toast.LENGTH_SHORT)
+            return false
+        }
+        return true
     }
 }
 
