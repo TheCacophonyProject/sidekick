@@ -6,12 +6,18 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import java.lang.Exception
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 
 class LoginScreen : AppCompatActivity() {
+
+    @Volatile var imageClickCountdown = 10 // Number of times the image needs to be pressed for the API url option to show
+    private val API_URLS = arrayOf("https://api.cacophony.org.nz", "https://api-test.cacophony.org.nz", "http://192.168.20.9:1080")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,6 +27,17 @@ class LoginScreen : AppCompatActivity() {
         if (CacophonyAPI.getNameOrEmail(applicationContext) != "") {
             gotoMainActivity()
         }
+
+        val img = findViewById<AutoCompleteTextView>(R.id.api_url_input)
+        img.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(v: View) {
+                findViewById<AutoCompleteTextView>(R.id.api_url_input).showDropDown()
+            }
+        })
+
+        val apiAutoComplete = findViewById<AutoCompleteTextView>(R.id.api_url_input)
+        apiAutoComplete.threshold = 0
+        apiAutoComplete.setAdapter(ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, API_URLS))
     }
 
     fun login(v : View) {
@@ -56,6 +73,13 @@ class LoginScreen : AppCompatActivity() {
             passwordEditText.post {
                 passwordEditText.text.clear()
             }
+        }
+    }
+
+    fun imageClick(v : View) {
+        imageClickCountdown--
+        if (imageClickCountdown <= 0) {
+            findViewById<LinearLayout>(R.id.api_linear_layout).visibility = View.VISIBLE
         }
     }
 
