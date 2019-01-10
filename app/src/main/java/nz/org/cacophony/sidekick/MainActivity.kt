@@ -107,11 +107,6 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.INVISIBLE
     }
 
-    fun logout(v: View) {
-        CacophonyAPI.logout(applicationContext)
-        finish()
-    }
-
     fun downloadAll(v : View) {
         for ((_, device) in deviceList.getMap()) {
             device.startDownloadRecordings()
@@ -160,15 +155,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        // Put refresh button into action bar
-        menuInflater.inflate(R.menu.refresh, menu)
+        // Put settings button into action bar
+        menuInflater.inflate(R.menu.settings, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.refresh_button) {
-            Log.d(TAG, "refresh")
-            discovery.restart(clear = true)
+        if (item.itemId == R.id.settings_button) {
+            Log.d(TAG, "settings")
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
         }
         return super.onOptionsItemSelected(item)
     }
