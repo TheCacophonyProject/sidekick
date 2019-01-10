@@ -49,7 +49,7 @@ class DeviceListAdapter(private val devices: DeviceList)
         holder.deviceNameView.text = device.name
         holder.clickDevice.setOnClickListener { device.openManagementInterface() }
         holder.downloadRecordingsButton.setOnClickListener { device.startDownloadRecordings() }
-        holder.recordingCountView.text = device.recordingsString
+        holder.recordingCountView.text = device.statusString
         if (device.downloading) {
             holder.downloadRecordingsButton.text = "Downloading"
         } else {

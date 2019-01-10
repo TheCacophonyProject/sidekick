@@ -41,7 +41,7 @@ class DiscoveryManager(
             val deviceMap = devices.getMap()
             for ((name, device) in deviceMap) {
                 thread(start = true) {
-                    if (!device.testConnection(3000)) {
+                    if (!device.connectedToDevice) {
                         devices.remove(name)
                     }
                 }
@@ -123,14 +123,17 @@ class DeviceListener(
                             recDao,
                             hasWritePermission)
                     //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
-                    if (newDevice.testConnection(3000)) {
+                    newDevice.checkConnectionStatus()
+                    if (newDevice.connectedToDevice) {
                         devices.add(newDevice)
                     }
-                    devices.getMap().get(svc.serviceName)!!.updateRecordings()
-                } else if (device.testConnection(3000)) {
-                    device.updateRecordings()
-                } else {
-                    devices.remove(svc.serviceName) // Device service was still found but could not connect to device
+                } else  {
+                    device.checkConnectionStatus()
+                    if (device.connectedToDevice) {
+                        device.updateRecordings()
+                    } else {
+                        devices.remove(svc.serviceName) // Device service was still found but could not connect to device
+                    }
                 }
             }
 

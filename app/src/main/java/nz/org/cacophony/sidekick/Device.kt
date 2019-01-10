@@ -28,15 +28,19 @@ class Device(
         private val dao: RecordingDao,
         private val hasWritePermission: () -> Boolean) {
     @Volatile var deviceRecordings = emptyArray<String>()
-    @Volatile var recordingsString = "Searching..."
+    @Volatile var gotDevicesRecordings = false
+    @Volatile var statusString = ""
     @Volatile var downloading = false
     @Volatile var numRecToDownload = 0
+    @Volatile var connectedToInterface = false
+    @Volatile var connectedToDevice = false
     private val client :OkHttpClient = OkHttpClient()
 
     init {
         Log.i(TAG, "Created new device: $name")
         makeDeviceDir()
         thread(start = true) {
+            checkConnectionStatus()
             updateRecordings()
         }
     }
@@ -44,8 +48,8 @@ class Device(
     fun updateRecordings() {
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(name)
-        if (!testConnection(3000)) {
-            makeToast("Failed to connect to device '$name'", Toast.LENGTH_LONG)
+        checkConnectionStatus(showToast = true)
+        if (!connectedToInterface) {
             return
         }
         for (rec in uploadedRecordings) {
@@ -59,7 +63,7 @@ class Device(
                 dao.deleteRecording(rec.id)
             }
         }
-        updateRecordingsList()
+        updateNumberOfRecordingsToDownload()
     }
 
     // Delete recording from device and Database. Recording file is deleted when uploaded to the server
@@ -92,6 +96,10 @@ class Device(
 
     // Get list of recordings on the device
     private fun updateRecordingsList() {
+        checkConnectionStatus()
+        if (!connectedToInterface) {
+            return
+        }
         val recJSON : JSONArray
         try {
             recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)  //TODO check response from apiRequest
@@ -103,20 +111,33 @@ class Device(
         for (i in 0 until recJSON.length()) {
             deviceRecordings = deviceRecordings.plus(recJSON.get(i) as String)
         }
-        updateRecordingCount()
-
+        gotDevicesRecordings = true
+        updateStatusString()
     }
 
-    private fun updateRecordingCount() {
+    private fun updateStatusString() {
         updateNumberOfRecordingsToDownload()
-        if (numRecToDownload == 1) {
-            recordingsString = "$numRecToDownload recording to download."
+        var newStatus = ""
+        if (!connectedToDevice) {
+            newStatus = "Failed to connect to device"
+        } else if (!connectedToInterface) {
+            newStatus = "Failed to connect to interface"
+        } else if (!gotDevicesRecordings) {
+            newStatus = "Looking for recordings"
+        } else if (numRecToDownload == 1) {
+            newStatus = "$numRecToDownload recording to download."
         } else  if (numRecToDownload > 1){
-            recordingsString = "$numRecToDownload recordings to download."
-        } else {
-            recordingsString = "All recordings downloaded."
+            newStatus = "$numRecToDownload recordings to download."
+        } else if (numRecToDownload == 0){
+            newStatus = "All recordings downloaded."
+        } else if (numRecToDownload == -1) {
+            newStatus = "Checking recordings"
         }
-        onChange?.invoke()
+
+        if (!newStatus.equals(statusString)) {
+            statusString = newStatus
+            onChange?.invoke()
+        }
     }
 
     private fun updateNumberOfRecordingsToDownload() {
@@ -160,9 +181,10 @@ class Device(
                         val recording = Recording(name, outFile.toString(), recordingName)
                         dao.insert(recording)
                     } else {
-                        if (!testManagementConnection(showToast = true)) break
+                        checkConnectionStatus(showToast = true)
+                        if (!connectedToInterface) break
                     }
-                    updateRecordingCount()
+                    updateStatusString()
                     //TODO note in the db if the recording failed
                 } else {
                     Log.i(TAG, "Already downloaded $recordingName")
@@ -256,27 +278,24 @@ class Device(
         activity.startActivity(urlIntent)
     }
 
-    fun testConnection(timeout: Int) : Boolean {
-        var result = false
-        try {
-            result = InetAddress.getByName(hostname).isReachable(timeout)
-        } catch (e :IOException) {
-            Log.e(TAG, "Error in testing device connection: $e")
-        }
-        return result
-    }
-
-    private fun testManagementConnection(timeout: Int = 3000, showToast : Boolean = false) : Boolean {
+    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false) {
         try {
             val socket = Socket()
             socket.connect(InetSocketAddress(hostname, port), timeout)
             socket.close()
+            connectedToInterface = true
+            connectedToDevice = true
         } catch (e: Exception) {
             Log.e(TAG, e.toString())
-            if (showToast) makeToast("Failed to connect to '$name' management interface.", Toast.LENGTH_SHORT)
-            return false
+            connectedToInterface = false
+            connectedToDevice = InetAddress.getByName(hostname).isReachable(timeout)
         }
-        return true
+        if (showToast && !connectedToDevice) {
+            makeToast("Failed to connect to '$name'.", Toast.LENGTH_SHORT)
+        } else if (showToast && !connectedToInterface) {
+            makeToast("Failed to connect to '$name' management interface.", Toast.LENGTH_SHORT)
+        }
+        updateStatusString()
     }
 }
 
