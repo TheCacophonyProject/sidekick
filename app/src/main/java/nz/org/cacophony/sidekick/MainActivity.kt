@@ -79,7 +79,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::hasWritePermission)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar, ::hasWritePermission)
+    }
+
+    private fun setRefreshBar(active : Boolean) {
+        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+        if (active) {
+            progressBar.visibility = View.VISIBLE
+        } else {
+            progressBar.visibility = View.INVISIBLE
+        }
     }
 
     override fun onBackPressed() {
@@ -95,6 +104,7 @@ class MainActivity : AppCompatActivity() {
                 resources.getColor(R.color.colorPrimary),
                 PorterDuff.Mode.SRC_ATOP
         )
+        progressBar.visibility = View.INVISIBLE
     }
 
     fun logout(v: View) {

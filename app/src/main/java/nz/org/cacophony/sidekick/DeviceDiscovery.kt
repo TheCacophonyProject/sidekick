@@ -31,6 +31,7 @@ class DiscoveryManager(
         private val devices: DeviceList,
         private val activity: Activity,
         private val makeToast: (m: String, i : Int) -> Unit,
+        private val setRefreshBar: (active : Boolean) -> Unit,
         private val hasWritePermission: () -> Boolean) {
     private var listener: DeviceListener? = null
 
@@ -57,6 +58,7 @@ class DiscoveryManager(
 
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
+        setRefreshBar(true)
         listener = DeviceListener(devices, activity, makeToast, hasWritePermission) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
@@ -64,6 +66,7 @@ class DiscoveryManager(
     private fun stopListener() {
         if (listener != null) {
             Log.d(TAG, "Stopping discovery")
+            setRefreshBar(false)
             nsdManager.stopServiceDiscovery(listener)
             listener = null
         }
