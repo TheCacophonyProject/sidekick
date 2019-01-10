@@ -129,9 +129,9 @@ class Device(
         } else  if (numRecToDownload > 1){
             newStatus = "$numRecToDownload recordings to download."
         } else if (numRecToDownload == 0){
-            newStatus = "All recordings downloaded."
+            newStatus = "No recordings to download."
         } else if (numRecToDownload == -1) {
-            newStatus = "Checking recordings"
+            newStatus = "Checking for downloads..."
         }
 
         if (!newStatus.equals(statusString)) {
