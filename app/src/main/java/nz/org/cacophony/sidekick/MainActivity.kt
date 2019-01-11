@@ -41,6 +41,8 @@ import java.lang.Exception
 import android.os.PowerManager
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.widget.TextView
+import kotlinx.android.synthetic.main.activity_main.*
 
 
 const val TAG = "cacophony-manager"
@@ -178,7 +180,15 @@ class MainActivity : AppCompatActivity() {
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
-        runOnUiThread { deviceListAdapter.notifyDataSetChanged() }
+        runOnUiThread {
+            val placeholderText = findViewById<TextView>(R.id.placeholder_text)
+            if (deviceList.size() == 0) {
+                placeholderText.visibility = View.VISIBLE
+            } else {
+                placeholderText.visibility = View.GONE
+            }
+            deviceListAdapter.notifyDataSetChanged()
+        }
     }
 
     override fun onResume() {

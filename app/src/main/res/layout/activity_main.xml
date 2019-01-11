@@ -20,6 +20,14 @@
             android:visibility="visible"
             tools:layout_editor_absoluteX="8dp" />
 
+        <TextView
+            android:id="@+id/placeholder_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Searching for devices..."
+            android:padding="8dp"
+            android:textSize="24sp" />
+
         <android.support.v7.widget.RecyclerView
             android:id="@+id/device_list"
             android:layout_width="match_parent"
