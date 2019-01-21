@@ -28,12 +28,9 @@ class Device(
         private val dao: RecordingDao,
         private val hasWritePermission: () -> Boolean) {
     @Volatile var deviceRecordings = emptyArray<String>()
-    @Volatile var gotDevicesRecordings = false
     @Volatile var statusString = ""
-    @Volatile var downloading = false
     @Volatile var numRecToDownload = 0
-    @Volatile var connectedToInterface = false
-    @Volatile var connectedToDevice = false
+    @Volatile var sm = StateMachine()
     private val client :OkHttpClient = OkHttpClient()
 
     init {
@@ -49,7 +46,7 @@ class Device(
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(name)
         checkConnectionStatus(showToast = true)
-        if (!connectedToInterface) {
+        if (!sm.state.connected) {
             return
         }
         for (rec in uploadedRecordings) {
@@ -97,7 +94,7 @@ class Device(
     // Get list of recordings on the device
     private fun updateRecordingsList() {
         checkConnectionStatus()
-        if (!connectedToInterface) {
+        if (!sm.state.connected) {
             return
         }
         val recJSON : JSONArray
@@ -111,27 +108,24 @@ class Device(
         for (i in 0 until recJSON.length()) {
             deviceRecordings = deviceRecordings.plus(recJSON.get(i) as String)
         }
-        gotDevicesRecordings = true
+        sm.updatedRecordingList()
         updateStatusString()
     }
 
     private fun updateStatusString() {
         updateNumberOfRecordingsToDownload()
         var newStatus = ""
-        if (!connectedToDevice) {
-            newStatus = "Failed to connect to device"
-        } else if (!connectedToInterface) {
-            newStatus = "Failed to connect to interface"
-        } else if (!gotDevicesRecordings) {
-            newStatus = "Looking for recordings"
+
+        if (!sm.state.connected) {
+            newStatus = sm.state.message
+        } else if (!sm.hasRecordingList) {
+            newStatus = "Checking for recordings"
+        } else if (numRecToDownload == 0) {
+            newStatus = "No recordings to download"
         } else if (numRecToDownload == 1) {
-            newStatus = "$numRecToDownload recording to download."
-        } else  if (numRecToDownload > 1){
-            newStatus = "$numRecToDownload recordings to download."
-        } else if (numRecToDownload == 0){
-            newStatus = "No recordings to download."
-        } else if (numRecToDownload == -1) {
-            newStatus = "Checking for downloads..."
+            newStatus = "1 recording to download"
+        } else if (numRecToDownload > 1) {
+            newStatus = "$numRecToDownload recordings to download"
         }
 
         if (!newStatus.equals(statusString)) {
@@ -153,7 +147,7 @@ class Device(
     }
 
     fun startDownloadRecordings() {
-        if (downloading) {
+        if (sm.state == DeviceState.DOWNLOADING_RECORDINGS) {
             return
         }
         if (!hasWritePermission()) {
@@ -165,7 +159,7 @@ class Device(
             return
         }
         thread(start = true) {
-            downloading = true
+            sm.downloadingRecordings(true)
             updateRecordings()
             Log.i(TAG, "Download recordings from '$name'")
 
@@ -182,7 +176,8 @@ class Device(
                         dao.insert(recording)
                     } else {
                         checkConnectionStatus(showToast = true)
-                        if (!connectedToInterface) break
+                        Log.i(TAG, sm.state.message)
+                        if (!sm.state.connected) break
                     }
                     updateStatusString()
                     //TODO note in the db if the recording failed
@@ -190,7 +185,7 @@ class Device(
                     Log.i(TAG, "Already downloaded $recordingName")
                 }
             }
-            downloading = false
+            sm.downloadingRecordings(false)
         }
     }
 
@@ -283,20 +278,59 @@ class Device(
             val socket = Socket()
             socket.connect(InetSocketAddress(hostname, port), timeout)
             socket.close()
-            connectedToInterface = true
-            connectedToDevice = true
+            sm.connectionToInterface(true)
         } catch (e: Exception) {
             Log.e(TAG, e.toString())
-            connectedToInterface = false
-            connectedToDevice = InetAddress.getByName(hostname).isReachable(timeout)
-        }
-        if (showToast && !connectedToDevice) {
-            makeToast("Failed to connect to '$name'.", Toast.LENGTH_SHORT)
-        } else if (showToast && !connectedToInterface) {
-            makeToast("Failed to connect to '$name' management interface.", Toast.LENGTH_SHORT)
+            sm.connectionToInterface(false)
+            sm.connectionToDevice(InetAddress.getByName(hostname).isReachable(timeout))
+            if (showToast) {
+                makeToast("$name: ${sm.state.message}", Toast.LENGTH_SHORT)
+            }
         }
         updateStatusString()
     }
 }
 
 data class HttpResponse (val connection : HttpURLConnection, val responseString : String)
+
+class StateMachine() {
+
+    var state = DeviceState.FOUND
+    var hasRecordingList = false
+
+    fun downloadingRecordings(downloading : Boolean) {
+        if (downloading) {
+            state = DeviceState.DOWNLOADING_RECORDINGS
+        } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
+            state = DeviceState.CONNECTED
+        }
+    }
+
+    fun updatedRecordingList() {
+        hasRecordingList = true
+    }
+
+    fun connectionToInterface(connected : Boolean) {
+        if (connected && !state.connected) {
+            state = DeviceState.CONNECTED
+        } else if (!connected && state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
+            state = DeviceState.ERROR_CONNECTING_TO_INTERFACE
+        }
+    }
+
+    fun connectionToDevice(connected : Boolean) {
+        if (connected && state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
+            state = DeviceState.ERROR_CONNECTING_TO_INTERFACE
+        } else if (!connected) {
+            state = DeviceState.ERROR_CONNECTING_TO_DEVICE
+        }
+    }
+}
+
+enum class DeviceState(val message : String, val connected : Boolean) {
+    FOUND("Found device.", true),
+    CONNECTED("Connected.", true),
+    DOWNLOADING_RECORDINGS("Downloading recordings.", true),
+    ERROR_CONNECTING_TO_DEVICE("Error connecting.", false),
+    ERROR_CONNECTING_TO_INTERFACE("Error connecting to interface.", false),
+}
