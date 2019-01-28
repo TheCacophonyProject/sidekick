@@ -299,9 +299,9 @@ class StateMachine() {
 
     fun downloadingRecordings(downloading : Boolean) {
         if (downloading) {
-            state = DeviceState.DOWNLOADING_RECORDINGS
+            updateState(DeviceState.DOWNLOADING_RECORDINGS)
         } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
-            state = DeviceState.CONNECTED
+            updateState(DeviceState.CONNECTED)
         }
     }
 
@@ -311,23 +311,58 @@ class StateMachine() {
 
     fun connectionToInterface(connected : Boolean) {
         if (connected && !state.connected) {
-            state = DeviceState.CONNECTED
+            updateState(DeviceState.CONNECTED)
         } else if (!connected && state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-            state = DeviceState.ERROR_CONNECTING_TO_INTERFACE
+            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
         }
     }
 
     fun connectionToDevice(connected : Boolean) {
         if (connected && state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-            state = DeviceState.ERROR_CONNECTING_TO_INTERFACE
+            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
         } else if (!connected) {
-            state = DeviceState.ERROR_CONNECTING_TO_DEVICE
+            updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
+        }
+    }
+
+    fun updateState(newState : DeviceState) {
+        if (state == newState) return
+        val validSwitch = when (state) {
+            DeviceState.FOUND -> { true }
+            DeviceState.CONNECTED -> {
+                newState in arrayListOf(
+                        DeviceState.DOWNLOADING_RECORDINGS,
+                        DeviceState.ERROR_CONNECTING_TO_INTERFACE,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+            DeviceState.DOWNLOADING_RECORDINGS -> {
+                newState in arrayListOf(
+                        DeviceState.CONNECTED,
+                        DeviceState.ERROR_CONNECTING_TO_INTERFACE,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+            DeviceState.ERROR_CONNECTING_TO_DEVICE -> {
+                newState in arrayListOf(
+                        DeviceState.CONNECTED,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+            DeviceState.ERROR_CONNECTING_TO_INTERFACE -> {
+                newState in arrayListOf(
+                        DeviceState.CONNECTED,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+        }
+        if (validSwitch) {
+            state = newState
+        }
+        if (!validSwitch) {
+            Log.e(TAG, "Invalid state switch from $state to $newState")
         }
     }
 }
 
 enum class DeviceState(val message : String, val connected : Boolean) {
-    FOUND("Found device.", true),
+    FOUND("Found device.", false),
     CONNECTED("Connected.", true),
     DOWNLOADING_RECORDINGS("Downloading recordings.", true),
     ERROR_CONNECTING_TO_DEVICE("Error connecting.", false),
