@@ -1,18 +1,17 @@
 package nz.org.cacophony.sidekick
 
-import android.util.Log
-import java.lang.Exception
-import java.net.HttpURLConnection
-import java.net.URL
 import android.content.Context
 import android.content.SharedPreferences
-import org.json.JSONObject
-import java.io.File
+import android.util.Log
 import okhttp3.*
 import org.json.JSONException
+import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 
-class CacophonyAPI(context :Context) {
+class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
 
     companion object {
         private const val DEFAULT_API_SERVER :String = "https://api.cacophony.org.nz"

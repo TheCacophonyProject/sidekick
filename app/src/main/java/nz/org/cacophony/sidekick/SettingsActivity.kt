@@ -1,12 +1,9 @@
 package nz.org.cacophony.sidekick
 
-import android.os.Bundle
-import android.support.design.widget.Snackbar
-import android.support.v7.app.AppCompatActivity;
-import android.view.View
-
-import kotlinx.android.synthetic.main.activity_settings.*
 import android.content.Intent
+import android.os.Bundle
+import android.support.v7.app.AppCompatActivity
+import android.view.View
 
 
 
@@ -17,6 +14,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun logout(v: View) {
         CacophonyAPI.logout(applicationContext)
         val intent = Intent(applicationContext, LoginScreen::class.java)

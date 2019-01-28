@@ -20,9 +20,14 @@ package nz.org.cacophony.sidekick
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.PorterDuff
 import android.net.nsd.NsdManager
 import android.os.Bundle
+import android.os.PowerManager
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -30,19 +35,12 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.ProgressBar
-import kotlin.concurrent.thread
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import java.io.File
-import java.lang.Exception
-import android.os.PowerManager
-import android.support.v4.app.ActivityCompat
-import android.support.v4.content.ContextCompat
-import android.widget.TextView
-import kotlinx.android.synthetic.main.activity_main.*
+import kotlin.concurrent.thread
 
 
 const val TAG = "cacophony-manager"
@@ -103,18 +101,20 @@ class MainActivity : AppCompatActivity() {
     private fun setProgressBarColor() {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
         progressBar.indeterminateDrawable.setColorFilter(
-                resources.getColor(R.color.colorPrimary),
+                ContextCompat.getColor(this, R.color.colorPrimary),
                 PorterDuff.Mode.SRC_ATOP
         )
         progressBar.visibility = View.INVISIBLE
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun downloadAll(v : View) {
         for ((_, device) in deviceList.getMap()) {
             device.startDownloadRecordings()
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun uploadRecordings(v: View) {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
@@ -171,6 +171,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun refreshDevices(v: View) {
         Log.d(TAG, "refresh")
         discovery.restart(clear = true)

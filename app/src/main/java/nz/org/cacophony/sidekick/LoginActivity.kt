@@ -2,20 +2,14 @@ package nz.org.cacophony.sidekick
 
 import android.content.Intent
 import android.net.Uri
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Browser
+import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.Toast
-import java.lang.Exception
+import android.widget.*
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import java.net.URL
 
 class LoginScreen : AppCompatActivity() {
 
@@ -43,7 +37,8 @@ class LoginScreen : AppCompatActivity() {
         apiAutoComplete.setAdapter(ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, API_URLS))
     }
 
-    fun login(v : View) {
+    @Suppress("UNUSED_PARAMETER")
+    fun login(view : View) {
         thread(start = true) {
             val nameOrEmailEditText = findViewById<EditText>(R.id.username_email_login)
             val passwordEditText = findViewById<EditText>(R.id.password_login)
@@ -56,7 +51,7 @@ class LoginScreen : AppCompatActivity() {
                 }
             } catch (e : Exception) {
                 Log.e(TAG, e.toString())
-                var errorMessage = ""
+                val errorMessage: String
                 when(e) {
                     is UnknownHostException -> {
                         errorMessage = "Unknown host: ${apiUrlEditText.text}"
@@ -79,6 +74,7 @@ class LoginScreen : AppCompatActivity() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun imageClick(v : View) {
         imageClickCountdown--
         if (imageClickCountdown <= 0) {
@@ -86,6 +82,7 @@ class LoginScreen : AppCompatActivity() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun openRegisterPage(v : View) {
         val url = Uri.parse("https://browse.cacophony.org.nz/register")
         val urlIntent = Intent(Intent.ACTION_VIEW, url)
