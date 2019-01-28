@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
     private fun setProgressBarColor() {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
         progressBar.indeterminateDrawable.setColorFilter(
-                resources.getColor(R.color.colorPrimary),
+                ContextCompat.getColor(this, R.color.colorPrimary),
                 PorterDuff.Mode.SRC_ATOP
         )
         progressBar.visibility = View.INVISIBLE
