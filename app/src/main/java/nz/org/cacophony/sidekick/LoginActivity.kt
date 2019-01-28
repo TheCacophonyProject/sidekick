@@ -20,7 +20,7 @@ import java.net.URL
 class LoginScreen : AppCompatActivity() {
 
     @Volatile var imageClickCountdown = 10 // Number of times the image needs to be pressed for the API url option to show
-    private val API_URLS = arrayOf("https://api.cacophony.org.nz", "https://api-test.cacophony.org.nz", "http://192.168.20.9:1080")
+    private val API_URLS = arrayOf("https://api.cacophony.org.nz", "https://api-test.cacophony.org.nz")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -45,8 +45,7 @@ class Device(
     fun updateRecordings() {
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(name)
-        checkConnectionStatus(showToast = true)
-        if (!sm.state.connected) {
+        if (!checkConnectionStatus(showToast = true)) {
             return
         }
         for (rec in uploadedRecordings) {
@@ -93,8 +92,7 @@ class Device(
 
     // Get list of recordings on the device
     private fun updateRecordingsList() {
-        checkConnectionStatus()
-        if (!sm.state.connected) {
+        if (!checkConnectionStatus()) {
             return
         }
         val recJSON : JSONArray
@@ -147,7 +145,7 @@ class Device(
     }
 
     fun startDownloadRecordings() {
-        if (sm.state == DeviceState.DOWNLOADING_RECORDINGS) {
+        if (sm.state != DeviceState.CONNECTED) {
             return
         }
         if (!hasWritePermission()) {
@@ -175,9 +173,7 @@ class Device(
                         val recording = Recording(name, outFile.toString(), recordingName)
                         dao.insert(recording)
                     } else {
-                        checkConnectionStatus(showToast = true)
-                        Log.i(TAG, sm.state.message)
-                        if (!sm.state.connected) break
+                        if (!checkConnectionStatus(showToast = true)) break
                     }
                     updateStatusString()
                     //TODO note in the db if the recording failed
@@ -273,12 +269,14 @@ class Device(
         activity.startActivity(urlIntent)
     }
 
-    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false) {
+    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false) : Boolean {
+        var connected = false
         try {
             val socket = Socket()
             socket.connect(InetSocketAddress(hostname, port), timeout)
             socket.close()
             sm.connectionToInterface(true)
+            connected = true
         } catch (e: Exception) {
             Log.e(TAG, e.toString())
             sm.connectionToInterface(false)
@@ -288,6 +286,7 @@ class Device(
             }
         }
         updateStatusString()
+        return connected
     }
 }
 
