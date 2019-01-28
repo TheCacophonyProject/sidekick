@@ -11,7 +11,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 
-class CacophonyAPI(context :Context) {
+class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
 
     companion object {
         private const val DEFAULT_API_SERVER :String = "https://api.cacophony.org.nz"

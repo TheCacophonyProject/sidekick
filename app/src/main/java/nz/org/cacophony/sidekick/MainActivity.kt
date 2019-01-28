@@ -107,12 +107,14 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.INVISIBLE
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun downloadAll(v : View) {
         for ((_, device) in deviceList.getMap()) {
             device.startDownloadRecordings()
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun uploadRecordings(v: View) {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
@@ -169,6 +171,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun refreshDevices(v: View) {
         Log.d(TAG, "refresh")
         discovery.restart(clear = true)

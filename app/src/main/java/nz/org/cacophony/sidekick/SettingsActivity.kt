@@ -14,6 +14,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun logout(v: View) {
         CacophonyAPI.logout(applicationContext)
         val intent = Intent(applicationContext, LoginScreen::class.java)

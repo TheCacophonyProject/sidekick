@@ -37,7 +37,8 @@ class LoginScreen : AppCompatActivity() {
         apiAutoComplete.setAdapter(ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, API_URLS))
     }
 
-    fun login(v : View) {
+    @Suppress("UNUSED_PARAMETER")
+    fun login(view : View) {
         thread(start = true) {
             val nameOrEmailEditText = findViewById<EditText>(R.id.username_email_login)
             val passwordEditText = findViewById<EditText>(R.id.password_login)
@@ -50,7 +51,7 @@ class LoginScreen : AppCompatActivity() {
                 }
             } catch (e : Exception) {
                 Log.e(TAG, e.toString())
-                var errorMessage = ""
+                val errorMessage: String
                 when(e) {
                     is UnknownHostException -> {
                         errorMessage = "Unknown host: ${apiUrlEditText.text}"
@@ -73,6 +74,7 @@ class LoginScreen : AppCompatActivity() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun imageClick(v : View) {
         imageClickCountdown--
         if (imageClickCountdown <= 0) {
@@ -80,6 +82,7 @@ class LoginScreen : AppCompatActivity() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun openRegisterPage(v : View) {
         val url = Uri.parse("https://browse.cacophony.org.nz/register")
         val urlIntent = Intent(Intent.ACTION_VIEW, url)
