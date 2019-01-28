@@ -2,20 +2,14 @@ package nz.org.cacophony.sidekick
 
 import android.content.Intent
 import android.net.Uri
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Browser
+import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.Toast
-import java.lang.Exception
+import android.widget.*
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import java.net.URL
 
 class LoginScreen : AppCompatActivity() {
 
