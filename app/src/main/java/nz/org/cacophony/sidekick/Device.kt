@@ -13,11 +13,9 @@ import okhttp3.ResponseBody
 import org.json.JSONArray
 import java.io.*
 import java.lang.Exception
-import java.net.HttpURLConnection
-import java.net.InetAddress
-import java.net.URL
 import kotlin.concurrent.thread
 import okio.Okio
+import java.net.*
 
 
 class Device(
@@ -30,15 +28,16 @@ class Device(
         private val dao: RecordingDao,
         private val hasWritePermission: () -> Boolean) {
     @Volatile var deviceRecordings = emptyArray<String>()
-    @Volatile var recordingsString = "Searching..."
-    @Volatile var downloading = false
+    @Volatile var statusString = ""
     @Volatile var numRecToDownload = 0
+    @Volatile var sm = StateMachine()
     private val client :OkHttpClient = OkHttpClient()
 
     init {
         Log.i(TAG, "Created new device: $name")
         makeDeviceDir()
         thread(start = true) {
+            checkConnectionStatus()
             updateRecordings()
         }
     }
@@ -46,8 +45,7 @@ class Device(
     fun updateRecordings() {
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(name)
-        if (!testConnection(3000)) {
-            makeToast("Failed to connect to device '$name'", Toast.LENGTH_LONG)
+        if (!checkConnectionStatus(showToast = true)) {
             return
         }
         for (rec in uploadedRecordings) {
@@ -61,59 +59,77 @@ class Device(
                 dao.deleteRecording(rec.id)
             }
         }
-        updateRecordingsList()
+        updateNumberOfRecordingsToDownload()
     }
 
     // Delete recording from device and Database. Recording file is deleted when uploaded to the server
     private fun deleteRecording(recordingName: String) : Boolean {
-        val request = Request.Builder()
-                .url(URL("http", hostname, port, "/api/recording/$recordingName"))
-                .addHeader("Authorization", getAuthString())
-                .delete()
-                .build()
+        try {
+            val request = Request.Builder()
+                    .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                    .addHeader("Authorization", getAuthString())
+                    .delete()
+                    .build()
 
-        val response = client.newCall(request).execute()
+            val response = client.newCall(request).execute()
 
-        if (response.isSuccessful) {
-            return true
-        }
-        val code = response.code()
-        Log.i(TAG, "Delete recording '$recordingName' on '$name' failed with code $code")
-        if (code == 403) {
-            makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
-        } else {
-            makeToast("Failed to delete '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            if (response.isSuccessful) {
+                return true
+            }
+            val code = response.code()
+            Log.i(TAG, "Delete recording '$recordingName' on '$name' failed with code $code")
+            if (code == 403) {
+                makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
+            } else {
+                makeToast("Failed to delete '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            }
+
+        } catch (e : Exception) {
+            Log.e(TAG, "Exception when deleting recording from device: $e")
         }
         return false
     }
 
     // Get list of recordings on the device
     private fun updateRecordingsList() {
+        if (!checkConnectionStatus()) {
+            return
+        }
         val recJSON : JSONArray
         try {
             recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)  //TODO check response from apiRequest
         } catch(e :Exception) {
-            Log.e(TAG, e.toString())
+            Log.e(TAG, "Exception when updating recording list: $e")
             return
         }
         deviceRecordings = emptyArray<String>()
         for (i in 0 until recJSON.length()) {
             deviceRecordings = deviceRecordings.plus(recJSON.get(i) as String)
         }
-        updateRecordingCount()
-
+        sm.updatedRecordingList()
+        updateStatusString()
     }
 
-    private fun updateRecordingCount() {
+    private fun updateStatusString() {
         updateNumberOfRecordingsToDownload()
-        if (numRecToDownload == 1) {
-            recordingsString = "$numRecToDownload recording to download."
-        } else  if (numRecToDownload > 1){
-            recordingsString = "$numRecToDownload recordings to download."
-        } else {
-            recordingsString = "All recordings downloaded."
+        var newStatus = ""
+
+        if (!sm.state.connected) {
+            newStatus = sm.state.message
+        } else if (!sm.hasRecordingList) {
+            newStatus = "Checking for recordings"
+        } else if (numRecToDownload == 0) {
+            newStatus = "No recordings to download"
+        } else if (numRecToDownload == 1) {
+            newStatus = "1 recording to download"
+        } else if (numRecToDownload > 1) {
+            newStatus = "$numRecToDownload recordings to download"
         }
-        onChange?.invoke()
+
+        if (!newStatus.equals(statusString)) {
+            statusString = newStatus
+            onChange?.invoke()
+        }
     }
 
     private fun updateNumberOfRecordingsToDownload() {
@@ -129,7 +145,7 @@ class Device(
     }
 
     fun startDownloadRecordings() {
-        if (downloading) {
+        if (sm.state != DeviceState.CONNECTED) {
             return
         }
         if (!hasWritePermission()) {
@@ -141,7 +157,7 @@ class Device(
             return
         }
         thread(start = true) {
-            downloading = true
+            sm.downloadingRecordings(true)
             updateRecordings()
             Log.i(TAG, "Download recordings from '$name'")
 
@@ -156,39 +172,46 @@ class Device(
                         val outFile = File(getDeviceDir(), recordingName)
                         val recording = Recording(name, outFile.toString(), recordingName)
                         dao.insert(recording)
+                    } else {
+                        if (!checkConnectionStatus(showToast = true)) break
                     }
-                    updateRecordingCount()
+                    updateStatusString()
                     //TODO note in the db if the recording failed
                 } else {
                     Log.i(TAG, "Already downloaded $recordingName")
                 }
             }
-            downloading = false
+            sm.downloadingRecordings(false)
         }
     }
 
     private fun downloadRecording(recordingName: String) : Boolean {
-        val request = Request.Builder()
-                .url(URL("http", hostname, port, "/api/recording/$recordingName"))
-                .addHeader("Authorization", getAuthString())
-                .get()
-                .build()
+        try {
+            val request = Request.Builder()
+                    .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                    .addHeader("Authorization", getAuthString())
+                    .get()
+                    .build()
 
-        val response = client.newCall(request).execute()
-        if (response.isSuccessful) {
-            val downloadedFile = File(getDeviceDir(), recordingName)
-            val sink = Okio.buffer(Okio.sink(downloadedFile))
-            sink.writeAll((response.body() as ResponseBody).source())
-            sink.close()
-            response.close()
-            return true
-        }
-        val code = response.code()
-        Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
-        if (code == 403) {
-            makeToast("Not authorized to download recordings from '$name'", Toast.LENGTH_LONG)
-        } else {
-            makeToast("Failed to recording '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val downloadedFile = File(getDeviceDir(), recordingName)
+                val sink = Okio.buffer(Okio.sink(downloadedFile))
+                sink.writeAll((response.body() as ResponseBody).source())
+                sink.close()
+                response.close()
+                return true
+            }
+            val code = response.code()
+            Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
+            if (code == 403) {
+                makeToast("Not authorized to download recordings from '$name'", Toast.LENGTH_LONG)
+            } else {
+                makeToast("Failed to download recording '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+            }
+        } catch (e: Exception) {
+            makeToast("Error with downloading recording from '$name'", Toast.LENGTH_LONG)
+            Log.e(TAG, "Exception when downloading recording: $e")
         }
         return false
     }
@@ -246,15 +269,102 @@ class Device(
         activity.startActivity(urlIntent)
     }
 
-    fun testConnection(timeout: Int) : Boolean {
-        var result = false
+    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false) : Boolean {
+        var connected = false
         try {
-            result = InetAddress.getByName(hostname).isReachable(timeout)
-        } catch (e :IOException) {
-            Log.e(TAG, "Error in testing device connection: $e")
+            val socket = Socket()
+            socket.connect(InetSocketAddress(hostname, port), timeout)
+            socket.close()
+            sm.connectionToInterface(true)
+            connected = true
+        } catch (e: Exception) {
+            Log.e(TAG, e.toString())
+            sm.connectionToInterface(false)
+            sm.connectionToDevice(InetAddress.getByName(hostname).isReachable(timeout))
+            if (showToast) {
+                makeToast("$name: ${sm.state.message}", Toast.LENGTH_SHORT)
+            }
         }
-        return result
+        updateStatusString()
+        return connected
     }
 }
 
 data class HttpResponse (val connection : HttpURLConnection, val responseString : String)
+
+class StateMachine() {
+
+    var state = DeviceState.FOUND
+    var hasRecordingList = false
+
+    fun downloadingRecordings(downloading : Boolean) {
+        if (downloading) {
+            updateState(DeviceState.DOWNLOADING_RECORDINGS)
+        } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
+            updateState(DeviceState.CONNECTED)
+        }
+    }
+
+    fun updatedRecordingList() {
+        hasRecordingList = true
+    }
+
+    fun connectionToInterface(connected : Boolean) {
+        if (connected && !state.connected) {
+            updateState(DeviceState.CONNECTED)
+        } else if (!connected && state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
+            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
+        }
+    }
+
+    fun connectionToDevice(connected : Boolean) {
+        if (connected && state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
+            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
+        } else if (!connected) {
+            updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
+        }
+    }
+
+    fun updateState(newState : DeviceState) {
+        if (state == newState) return
+        val validSwitch = when (state) {
+            DeviceState.FOUND -> { true }
+            DeviceState.CONNECTED -> {
+                newState in arrayListOf(
+                        DeviceState.DOWNLOADING_RECORDINGS,
+                        DeviceState.ERROR_CONNECTING_TO_INTERFACE,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+            DeviceState.DOWNLOADING_RECORDINGS -> {
+                newState in arrayListOf(
+                        DeviceState.CONNECTED,
+                        DeviceState.ERROR_CONNECTING_TO_INTERFACE,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+            DeviceState.ERROR_CONNECTING_TO_DEVICE -> {
+                newState in arrayListOf(
+                        DeviceState.CONNECTED,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+            DeviceState.ERROR_CONNECTING_TO_INTERFACE -> {
+                newState in arrayListOf(
+                        DeviceState.CONNECTED,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+            }
+        }
+        if (validSwitch) {
+            state = newState
+        }
+        if (!validSwitch) {
+            Log.e(TAG, "Invalid state switch from $state to $newState")
+        }
+    }
+}
+
+enum class DeviceState(val message : String, val connected : Boolean) {
+    FOUND("Found device.", false),
+    CONNECTED("Connected.", true),
+    DOWNLOADING_RECORDINGS("Downloading recordings.", true),
+    ERROR_CONNECTING_TO_DEVICE("Error connecting.", false),
+    ERROR_CONNECTING_TO_INTERFACE("Error connecting to interface.", false),
+}

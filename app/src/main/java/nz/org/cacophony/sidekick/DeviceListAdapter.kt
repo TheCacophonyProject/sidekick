@@ -49,13 +49,13 @@ class DeviceListAdapter(private val devices: DeviceList)
         holder.deviceNameView.text = device.name
         holder.clickDevice.setOnClickListener { device.openManagementInterface() }
         holder.downloadRecordingsButton.setOnClickListener { device.startDownloadRecordings() }
-        holder.recordingCountView.text = device.recordingsString
-        if (device.downloading) {
+        holder.recordingCountView.text = device.statusString
+        if (device.sm.state == DeviceState.DOWNLOADING_RECORDINGS) {
             holder.downloadRecordingsButton.text = "Downloading"
         } else {
             holder.downloadRecordingsButton.text = "Download"
         }
-        if (device.numRecToDownload == 0 || device.downloading) {
+        if (device.numRecToDownload == 0 || device.sm.state == DeviceState.DOWNLOADING_RECORDINGS) {
             holder.downloadRecordingsButton.isClickable = false
             holder.downloadRecordingsButton.alpha = .5f
         } else {

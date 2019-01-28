@@ -41,6 +41,8 @@ import java.lang.Exception
 import android.os.PowerManager
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.widget.TextView
+import kotlinx.android.synthetic.main.activity_main.*
 
 
 const val TAG = "cacophony-manager"
@@ -79,7 +81,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::hasWritePermission)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar, ::hasWritePermission)
+    }
+
+    private fun setRefreshBar(active : Boolean) {
+        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+        if (active) {
+            progressBar.visibility = View.VISIBLE
+        } else {
+            progressBar.visibility = View.INVISIBLE
+        }
     }
 
     override fun onBackPressed() {
@@ -95,11 +106,7 @@ class MainActivity : AppCompatActivity() {
                 resources.getColor(R.color.colorPrimary),
                 PorterDuff.Mode.SRC_ATOP
         )
-    }
-
-    fun logout(v: View) {
-        CacophonyAPI.logout(applicationContext)
-        finish()
+        progressBar.visibility = View.INVISIBLE
     }
 
     fun downloadAll(v : View) {
@@ -150,15 +157,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        // Put refresh button into action bar
-        menuInflater.inflate(R.menu.refresh, menu)
+        // Put settings button into action bar
+        menuInflater.inflate(R.menu.settings, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.refresh_button) {
-            Log.d(TAG, "refresh")
-            discovery.restart(clear = true)
+        if (item.itemId == R.id.settings_button) {
+            Log.d(TAG, "settings")
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
         }
         return super.onOptionsItemSelected(item)
     }
@@ -172,7 +180,15 @@ class MainActivity : AppCompatActivity() {
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
-        runOnUiThread { deviceListAdapter.notifyDataSetChanged() }
+        runOnUiThread {
+            val placeholderText = findViewById<TextView>(R.id.placeholder_text)
+            if (deviceList.size() == 0) {
+                placeholderText.visibility = View.VISIBLE
+            } else {
+                placeholderText.visibility = View.GONE
+            }
+            deviceListAdapter.notifyDataSetChanged()
+        }
     }
 
     override fun onResume() {
