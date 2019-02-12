@@ -19,6 +19,7 @@
 package nz.org.cacophony.sidekick
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -35,12 +36,10 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.Button
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import java.io.File
 import kotlin.concurrent.thread
+import android.content.IntentFilter
 
 
 const val TAG = "cacophony-manager"
@@ -52,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var discovery: DiscoveryManager
     private lateinit var deviceList: DeviceList
     private lateinit var recDao: RecordingDao
+    private lateinit var networkChangeReceiver : NetworkChangeReceiver
     @Volatile var uploading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +67,9 @@ class MainActivity : AppCompatActivity() {
             makeToast("Application needs write permission to download files", Toast.LENGTH_LONG)
         }
 
+        findViewById<TextView>(R.id.network_message_text).text =
+                "Not connected to a '${getResources().getString(R.string.valid_ssid)}' network."
+
         deviceList = DeviceList()
         deviceListAdapter = DeviceListAdapter(deviceList)
         deviceList.setOnChanged { notifyDeviceListChanged() }
@@ -80,6 +83,45 @@ class MainActivity : AppCompatActivity() {
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar, ::hasWritePermission)
+
+        val networkIntentFilter = IntentFilter()
+        networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")
+        networkIntentFilter.addAction("android.net.wifi.WIFI_STATE_CHANGED")
+        networkIntentFilter.addAction("android.net.wifi.WIFI_AP_STATE_CHANGED")
+        networkChangeReceiver = NetworkChangeReceiver(::networkUpdate)
+        registerReceiver(networkChangeReceiver, networkIntentFilter)
+        networkUpdate()
+    }
+
+    class NetworkChangeReceiver(val networkUpdate : (() -> Unit)) : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            networkUpdate()
+        }
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(networkChangeReceiver)
+        super.onDestroy()
+    }
+
+    private fun networkUpdate() {
+        val networkMessageLayout = findViewById<LinearLayout>(R.id.network_message_layout)
+        if (WifiHelper(applicationContext).isConnectedToValidNetwork()) {
+            networkMessageLayout.visibility = View.GONE
+        } else {
+            networkMessageLayout.visibility = View.VISIBLE
+        }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun enableValidAp(v : View) {
+        val wifiHelper = WifiHelper(applicationContext)
+        makeToast("Turning on hotspot")
+        if (wifiHelper.enableValidAp()) {
+            makeToast("Hotspot turned on")
+        } else {
+            makeToast("Failed to turn on hotspot")
+        }
     }
 
     private fun setRefreshBar(active : Boolean) {
