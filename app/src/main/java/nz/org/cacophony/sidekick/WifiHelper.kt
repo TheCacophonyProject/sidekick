@@ -53,7 +53,7 @@ class WifiHelper(c: Context) {
             val wifiConfig = getConfigMethod.invoke(wifiManager) as WifiConfiguration
 
             wifiConfig.preSharedKey = "feathers"
-            wifiConfig.SSID = "test"
+            wifiConfig.SSID = "bushnet"
 
             val setConfigMethod = wifiManager.javaClass.getMethod("setWifiApConfiguration", WifiConfiguration::class.java)
             setConfigMethod.invoke(wifiManager, wifiConfig)
