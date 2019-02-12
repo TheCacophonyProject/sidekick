@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun networkUpdate() {
-        val bushnetMessage = findViewById(R.id.hotspot_alert) as LinearLayout
+        val bushnetMessage = findViewById(R.id.bushnet_network_alert) as LinearLayout
         val wifiHelper = WifiHelper(applicationContext)
         if (wifiHelper.isValidBushnetApEnabled() || wifiHelper.getWifiSsid() == "\"bushnet\"") {
             bushnetMessage.visibility = View.GONE

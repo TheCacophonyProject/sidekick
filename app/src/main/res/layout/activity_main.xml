@@ -12,7 +12,7 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:id="@+id/hotspot_alert"
+            android:id="@+id/bushnet_network_alert"
             android:visibility="visible"
             android:layout_width="match_parent"
             android:background="@color/alert"
