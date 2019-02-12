@@ -67,6 +67,9 @@ class MainActivity : AppCompatActivity() {
             makeToast("Application needs write permission to download files", Toast.LENGTH_LONG)
         }
 
+        findViewById<TextView>(R.id.network_message_text).text =
+                "Not connected to a '${getResources().getString(R.string.valid_ssid)}' network."
+
         deviceList = DeviceList()
         deviceListAdapter = DeviceListAdapter(deviceList)
         deviceList.setOnChanged { notifyDeviceListChanged() }
@@ -102,22 +105,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun networkUpdate() {
-        val bushnetMessage = findViewById(R.id.bushnet_network_alert) as LinearLayout
-        val wifiHelper = WifiHelper(applicationContext)
-        if (wifiHelper.isValidBushnetApEnabled() || wifiHelper.getWifiSsid() == "\"bushnet\"") {
-            bushnetMessage.visibility = View.GONE
+        val networkMessageLayout = findViewById<LinearLayout>(R.id.network_message_layout)
+        if (WifiHelper(applicationContext).isConnectedToValidNetwork()) {
+            networkMessageLayout.visibility = View.GONE
         } else {
-            bushnetMessage.visibility = View.VISIBLE
+            networkMessageLayout.visibility = View.VISIBLE
         }
     }
 
-    fun enableHotspot(v : View) {
+    @Suppress("UNUSED_PARAMETER")
+    fun enableValidAp(v : View) {
         val wifiHelper = WifiHelper(applicationContext)
         makeToast("Turning on hotspot")
-        if (wifiHelper.enableBushnetAp()) {
-            makeToast("hotspot turned on")
+        if (wifiHelper.enableValidAp()) {
+            makeToast("Hotspot turned on")
         } else {
-            makeToast("failed to turn on hotspot.")
+            makeToast("Failed to turn on hotspot")
         }
     }
 

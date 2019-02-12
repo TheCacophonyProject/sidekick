@@ -9,6 +9,8 @@ import java.lang.reflect.Method
 
 class WifiHelper(c: Context) {
 
+    private val validSsid = c.getResources().getString(R.string.valid_ssid)
+    private val validPassword = c.getResources().getString(R.string.valid_ap_password)
     private val wifiManager = c.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as WifiManager
     private val apSettings : WifiConfiguration
     private val wifiInfo : WifiInfo
@@ -41,19 +43,19 @@ class WifiHelper(c: Context) {
         return wifiConfig.SSID
     }
 
-    fun isValidBushnetApEnabled() : Boolean {
-        return isApOn() && getApSsid() == "bushnet" && getApPassword() == "feathers"
+    fun isValidApEnabled() : Boolean {
+        return isApOn() && getApSsid() == validSsid && getApPassword() == validPassword
     }
 
-    fun enableBushnetAp() : Boolean {
+    fun enableValidAp() : Boolean {
         try {
-            if (isValidBushnetApEnabled()) return true
+            if (isValidApEnabled()) return true
 
             val getConfigMethod = wifiManager.javaClass.getMethod("getWifiApConfiguration") as Method
             val wifiConfig = getConfigMethod.invoke(wifiManager) as WifiConfiguration
 
-            wifiConfig.preSharedKey = "feathers"
-            wifiConfig.SSID = "bushnet"
+            wifiConfig.preSharedKey = validPassword
+            wifiConfig.SSID = validSsid
 
             val setConfigMethod = wifiManager.javaClass.getMethod("setWifiApConfiguration", WifiConfiguration::class.java)
             setConfigMethod.invoke(wifiManager, wifiConfig)
@@ -65,6 +67,10 @@ class WifiHelper(c: Context) {
             Log.e(TAG, e.toString())
             return false
         }
+    }
+
+    fun isConnectedToValidNetwork() : Boolean {
+        return isValidApEnabled() || getWifiSsid() == "\"$validSsid\""
     }
 
     private fun getApPassword() : String {
