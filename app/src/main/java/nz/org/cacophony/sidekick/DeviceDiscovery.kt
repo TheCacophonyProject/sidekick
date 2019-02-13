@@ -42,6 +42,7 @@ class DiscoveryManager(
             val deviceMap = devices.getMap()
             for ((name, device) in deviceMap) {
                 thread(start = true) {
+                    device.checkConnectionStatus()
                     if (device.sm.state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
                         devices.remove(name)
                     }
