@@ -82,7 +82,7 @@
         <android.support.v7.widget.RecyclerView
             android:id="@+id/device_list"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:padding="8dp"
             android:scrollbars="vertical"
             android:layout_weight="1"
@@ -96,7 +96,7 @@
             android:text="Upload recordings"/>
 
         <Button
-            android:layout_marginTop="60px"
+            android:layout_marginTop="60dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:onClick="refreshDevices"
