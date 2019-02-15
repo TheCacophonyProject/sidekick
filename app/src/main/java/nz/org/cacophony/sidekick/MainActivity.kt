@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         permissionHelper = PermissionHelper(applicationContext)
         permissionHelper.checkAll(this)
 
-        findViewById<TextView>(R.id.network_message_text).text =
+        findViewById<TextView>(R.id.network_error_message_text).text =
                 "Not connected to a '${getResources().getString(R.string.valid_ssid)}' network."
 
         deviceList = DeviceList()
@@ -102,12 +102,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun networkUpdate() {
-        val networkMessageLayout = findViewById<LinearLayout>(R.id.network_message_layout)
-        if (WifiHelper(applicationContext).isConnectedToValidNetwork()) {
-            networkMessageLayout.visibility = View.GONE
-        } else {
-            networkMessageLayout.visibility = View.VISIBLE
+        val wifiHelper = WifiHelper(applicationContext)
+        val networkErrorMessageLayout = findViewById<LinearLayout>(R.id.network_error_message_layout)
+        val networkWarningMessageLayout = findViewById<LinearLayout>(R.id.network_warning_message_layout)
+        val networkWarningText = findViewById<TextView>(R.id.network_warning_message_text)
+
+        if (wifiHelper.canAccessApConfig()) {
+            if (wifiHelper.isConnectedToValidNetwork()) {
+                networkErrorMessageLayout.visibility = View.GONE
+            } else {
+                networkErrorMessageLayout.visibility = View.VISIBLE
+            }
+        } else if (wifiHelper.canAccessWifiSsid()) {
+            if (wifiHelper.isApOn() || wifiHelper.validWifi()) {
+                networkWarningMessageLayout.visibility = View.GONE
+            } else {
+                networkWarningText.text = "Check that you are connected to a '${getResources().getString(R.string.valid_ssid)}' network"
+                networkWarningMessageLayout.visibility = View.VISIBLE
+            }
         }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun openNetworkSettings(v : View) {
+        val intent = Intent()
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
+        startActivity(intent)
     }
 
     @Suppress("UNUSED_PARAMETER")

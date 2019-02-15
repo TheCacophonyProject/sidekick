@@ -12,14 +12,14 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:id="@+id/network_message_layout"
+            android:id="@+id/network_error_message_layout"
             android:visibility="visible"
             android:layout_width="match_parent"
             android:background="@color/alert"
             android:layout_height="70dp">
 
             <TextView
-                android:id="@+id/network_message_text"
+                android:id="@+id/network_error_message_text"
                 android:layout_weight="1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -34,7 +34,32 @@
                 android:textAlignment="center"
                 android:text="enable hotspot"
                 android:layout_height="wrap_content" />
+        </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/network_warning_message_layout"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:background="@color/warning"
+            android:layout_height="70dp">
+
+            <TextView
+                android:id="@+id/network_warning_message_text"
+                android:text=""
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:layout_gravity="center"
+                android:onClick="openNetworkSettings"
+                android:layout_width="130dp"
+                android:textAlignment="center"
+                android:text="Network settings"
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
         <ProgressBar
