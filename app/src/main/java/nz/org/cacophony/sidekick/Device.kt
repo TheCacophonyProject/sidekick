@@ -25,13 +25,13 @@ class Device(
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
         private val makeToast: (m: String, i : Int) -> Unit,
-        private val dao: RecordingDao,
-        private val hasWritePermission: () -> Boolean) {
+        private val dao: RecordingDao) {
     @Volatile var deviceRecordings = emptyArray<String>()
     @Volatile var statusString = ""
     @Volatile var numRecToDownload = 0
     @Volatile var sm = StateMachine()
     private val client :OkHttpClient = OkHttpClient()
+    private val pr = PermissionHelper(activity.applicationContext)
 
     init {
         Log.i(TAG, "Created new device: $name")
@@ -148,7 +148,7 @@ class Device(
         if (sm.state != DeviceState.CONNECTED) {
             return
         }
-        if (!hasWritePermission()) {
+        if (pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             makeToast("App doesn't have permission to write to storage. Canceling download.", Toast.LENGTH_LONG)
             return
         }

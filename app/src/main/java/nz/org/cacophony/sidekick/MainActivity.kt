@@ -18,16 +18,13 @@
 
 package nz.org.cacophony.sidekick
 
-import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.PorterDuff
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.os.PowerManager
-import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
@@ -43,7 +40,6 @@ import android.content.IntentFilter
 
 
 const val TAG = "cacophony-manager"
-const val REQUEST_WRITE_EXTERNAL_STORAGE = 1
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
@@ -52,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deviceList: DeviceList
     private lateinit var recDao: RecordingDao
     private lateinit var networkChangeReceiver : NetworkChangeReceiver
+    private lateinit var permissionHelper : PermissionHelper
     @Volatile var uploading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,11 +60,11 @@ class MainActivity : AppCompatActivity() {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
             recDao = db.recordingDao()
         }
-        if (!hasWritePermission()) {
-            makeToast("Application needs write permission to download files", Toast.LENGTH_LONG)
-        }
 
-        findViewById<TextView>(R.id.network_message_text).text =
+        permissionHelper = PermissionHelper(applicationContext)
+        permissionHelper.checkAll(this)
+
+        findViewById<TextView>(R.id.network_error_message_text).text =
                 "Not connected to a '${getResources().getString(R.string.valid_ssid)}' network."
 
         deviceList = DeviceList()
@@ -82,7 +79,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar, ::hasWritePermission)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar)
 
         val networkIntentFilter = IntentFilter()
         networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")
@@ -105,12 +102,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun networkUpdate() {
-        val networkMessageLayout = findViewById<LinearLayout>(R.id.network_message_layout)
-        if (WifiHelper(applicationContext).isConnectedToValidNetwork()) {
-            networkMessageLayout.visibility = View.GONE
-        } else {
-            networkMessageLayout.visibility = View.VISIBLE
+        val wifiHelper = WifiHelper(applicationContext)
+        val networkErrorMessageLayout = findViewById<LinearLayout>(R.id.network_error_message_layout)
+        val networkWarningMessageLayout = findViewById<LinearLayout>(R.id.network_warning_message_layout)
+        val networkWarningText = findViewById<TextView>(R.id.network_warning_message_text)
+
+        if (wifiHelper.canAccessApConfig()) {
+            if (wifiHelper.isConnectedToValidNetwork()) {
+                networkErrorMessageLayout.visibility = View.GONE
+            } else {
+                networkErrorMessageLayout.visibility = View.VISIBLE
+            }
+        } else if (wifiHelper.canAccessWifiSsid()) {
+            if (wifiHelper.isApOn() || wifiHelper.validWifi()) {
+                networkWarningMessageLayout.visibility = View.GONE
+            } else {
+                networkWarningText.text = "Check that you are connected to a '${getResources().getString(R.string.valid_ssid)}' network"
+                networkWarningMessageLayout.visibility = View.VISIBLE
+            }
         }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun openNetworkSettings(v : View) {
+        val intent = Intent()
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
+        startActivity(intent)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -252,29 +270,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun hasWritePermission() : Boolean {
-        val permission = ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        if (permission == PackageManager.PERMISSION_GRANTED) {
-            return true
-        }
-        ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                REQUEST_WRITE_EXTERNAL_STORAGE)
-        return false
-    }
-
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        when (requestCode) {
-            REQUEST_WRITE_EXTERNAL_STORAGE -> {
-                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    makeToast("External write permission granted.")
-                } else {
-                    makeToast("Will not be able to download recordings without write permission.")
-                }
-                return
-            }
-        }
+        permissionHelper.onResult(requestCode, permissions, grantResults, ::makeToast)
     }
 }

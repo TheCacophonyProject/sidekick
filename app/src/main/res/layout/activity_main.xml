@@ -12,14 +12,15 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:id="@+id/network_message_layout"
-            android:visibility="visible"
+            android:id="@+id/network_error_message_layout"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:background="@color/alert"
             android:layout_height="70dp">
 
             <TextView
-                android:id="@+id/network_message_text"
+                android:id="@+id/network_error_message_text"
+                android:padding="8dp"
                 android:layout_weight="1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -34,7 +35,33 @@
                 android:textAlignment="center"
                 android:text="enable hotspot"
                 android:layout_height="wrap_content" />
+        </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/network_warning_message_layout"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:background="@color/warning"
+            android:layout_height="70dp">
+
+            <TextView
+                android:id="@+id/network_warning_message_text"
+                android:padding="8dp"
+                android:text=""
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:layout_gravity="center"
+                android:onClick="openNetworkSettings"
+                android:layout_width="130dp"
+                android:textAlignment="center"
+                android:text="Network settings"
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
         <ProgressBar
@@ -57,7 +84,7 @@
         <android.support.v7.widget.RecyclerView
             android:id="@+id/device_list"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:padding="8dp"
             android:scrollbars="vertical"
             android:layout_weight="1"
@@ -71,7 +98,7 @@
             android:text="Upload recordings"/>
 
         <Button
-            android:layout_marginTop="60px"
+            android:layout_marginTop="60dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:onClick="refreshDevices"
