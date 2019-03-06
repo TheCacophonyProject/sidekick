@@ -148,7 +148,7 @@ class Device(
         if (sm.state != DeviceState.CONNECTED) {
             return
         }
-        if (pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+        if (!pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             makeToast("App doesn't have permission to write to storage. Canceling download.", Toast.LENGTH_LONG)
             return
         }
