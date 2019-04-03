@@ -182,13 +182,18 @@ class MainActivity : AppCompatActivity() {
         if (uploading) { return }
         uploading = true
         val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
-        uploadButton.text = "Uploading"
         uploadButton.isClickable = false
         uploadButton.alpha = .5f
 
         thread(start = true) {
-            val recordingsToUpload = recDao.getRecordingsToUpload()
+            val recordingsToUpload = recDao.recordingsToUpload
+            val recLen = recordingsToUpload.size
+            var recNum = 0
             for (rec in recordingsToUpload) {
+                recNum++
+                uploadButton.post {
+                    uploadButton.text = "Uploading $recNum of $recLen"
+                }
                 try {
                     CacophonyAPI.uploadRecording(applicationContext, rec)
                     recDao.setAsUploaded(rec.id)
