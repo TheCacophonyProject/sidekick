@@ -49,7 +49,7 @@ class PermissionHelper(private val c : Context) {
                 Log.i(TAG, p.successMessage)
                 makeToast(p.successMessage, Toast.LENGTH_SHORT)
             } else if (index >= 0) {
-                Log.i(TAG, p.successMessage)
+                Log.i(TAG, p.failMessage)
                 makeToast(p.failMessage, Toast.LENGTH_LONG)
             }
         }
