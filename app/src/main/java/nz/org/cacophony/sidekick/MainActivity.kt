@@ -335,7 +335,7 @@ class MainActivity : AppCompatActivity() {
     fun updateDevicesLocation(location: Location) {
         runOnUiThread {
             val updateLocationButton = findViewById<Button>(R.id.set_location)
-            updateLocationButton.text = "Updating devices location"
+            updateLocationButton.text = "Updating location for nearby devices"
         }
         thread(start = true) {
             for ((_, device) in deviceList.getMap()) {
@@ -343,7 +343,7 @@ class MainActivity : AppCompatActivity() {
                     makeToast("Failed to update location on '${device.name}'")
                 }
             }
-            makeToast("Finished updating devices location")
+            makeToast("Finished updating location for devices")
             resetUpdateLocationButton()
         }
     }
@@ -352,7 +352,7 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             val updateLocationButton = findViewById<Button>(R.id.set_location)
             updateLocationButton.isClickable = true
-            updateLocationButton.text = "Update Devices Location"
+            updateLocationButton.text = "Update All Devices Location"
         }
     }
 

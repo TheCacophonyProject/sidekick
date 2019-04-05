@@ -103,7 +103,7 @@
             android:onClick="setLocationButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Update Devices Location"/>
+            android:text="Update All Devices Location"/>
 
         <Button
             android:layout_marginTop="30dp"
