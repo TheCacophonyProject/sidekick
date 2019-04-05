@@ -11,7 +11,7 @@ android {
         applicationId "nz.org.cacophony.sidekick"
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 2
+        versionCode 4
         versionName "1.1"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -57,4 +57,5 @@ dependencies {
     })
 
     implementation 'com.squareup.okhttp3:okhttp:3.11.0'
+    implementation "com.google.android.gms:play-services-location:16.0.0"
 }

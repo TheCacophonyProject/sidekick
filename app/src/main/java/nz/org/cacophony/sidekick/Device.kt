@@ -2,11 +2,13 @@ package nz.org.cacophony.sidekick
 
 import android.app.Activity
 import android.content.Intent
+import android.location.Location
 import android.net.Uri
 import android.os.Environment
 import android.provider.Browser
 import android.util.Log
 import android.widget.Toast
+import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
@@ -300,6 +302,26 @@ class Device(
         }
         updateStatusString()
         return connected
+    }
+
+    fun updateLocation(location : Location): Boolean {
+        val client :OkHttpClient = OkHttpClient()
+        val body = FormBody.Builder()
+                .addEncoded("latitude", location.latitude.toString())
+                .addEncoded("longitude", location.longitude.toString())
+                .build()
+        val request = Request.Builder()
+                .url(URL("http", hostname, port, "/api/location"))
+                .addHeader("Authorization", getAuthString())
+                .post(body)
+                .build()
+        val response = client.newCall(request).execute()
+        var responseBody = ""
+        if (response.body() != null) {
+            responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+        }
+        Log.d(TAG, "Location update response: '$responseBody'")
+        return response.code() == 200
     }
 }
 

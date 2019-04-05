@@ -18,9 +18,8 @@
 
 package nz.org.cacophony.sidekick
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
+import android.Manifest
+import android.content.*
 import android.graphics.PorterDuff
 import android.net.nsd.NsdManager
 import android.os.Bundle
@@ -36,7 +35,13 @@ import android.view.View
 import android.widget.*
 import java.io.File
 import kotlin.concurrent.thread
-import android.content.IntentFilter
+import com.google.android.gms.location.*
+import android.widget.Toast
+import android.content.Intent
+import android.location.Location
+import android.os.Looper
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationCallback
 
 
 const val TAG = "cacophony-manager"
@@ -49,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recDao: RecordingDao
     private lateinit var networkChangeReceiver : NetworkChangeReceiver
     private lateinit var permissionHelper : PermissionHelper
+    private var locationRequest : LocationRequest? = null
     @Volatile var uploading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -182,13 +188,18 @@ class MainActivity : AppCompatActivity() {
         if (uploading) { return }
         uploading = true
         val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
-        uploadButton.text = "Uploading"
         uploadButton.isClickable = false
         uploadButton.alpha = .5f
 
         thread(start = true) {
-            val recordingsToUpload = recDao.getRecordingsToUpload()
+            val recordingsToUpload = recDao.recordingsToUpload
+            val recLen = recordingsToUpload.size
+            var recNum = 0
             for (rec in recordingsToUpload) {
+                recNum++
+                uploadButton.post {
+                    uploadButton.text = "Uploading $recNum of $recLen"
+                }
                 try {
                     CacophonyAPI.uploadRecording(applicationContext, rec)
                     recDao.setAsUploaded(rec.id)
@@ -270,8 +281,85 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
+    fun setLocationButton(v : View) {
+        setDevicesLocation(true)
+    }
+
+    private fun setDevicesLocation(requestUpdate : Boolean) {
+        if (!permissionHelper.check(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            if (requestUpdate) {
+                permissionHelper.request(this, Manifest.permission.ACCESS_FINE_LOCATION, permissionHelper.locationUpdate)
+            }
+            return
+        }
+        runOnUiThread {
+            val updateLocationButton = findViewById<Button>(R.id.set_location)
+            updateLocationButton.isClickable = false
+            updateLocationButton.text = "Getting location..."
+
+        }
+        locationRequest = LocationRequest.create()?.apply {
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            numUpdates = 1
+        }
+
+        val mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        try {
+            mFusedLocationClient.requestLocationUpdates(locationRequest, mLocationCallback, Looper.getMainLooper())
+        } catch (e: SecurityException) {
+            Log.e(TAG, e.toString())
+            makeToast("Failed to request location updates")
+            resetUpdateLocationButton()
+        }
+    }
+
+
+    private var mLocationCallback: LocationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            Log.i(TAG, "location update")
+            val locationList = locationResult.locations
+            if (locationList.size > 0) {
+                val location = locationList[locationList.size - 1]
+                Log.i(TAG, "lat ${location.latitude}, long: ${location.longitude}")
+                updateDevicesLocation(location)
+            } else {
+                makeToast("Failed to get new location")
+                resetUpdateLocationButton()
+            }
+            locationRequest = null
+        }
+    }
+
+    fun updateDevicesLocation(location: Location) {
+        runOnUiThread {
+            val updateLocationButton = findViewById<Button>(R.id.set_location)
+            updateLocationButton.text = "Updating location for nearby devices"
+        }
+        thread(start = true) {
+            for ((_, device) in deviceList.getMap()) {
+                if (!device.updateLocation(location)) {
+                    makeToast("Failed to update location on '${device.name}'")
+                }
+            }
+            makeToast("Finished updating location for devices")
+            resetUpdateLocationButton()
+        }
+    }
+
+    fun resetUpdateLocationButton() {
+        runOnUiThread {
+            val updateLocationButton = findViewById<Button>(R.id.set_location)
+            updateLocationButton.isClickable = true
+            updateLocationButton.text = "Update All Devices Location"
+        }
+    }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        permissionHelper.onResult(requestCode, permissions, grantResults, ::makeToast)
+        when(requestCode) {
+            permissionHelper.locationUpdate -> setDevicesLocation(false)
+            else -> permissionHelper.onResult(requestCode, permissions, grantResults, ::makeToast)
+        }
     }
 }
