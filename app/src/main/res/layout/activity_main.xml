@@ -98,7 +98,15 @@
             android:text="Upload recordings"/>
 
         <Button
-            android:layout_marginTop="60dp"
+            android:layout_marginTop="30dp"
+            android:id="@+id/set_location"
+            android:onClick="setLocationButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Update Devices Location"/>
+
+        <Button
+            android:layout_marginTop="30dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:onClick="refreshDevices"

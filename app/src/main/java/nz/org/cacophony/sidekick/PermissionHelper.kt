@@ -9,9 +9,9 @@ import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.widget.Toast
 
-const val MULTIPLE_REQUESTS = 1
-
 class PermissionHelper(private val c : Context) {
+    val multipleRequests = 1
+    val locationUpdate = 2
 
     private val permissionList = listOf(
             Permission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -33,13 +33,17 @@ class PermissionHelper(private val c : Context) {
         if (requestPermissions) {
             ActivityCompat.requestPermissions(activity,
                     notGrantedPermission.toTypedArray(),
-                    MULTIPLE_REQUESTS)
+                    multipleRequests)
         }
         return false
     }
 
     fun check(name : String) : Boolean {
         return ContextCompat.checkSelfPermission(c, name) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun request(activity: Activity, name: String, requestCode : Int) {
+        ActivityCompat.requestPermissions(activity, arrayListOf(name).toTypedArray(), requestCode)
     }
 
     fun onResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray, makeToast: (m: String, i : Int) -> Unit) {
