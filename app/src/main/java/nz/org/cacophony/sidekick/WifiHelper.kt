@@ -33,7 +33,7 @@ class WifiHelper(val c: Context) {
     }
 
     fun validWifi() : Boolean {
-        return getWifiSsid() == "\"$validSsid\""
+        return getWifiSsid() == "\"$validSsid\"" || getWifiSsid() == validSsid
     }
 
     fun isApOn() : Boolean {
@@ -42,7 +42,7 @@ class WifiHelper(val c: Context) {
         return actualState == 13
     }
 
-    fun getWifiSsid() : String {
+    fun getWifiSsid() : String? {
         return wifiManager.connectionInfo.ssid
     }
 
@@ -95,7 +95,7 @@ class WifiHelper(val c: Context) {
     }
 
     fun isConnectedToValidNetwork() : Boolean {
-        return isValidApEnabled() || getWifiSsid() == "\"$validSsid\""
+        return isValidApEnabled() || validWifi()
     }
 
     private fun getApPassword() : String {
