@@ -42,6 +42,7 @@ class DiscoveryManager(
             for ((name, device) in deviceMap) {
                 thread(start = true) {
                     device.checkConnectionStatus()
+                    device.getDeviceInfo()
                     if (device.sm.state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
                         devices.remove(name)
                     }
@@ -124,13 +125,13 @@ class DeviceListener(
                             makeToast,
                             recDao)
                     //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
-                    newDevice.checkConnectionStatus()
                     if (newDevice.sm.state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
                         devices.add(newDevice)
                     }
                 } else  {
                     device.checkConnectionStatus()
                     if (device.sm.state.connected) {
+                        device.getDeviceInfo()
                         device.updateRecordings()
                     } else {
                         devices.remove(svc.serviceName) // Device service was still found but could not connect to device

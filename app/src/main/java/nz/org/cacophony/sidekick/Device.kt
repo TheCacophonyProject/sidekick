@@ -17,6 +17,7 @@ import java.io.*
 import java.lang.Exception
 import kotlin.concurrent.thread
 import okio.Okio
+import org.json.JSONObject
 import java.net.*
 
 
@@ -34,14 +35,44 @@ class Device(
     @Volatile var sm = StateMachine()
     private val client :OkHttpClient = OkHttpClient()
     private val pr = PermissionHelper(activity.applicationContext)
+    private var devicename: String = ""
+    private var groupname: String? = null
+    private var deviceID: Int = 0
 
     init {
         Log.i(TAG, "Created new device: $name")
         makeDeviceDir()
         thread(start = true) {
             checkConnectionStatus()
+            getDeviceInfo()
             updateRecordings()
         }
+    }
+
+    fun getDeviceInfo() {
+        if (sm.state != DeviceState.CONNECTED && sm.state != DeviceState.READY) {
+            return
+        }
+
+        //for now so devices without latest management will still work
+        sm.gotDeviceInfo();
+        val deviceJSON : JSONObject
+        try {
+
+            deviceJSON = JSONObject(apiRequest("GET", "/api/device-info").responseString);
+        } catch(e :Exception) {
+            Log.e(TAG, "Exception when getting device info: $e")
+            return
+        }
+        devicename = deviceJSON.getString("devicename");
+        if (devicename.isNullOrEmpty()){
+            devicename = name
+        }
+        groupname = deviceJSON.getString("groupname");
+        deviceID = deviceJSON.getInt("deviceID");
+
+        sm.gotDeviceInfo()
+        updateStatusString()
     }
 
     fun updateRecordings() {
@@ -147,7 +178,7 @@ class Device(
     }
 
     fun startDownloadRecordings() {
-        if (sm.state != DeviceState.CONNECTED) {
+        if (sm.state != DeviceState.READY) {
             return
         }
         if (!pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -172,7 +203,7 @@ class Device(
                     Log.i(TAG, "Downloading recording $recordingName")
                     if (downloadRecording(recordingName)) {
                         val outFile = File(getDeviceDir(), recordingName)
-                        val recording = Recording(name, outFile.toString(), recordingName)
+                        val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
                         dao.insert(recording)
                     } else {
                         if (!checkConnectionStatus(showToast = true)) break
@@ -331,13 +362,19 @@ class StateMachine() {
 
     var state = DeviceState.FOUND
     var hasRecordingList = false
+    var hasDeviceInfo = false
 
     fun downloadingRecordings(downloading : Boolean) {
         if (downloading) {
             updateState(DeviceState.DOWNLOADING_RECORDINGS)
         } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
-            updateState(DeviceState.CONNECTED)
+            updateState(DeviceState.READY)
         }
+    }
+
+    fun gotDeviceInfo() {
+        hasDeviceInfo = true
+        updateState(DeviceState.READY)
     }
 
     fun updatedRecordingList() {
@@ -346,7 +383,11 @@ class StateMachine() {
 
     fun connectionToInterface(connected : Boolean) {
         if (connected && !state.connected) {
-            updateState(DeviceState.CONNECTED)
+            if( hasDeviceInfo ) {
+                updateState(DeviceState.READY)
+            }else {
+                updateState(DeviceState.CONNECTED)
+            }
         } else if (!connected && state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
             updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
         }
@@ -366,13 +407,20 @@ class StateMachine() {
             DeviceState.FOUND -> { true }
             DeviceState.CONNECTED -> {
                 newState in arrayListOf(
+                        DeviceState.READY,
+                        DeviceState.ERROR_CONNECTING_TO_INTERFACE,
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE
+                )
+            }
+            DeviceState.READY -> {
+                newState in arrayListOf(
                         DeviceState.DOWNLOADING_RECORDINGS,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
                         DeviceState.ERROR_CONNECTING_TO_DEVICE)
             }
             DeviceState.DOWNLOADING_RECORDINGS -> {
                 newState in arrayListOf(
-                        DeviceState.CONNECTED,
+                        DeviceState.READY,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
                         DeviceState.ERROR_CONNECTING_TO_DEVICE)
             }
@@ -399,6 +447,7 @@ class StateMachine() {
 enum class DeviceState(val message : String, val connected : Boolean) {
     FOUND("Found device.", false),
     CONNECTED("Connected.", true),
+    READY("Got device info.", true),
     DOWNLOADING_RECORDINGS("Downloading recordings.", true),
     ERROR_CONNECTING_TO_DEVICE("Error connecting.", false),
     ERROR_CONNECTING_TO_INTERFACE("Error connecting to interface.", false),
