@@ -35,7 +35,7 @@ class Device(
     @Volatile var sm = StateMachine()
     private val client :OkHttpClient = OkHttpClient()
     private val pr = PermissionHelper(activity.applicationContext)
-    private var devicename: String = ""
+    private var devicename: String = name
     private var groupname: String? = null
     private var deviceID: Int = 0
 
