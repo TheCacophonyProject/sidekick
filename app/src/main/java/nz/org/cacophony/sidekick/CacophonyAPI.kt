@@ -83,10 +83,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                     .build()
 
             var endpoint="";
-            if (recording.deviceID > 0){
+            if (recording.deviceID > 0) {
                 endpoint = "device/${recording.deviceID}"
-            }else {
-                endpoint = "group/${recording.groupName}/device/${recording.deviceName}"
+            } else {
+                endpoint = "device/${recording.deviceName}/group/${recording.groupName}"
             }
 
             val request = Request.Builder()
