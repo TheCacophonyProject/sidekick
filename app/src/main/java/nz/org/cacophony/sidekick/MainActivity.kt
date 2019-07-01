@@ -40,8 +40,10 @@ import android.widget.Toast
 import android.content.Intent
 import android.location.Location
 import android.os.Looper
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.tasks.Task
 
 
 const val TAG = "cacophony-manager"
@@ -56,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var permissionHelper : PermissionHelper
     private var locationRequest : LocationRequest? = null
     @Volatile var uploading = false
+    private val locationSettingsUpdateCode = 5
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
@@ -299,24 +302,65 @@ class MainActivity : AppCompatActivity() {
             updateLocationButton.text = "Getting location..."
 
         }
-        locationRequest = LocationRequest.create()?.apply {
+        createLocationRequest()
+    }
+
+    private fun createLocationRequest() {
+        val locationRequest = LocationRequest.create().apply {
+            interval = 10000
+            fastestInterval = 5000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
             numUpdates = 1
         }
 
-        val mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
+        val client: SettingsClient = LocationServices.getSettingsClient(this)
+        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
 
-        try {
-            mFusedLocationClient.requestLocationUpdates(locationRequest, mLocationCallback, Looper.getMainLooper())
-        } catch (e: SecurityException) {
-            Log.e(TAG, e.toString())
-            makeToast("Failed to request location updates")
-            resetUpdateLocationButton()
+        task.addOnSuccessListener {
+            Log.i(TAG, "Have required location settings")
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+            try {
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+            } catch(e: SecurityException) {
+                Log.e(TAG, e.toString())
+                makeToast("Failed to request location updates")
+                resetUpdateLocationButton()
+            }
+        }
+
+        task.addOnFailureListener { e ->
+            Log.i(TAG, "Don't have required location settings.")
+            if (e is ResolvableApiException){
+                try {
+                    Log.i(TAG, "Requesting location settings to be updated")
+                    e.startResolutionForResult(this@MainActivity, locationSettingsUpdateCode)
+                } catch (sendEx: IntentSender.SendIntentException) {
+                    Log.e(TAG, e.toString())
+                    resetUpdateLocationButton()
+                }
+            } else {
+                Log.e(TAG, e.toString())
+                resetUpdateLocationButton()
+            }
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when(requestCode) {
+            locationSettingsUpdateCode -> {
+                if (resultCode == -1) {
+                    createLocationRequest()
+                } else {
+                    makeToast( "Don't have proper location settings to get location.")
+                    resetUpdateLocationButton()
+                }
+            }
+        }
+    }
 
-    private var mLocationCallback: LocationCallback = object : LocationCallback() {
+    private var locationCallback: LocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             Log.i(TAG, "location update")
             val locationList = locationResult.locations
