@@ -366,8 +366,17 @@ class MainActivity : AppCompatActivity() {
             val locationList = locationResult.locations
             if (locationList.size > 0) {
                 val location = locationList[locationList.size - 1]
-                Log.i(TAG, "lat ${location.latitude}, long: ${location.longitude}")
-                updateDevicesLocation(location)
+                Log.i(TAG, "lat ${location.latitude}, "+
+                        "long: ${location.longitude}, " +
+                        "alt: ${location.altitude}, " +
+                        "acc: ${location.accuracy}, " +
+                        "time: ${location.time}")
+                if (location.latitude == 0.0 && location.longitude == 0.0) {
+                    resetUpdateLocationButton()
+                    makeToast("Invalid location")
+                } else {
+                    updateDevicesLocation(location)
+                }
             } else {
                 makeToast("Failed to get new location")
                 resetUpdateLocationButton()
