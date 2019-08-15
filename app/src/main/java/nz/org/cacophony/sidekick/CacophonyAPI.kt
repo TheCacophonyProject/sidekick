@@ -9,6 +9,9 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import okhttp3.HttpUrl
+
+
 
 
 class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
@@ -20,6 +23,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
         private var nameOrEmailKey :String = "USERNAME"
         private var serverURLKey :String = "SERVER_URL"
         private var jwtKey :String = "JWT"
+        private var groupListKey = "GROUPS"
         private val client :OkHttpClient = OkHttpClient()
 
         fun login(c :Context, nameOrEmail: String, password: String, serverURL: String) {
@@ -116,6 +120,50 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                     throw Exception("Unknown error with connecting to server.")
                 }
             }
+        }
+
+        fun updateGroupList(c: Context) {
+            val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/groups")!!.newBuilder()
+
+            httpBuilder.addQueryParameter("where", "{}")
+            val request = Request.Builder()
+                    .url(httpBuilder.build())
+                    .addHeader("Authorization", getJWT(c))
+                    .build()
+
+            val response = client.newCall(request).execute()
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e : JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+            }
+
+            when(response.code()) {
+                422 -> throw Exception(responseBodyJSON.getString("message"))
+                200 -> {
+                    val groupSet = mutableSetOf<String>()
+                    val groups = responseBodyJSON.getJSONArray("groups")
+                    for (i in 0..(groups.length() - 1)) {
+                        groupSet.add(groups.getJSONObject(i).getString("groupname"))
+                    }
+                    Log.i(TAG, groupSet.toString())
+                    getPrefs(c).edit().putStringSet(groupListKey, groupSet).apply()
+                }
+                else -> {
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
+                    throw Exception("Unknown error with connecting to server.")
+                }
+            }
+        }
+
+        fun getGroupList(c: Context): MutableSet<String> {
+            return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())
         }
 
         fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
