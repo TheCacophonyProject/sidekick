@@ -10,8 +10,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import okhttp3.HttpUrl
-
-
+import kotlin.concurrent.thread
 
 
 class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
@@ -162,8 +161,18 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
             }
         }
 
-        fun getGroupList(c: Context): MutableSet<String> {
-            return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())
+        fun runUpdateGroupList(c: Context) {
+            thread(start=true) {
+                try {
+                    updateGroupList(c)
+                } catch(e: Exception) {
+                    Log.e(TAG, e.toString())
+                }
+            }
+        }
+
+        fun getGroupList(c: Context): List<String> {
+            return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>()).sorted()
         }
 
         fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
