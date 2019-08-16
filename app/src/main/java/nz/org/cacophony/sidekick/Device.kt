@@ -297,7 +297,7 @@ class Device(
     fun openManagementInterface() {
         thread(start = true) {
             Log.i(TAG, "open interface")
-            if (checkConnectionStatus(timeout = 1000, showToast = true)) {
+            if (checkConnectionStatus(timeout = 1000, showToast = true, retries = 1)) {
                 val uri = Uri.parse(URL("http", hostname, port, "/").toString())
                 Log.d(TAG, "opening browser to: $uri")
                 val urlIntent = Intent(Intent.ACTION_VIEW, uri)
@@ -307,26 +307,30 @@ class Device(
         }
     }
 
-    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false) : Boolean {
+    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false, retries : kotlin.Int = 3) : Boolean {
         var connected = false
-        try {
-            val conn = URL("http://$hostname").openConnection() as HttpURLConnection
-            conn.connectTimeout = timeout
-            conn.readTimeout = timeout
-            conn.responseCode
-            conn.disconnect()
-            sm.connectionToInterface(true)
-            connected = true
-        } catch (e : java.net.SocketException) {
-            Log.i(TAG, "failed to connect to device")
-            sm.connectionToDevice(false)
-        } catch (e : java.net.ConnectException) {
-            sm.connectionToDevice(true)
-            sm.connectionToInterface(false)
-            Log.i(TAG, "failed to connect to interface")
-        } catch (e : Exception) {
-            Log.e(TAG, "failed connecting to device ${e.toString()}")
-            sm.connectionToDevice(false)
+        for (i in 1..retries) {
+            try {
+                val conn = URL("http://$hostname").openConnection() as HttpURLConnection
+                conn.connectTimeout = timeout
+                conn.readTimeout = timeout
+                conn.responseCode
+                conn.disconnect()
+                sm.connectionToInterface(true)
+                connected = true
+                break
+            } catch (e : java.net.SocketException) {
+                Log.i(TAG, "failed to connect to device")
+                sm.connectionToDevice(false)
+            } catch (e : java.net.ConnectException) {
+                sm.connectionToDevice(true)
+                sm.connectionToInterface(false)
+                Log.i(TAG, "failed to connect to interface")
+            } catch (e : Exception) {
+                Log.e(TAG, "failed connecting to device ${e.toString()}")
+                sm.connectionToDevice(false)
+            }
+            Thread.sleep(3000)
         }
         if (showToast && !connected) {
             makeToast("$name: ${sm.state.message}", Toast.LENGTH_SHORT)
