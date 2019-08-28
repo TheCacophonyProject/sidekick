@@ -330,7 +330,11 @@ class Device(
                 Log.e(TAG, "failed connecting to device ${e.toString()}")
                 sm.connectionToDevice(false)
             }
-            Thread.sleep(3000)
+            if (i != retries) {
+                sm.connecting()
+                updateStatusString()
+                Thread.sleep(3000)
+            }
         }
         if (showToast && !connected) {
             makeToast("$name: ${sm.state.message}", Toast.LENGTH_SHORT)
@@ -370,12 +374,19 @@ class StateMachine() {
     var state = DeviceState.FOUND
     var hasRecordingList = false
     var hasDeviceInfo = false
+    var hasConnected = false
 
     fun downloadingRecordings(downloading : Boolean) {
         if (downloading) {
             updateState(DeviceState.DOWNLOADING_RECORDINGS)
         } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
             updateState(DeviceState.READY)
+        }
+    }
+
+    fun connecting() {
+        if (hasConnected) {
+            updateState(DeviceState.RECONNECT)
         }
     }
 
@@ -389,6 +400,7 @@ class StateMachine() {
     }
 
     fun connectionToInterface(connected : Boolean) {
+        hasConnected = hasConnected || connected
         if (connected && !state.connected) {
             if( hasDeviceInfo ) {
                 updateState(DeviceState.READY)
@@ -401,6 +413,7 @@ class StateMachine() {
     }
 
     fun connectionToDevice(connected : Boolean) {
+        hasConnected = hasConnected || connected
         if (connected && state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
             updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
         } else if (!connected) {
@@ -412,34 +425,44 @@ class StateMachine() {
         if (state == newState) return
         val validSwitch = when (state) {
             DeviceState.FOUND -> { true }
+            DeviceState.RECONNECT -> {true }
             DeviceState.CONNECTED -> {
                 newState in arrayListOf(
                         DeviceState.READY,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
                 )
             }
             DeviceState.READY -> {
                 newState in arrayListOf(
                         DeviceState.DOWNLOADING_RECORDINGS,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
             DeviceState.DOWNLOADING_RECORDINGS -> {
                 newState in arrayListOf(
                         DeviceState.READY,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
             DeviceState.ERROR_CONNECTING_TO_DEVICE -> {
                 newState in arrayListOf(
                         DeviceState.CONNECTED,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
             DeviceState.ERROR_CONNECTING_TO_INTERFACE -> {
                 newState in arrayListOf(
                         DeviceState.CONNECTED,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
         }
         if (validSwitch) {
@@ -452,8 +475,9 @@ class StateMachine() {
 }
 
 enum class DeviceState(val message : String, val connected : Boolean) {
-    FOUND("Found device.", false),
+    FOUND("Found device. Trying to connect", false),
     CONNECTED("Connected.", true),
+    RECONNECT("Trying to reconnect", false),
     READY("Got device info.", true),
     DOWNLOADING_RECORDINGS("Downloading recordings.", true),
     ERROR_CONNECTING_TO_DEVICE("Error connecting.", false),
