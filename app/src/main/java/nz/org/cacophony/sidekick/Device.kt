@@ -8,10 +8,7 @@ import android.os.Environment
 import android.provider.Browser
 import android.util.Log
 import android.widget.Toast
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.ResponseBody
+import okhttp3.*
 import org.json.JSONArray
 import java.io.*
 import java.lang.Exception
@@ -298,7 +295,10 @@ class Device(
         thread(start = true) {
             Log.i(TAG, "open interface")
             if (checkConnectionStatus(timeout = 1000, showToast = true, retries = 1)) {
-                val uri = Uri.parse(URL("http", hostname, port, "/").toString())
+                val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
+                val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
+                httpBuilder.addQueryParameter("groups", groupList.joinToString("--"))
+                val uri = Uri.parse(httpBuilder.build().toString())
                 Log.d(TAG, "opening browser to: $uri")
                 val urlIntent = Intent(Intent.ACTION_VIEW, uri)
                 urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-$name")  // Single browse tab per device

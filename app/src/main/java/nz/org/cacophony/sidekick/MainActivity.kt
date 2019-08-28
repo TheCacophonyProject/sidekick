@@ -97,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         networkChangeReceiver = NetworkChangeReceiver(::networkUpdate)
         registerReceiver(networkChangeReceiver, networkIntentFilter)
         networkUpdate()
+        CacophonyAPI.runUpdateGroupList(applicationContext)
     }
 
     class NetworkChangeReceiver(val networkUpdate : (() -> Unit)) : BroadcastReceiver() {
@@ -270,6 +271,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "onResume")
         super.onResume()
         discovery.restart(clear = true)
+        CacophonyAPI.runUpdateGroupList(applicationContext)
     }
 
     override fun onPause() {
