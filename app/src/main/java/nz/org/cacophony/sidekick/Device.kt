@@ -294,7 +294,7 @@ class Device(
     fun openManagementInterface() {
         thread(start = true) {
             Log.i(TAG, "open interface")
-            if (checkConnectionStatus(timeout = 1000, showToast = true)) {
+            if (checkConnectionStatus(timeout = 1000, showToast = true, retries = 1)) {
                 val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
                 val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
                 httpBuilder.addQueryParameter("groups", groupList.joinToString("--"))
@@ -307,26 +307,34 @@ class Device(
         }
     }
 
-    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false) : Boolean {
+    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false, retries : kotlin.Int = 3) : Boolean {
         var connected = false
-        try {
-            val conn = URL("http://$hostname").openConnection() as HttpURLConnection
-            conn.connectTimeout = timeout
-            conn.readTimeout = timeout
-            conn.responseCode
-            conn.disconnect()
-            sm.connectionToInterface(true)
-            connected = true
-        } catch (e : java.net.SocketException) {
-            Log.i(TAG, "failed to connect to device")
-            sm.connectionToDevice(false)
-        } catch (e : java.net.ConnectException) {
-            sm.connectionToDevice(true)
-            sm.connectionToInterface(false)
-            Log.i(TAG, "failed to connect to interface")
-        } catch (e : Exception) {
-            Log.e(TAG, "failed connecting to device ${e.toString()}")
-            sm.connectionToDevice(false)
+        for (i in 1..retries) {
+            sm.connecting()
+            updateStatusString()
+            try {
+                val conn = URL("http://$hostname").openConnection() as HttpURLConnection
+                conn.connectTimeout = timeout
+                conn.readTimeout = timeout
+                conn.responseCode
+                conn.disconnect()
+                sm.connected()
+                connected = true
+                break
+            } catch (e : java.net.SocketException) {
+                Log.i(TAG, "failed to connect to device")
+                sm.connectionFailed()
+            } catch (e : java.net.ConnectException) {
+                sm.connectionToDeviceOnly()
+                Log.i(TAG, "failed to connect to interface")
+            } catch (e : Exception) {
+                Log.e(TAG, "failed connecting to device ${e.toString()}")
+                sm.connectionFailed()
+            }
+            if (i != retries) {
+                updateStatusString()
+                Thread.sleep(3000)
+            }
         }
         if (showToast && !connected) {
             makeToast("$name: ${sm.state.message}", Toast.LENGTH_SHORT)
@@ -366,12 +374,39 @@ class StateMachine() {
     var state = DeviceState.FOUND
     var hasRecordingList = false
     var hasDeviceInfo = false
+    var hasConnected = false
 
     fun downloadingRecordings(downloading : Boolean) {
         if (downloading) {
             updateState(DeviceState.DOWNLOADING_RECORDINGS)
         } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
             updateState(DeviceState.READY)
+        }
+    }
+
+    fun connected() {
+        hasConnected = true
+        if (!state.connected) {
+            if (hasDeviceInfo) {
+                updateState(DeviceState.READY)
+            } else {
+                updateState(DeviceState.CONNECTED)
+            }
+        }
+    }
+
+    fun connectionToDeviceOnly() {
+        hasConnected = true
+        updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
+    }
+
+    fun connectionFailed() {
+        updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
+    }
+
+    fun connecting() {
+        if (hasConnected) {
+            updateState(DeviceState.RECONNECT)
         }
     }
 
@@ -384,58 +419,48 @@ class StateMachine() {
         hasRecordingList = true
     }
 
-    fun connectionToInterface(connected : Boolean) {
-        if (connected && !state.connected) {
-            if( hasDeviceInfo ) {
-                updateState(DeviceState.READY)
-            }else {
-                updateState(DeviceState.CONNECTED)
-            }
-        } else if (!connected && state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
-        }
-    }
-
-    fun connectionToDevice(connected : Boolean) {
-        if (connected && state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
-        } else if (!connected) {
-            updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
-        }
-    }
-
-    fun updateState(newState : DeviceState) {
+    private fun updateState(newState : DeviceState) {
         if (state == newState) return
         val validSwitch = when (state) {
             DeviceState.FOUND -> { true }
+            DeviceState.RECONNECT -> { true }
             DeviceState.CONNECTED -> {
                 newState in arrayListOf(
                         DeviceState.READY,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
                 )
             }
             DeviceState.READY -> {
                 newState in arrayListOf(
                         DeviceState.DOWNLOADING_RECORDINGS,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
             DeviceState.DOWNLOADING_RECORDINGS -> {
                 newState in arrayListOf(
                         DeviceState.READY,
                         DeviceState.ERROR_CONNECTING_TO_INTERFACE,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
             DeviceState.ERROR_CONNECTING_TO_DEVICE -> {
                 newState in arrayListOf(
                         DeviceState.CONNECTED,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
             DeviceState.ERROR_CONNECTING_TO_INTERFACE -> {
                 newState in arrayListOf(
                         DeviceState.CONNECTED,
-                        DeviceState.ERROR_CONNECTING_TO_DEVICE)
+                        DeviceState.ERROR_CONNECTING_TO_DEVICE,
+                        DeviceState.RECONNECT
+                )
             }
         }
         if (validSwitch) {
@@ -448,8 +473,9 @@ class StateMachine() {
 }
 
 enum class DeviceState(val message : String, val connected : Boolean) {
-    FOUND("Found device.", false),
+    FOUND("Found device. Trying to connect", false),
     CONNECTED("Connected.", true),
+    RECONNECT("Trying to reconnect", false),
     READY("Got device info.", true),
     DOWNLOADING_RECORDINGS("Downloading recordings.", true),
     ERROR_CONNECTING_TO_DEVICE("Error connecting.", false),
