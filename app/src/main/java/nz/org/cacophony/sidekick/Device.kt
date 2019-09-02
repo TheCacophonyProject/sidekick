@@ -164,7 +164,7 @@ class Device(
 
     private fun updateNumberOfRecordingsToDownload() {
         // Count the number of recordings that are on the device and not in the database
-        val downloadedRecordings = dao.getRecordingNamesFromDevice(name)
+        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename)
         var count = 0
         for (rec in deviceRecordings) {
             if (rec !in downloadedRecordings) {
