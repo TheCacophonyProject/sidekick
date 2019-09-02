@@ -310,28 +310,28 @@ class Device(
     fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false, retries : kotlin.Int = 3) : Boolean {
         var connected = false
         for (i in 1..retries) {
+            sm.connecting()
+            updateStatusString()
             try {
                 val conn = URL("http://$hostname").openConnection() as HttpURLConnection
                 conn.connectTimeout = timeout
                 conn.readTimeout = timeout
                 conn.responseCode
                 conn.disconnect()
-                sm.connectionToInterface(true)
+                sm.connected()
                 connected = true
                 break
             } catch (e : java.net.SocketException) {
                 Log.i(TAG, "failed to connect to device")
-                sm.connectionToDevice(false)
+                sm.connectionFailed()
             } catch (e : java.net.ConnectException) {
-                sm.connectionToDevice(true)
-                sm.connectionToInterface(false)
+                sm.connectionToDeviceOnly()
                 Log.i(TAG, "failed to connect to interface")
             } catch (e : Exception) {
                 Log.e(TAG, "failed connecting to device ${e.toString()}")
-                sm.connectionToDevice(false)
+                sm.connectionFailed()
             }
             if (i != retries) {
-                sm.connecting()
                 updateStatusString()
                 Thread.sleep(3000)
             }
@@ -384,6 +384,26 @@ class StateMachine() {
         }
     }
 
+    fun connected() {
+        hasConnected = true
+        if (!state.connected) {
+            if (hasDeviceInfo) {
+                updateState(DeviceState.READY)
+            } else {
+                updateState(DeviceState.CONNECTED)
+            }
+        }
+    }
+
+    fun connectionToDeviceOnly() {
+        hasConnected = true
+        updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
+    }
+
+    fun connectionFailed() {
+        updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
+    }
+
     fun connecting() {
         if (hasConnected) {
             updateState(DeviceState.RECONNECT)
@@ -399,33 +419,11 @@ class StateMachine() {
         hasRecordingList = true
     }
 
-    fun connectionToInterface(connected : Boolean) {
-        hasConnected = hasConnected || connected
-        if (connected && !state.connected) {
-            if( hasDeviceInfo ) {
-                updateState(DeviceState.READY)
-            }else {
-                updateState(DeviceState.CONNECTED)
-            }
-        } else if (!connected && state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
-        }
-    }
-
-    fun connectionToDevice(connected : Boolean) {
-        hasConnected = hasConnected || connected
-        if (connected && state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-            updateState(DeviceState.ERROR_CONNECTING_TO_INTERFACE)
-        } else if (!connected) {
-            updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
-        }
-    }
-
-    fun updateState(newState : DeviceState) {
+    private fun updateState(newState : DeviceState) {
         if (state == newState) return
         val validSwitch = when (state) {
             DeviceState.FOUND -> { true }
-            DeviceState.RECONNECT -> {true }
+            DeviceState.RECONNECT -> { true }
             DeviceState.CONNECTED -> {
                 newState in arrayListOf(
                         DeviceState.READY,
