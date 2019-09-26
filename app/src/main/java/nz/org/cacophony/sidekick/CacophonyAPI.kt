@@ -182,7 +182,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
             prefs.edit().putString(passwordKey, password).apply()
             prefs.edit().putString(jwtKey, jwt).apply()
             prefs.edit().putString(serverURLKey, serverURL).apply()
-            Crashlytics.setUserName(nameOrEmailKey);
+            Crashlytics.setUserName(nameOrEmail);
         }
 
         fun getNameOrEmail(c: Context) :String {
