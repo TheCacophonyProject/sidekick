@@ -9,7 +9,7 @@ import android.content.Context;
 import android.os.AsyncTask;
 import androidx.annotation.NonNull;
 
-@Database(entities = {Recording.class}, version = 2, exportSchema = false)
+@Database(entities = {Recording.class}, version = 3, exportSchema = false)
 public abstract class RecordingRoomDatabase extends RoomDatabase {
 
     public abstract RecordingDao recordingDao();
