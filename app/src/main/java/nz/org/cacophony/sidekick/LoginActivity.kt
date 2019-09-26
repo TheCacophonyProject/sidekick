@@ -8,12 +8,14 @@ import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.*
+import com.crashlytics.android.Crashlytics
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
 
 class LoginScreen : AppCompatActivity() {
 
-    @Volatile var imageClickCountdown = 10 // Number of times the image needs to be pressed for the API url option to show
+    @Volatile
+    var imageClickCountdown = 10 // Number of times the image needs to be pressed for the API url option to show
     private val API_URLS = arrayOf("https://api.cacophony.org.nz", "https://api-test.cacophony.org.nz")
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,7 +23,9 @@ class LoginScreen : AppCompatActivity() {
         setContentView(R.layout.activity_login_screen)
         val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
         apiUrlEditText.setText(CacophonyAPI.getServerURL(applicationContext))
-        if (CacophonyAPI.getNameOrEmail(applicationContext) != "") {
+        var username = CacophonyAPI.getNameOrEmail(applicationContext);
+        Crashlytics.setUserName(username)
+        if (username != "") {
             gotoMainActivity()
         }
 
@@ -38,7 +42,7 @@ class LoginScreen : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun login(view : View) {
+    fun login(view: View) {
         thread(start = true) {
             val nameOrEmailEditText = findViewById<EditText>(R.id.username_email_login)
             val passwordEditText = findViewById<EditText>(R.id.password_login)
@@ -49,15 +53,15 @@ class LoginScreen : AppCompatActivity() {
                 nameOrEmailEditText.post {
                     nameOrEmailEditText.text.clear()
                 }
-            } catch (e : Exception) {
+            } catch (e: Exception) {
                 Log.e(TAG, e.toString())
                 val errorMessage: String
-                when(e) {
+                when (e) {
                     is UnknownHostException -> {
                         errorMessage = "Unknown host: ${apiUrlEditText.text}"
                     }
                     else -> {
-                        if (e.message ==  null) {
+                        if (e.message == null) {
                             errorMessage = "Unknown error with login"
                         } else {
                             errorMessage = e.message!!
@@ -75,7 +79,7 @@ class LoginScreen : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun imageClick(v : View) {
+    fun imageClick(v: View) {
         imageClickCountdown--
         if (imageClickCountdown <= 0) {
             findViewById<LinearLayout>(R.id.api_linear_layout).visibility = View.VISIBLE
@@ -83,7 +87,7 @@ class LoginScreen : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun openRegisterPage(v : View) {
+    fun openRegisterPage(v: View) {
         val url = Uri.parse("https://browse.cacophony.org.nz/register")
         val urlIntent = Intent(Intent.ACTION_VIEW, url)
         urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-register")

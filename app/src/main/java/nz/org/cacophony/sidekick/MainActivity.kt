@@ -21,29 +21,23 @@ package nz.org.cacophony.sidekick
 import android.Manifest
 import android.content.*
 import android.graphics.PorterDuff
+import android.location.Location
 import android.net.nsd.NsdManager
 import android.os.Bundle
+import android.os.Looper
 import android.os.PowerManager
-import androidx.core.content.ContextCompat
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.Task
 import java.io.File
 import kotlin.concurrent.thread
-import com.google.android.gms.location.*
-import android.widget.Toast
-import android.content.Intent
-import android.location.Location
-import android.os.Looper
-import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.tasks.Task
 
 
 const val TAG = "cacophony-manager"
