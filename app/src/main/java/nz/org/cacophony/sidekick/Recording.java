@@ -1,12 +1,12 @@
 package nz.org.cacophony.sidekick;
 
-import android.arch.persistence.room.ColumnInfo;
-import android.arch.persistence.room.Entity;
-import android.arch.persistence.room.Index;
-import android.arch.persistence.room.PrimaryKey;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
+import androidx.annotation.Nullable;
+import androidx.room.ColumnInfo;
+import androidx.room.Entity;
+import androidx.room.Index;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 @Entity(tableName = "recording", indices = {@Index(value = "recording_path", unique = true)})
 public class Recording {
 

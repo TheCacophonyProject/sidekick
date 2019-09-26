@@ -1,15 +1,15 @@
 package nz.org.cacophony.sidekick;
 
 
-import android.arch.persistence.db.SupportSQLiteDatabase;
-import android.arch.persistence.room.Database;
-import android.arch.persistence.room.Room;
-import android.arch.persistence.room.RoomDatabase;
+import androidx.sqlite.db.SupportSQLiteDatabase;
+import androidx.room.Database;
+import androidx.room.Room;
+import androidx.room.RoomDatabase;
 import android.content.Context;
 import android.os.AsyncTask;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
-@Database(entities = {Recording.class}, version = 2, exportSchema = false)
+@Database(entities = {Recording.class}, version = 3, exportSchema = false)
 public abstract class RecordingRoomDatabase extends RoomDatabase {
 
     public abstract RecordingDao recordingDao();

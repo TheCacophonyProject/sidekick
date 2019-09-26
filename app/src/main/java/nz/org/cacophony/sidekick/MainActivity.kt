@@ -24,10 +24,10 @@ import android.graphics.PorterDuff
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.os.PowerManager
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -49,7 +49,7 @@ import com.google.android.gms.tasks.Task
 const val TAG = "cacophony-manager"
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var recyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var deviceListAdapter: DeviceListAdapter
     private lateinit var discovery: DiscoveryManager
     private lateinit var deviceList: DeviceList
@@ -80,8 +80,8 @@ class MainActivity : AppCompatActivity() {
         deviceListAdapter = DeviceListAdapter(deviceList)
         deviceList.setOnChanged { notifyDeviceListChanged() }
 
-        val recyclerLayoutManager = LinearLayoutManager(this)
-        recyclerView = findViewById<RecyclerView>(R.id.device_list).apply {
+        val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        recyclerView = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list).apply {
             setHasFixedSize(true)
             layoutManager = recyclerLayoutManager
             adapter = deviceListAdapter

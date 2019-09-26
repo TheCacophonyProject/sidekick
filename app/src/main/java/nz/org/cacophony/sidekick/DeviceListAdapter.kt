@@ -19,7 +19,7 @@
 package nz.org.cacophony.sidekick
 
 import android.graphics.Color
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,9 +28,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 class DeviceListAdapter(private val devices: DeviceList)
-    : RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
+    : androidx.recyclerview.widget.RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
 
-    class DeviceViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+    class DeviceViewHolder(v: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(v) {
         val deviceNameView = v.findViewById(R.id.device_name) as TextView
         val clickDevice = v.findViewById(R.id.device_info) as LinearLayout
         val recordingCountView = v.findViewById(R.id.recording_download_count) as TextView
