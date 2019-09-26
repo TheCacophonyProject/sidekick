@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.*
+import com.crashlytics.android.Crashlytics
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
 
@@ -21,7 +22,9 @@ class LoginScreen : AppCompatActivity() {
         setContentView(R.layout.activity_login_screen)
         val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
         apiUrlEditText.setText(CacophonyAPI.getServerURL(applicationContext))
-        if (CacophonyAPI.getNameOrEmail(applicationContext) != "") {
+        var username =CacophonyAPI.getNameOrEmail(applicationContext);
+        Crashlytics.setUserName(username)
+        if (username != "") {
             gotoMainActivity()
         }
 

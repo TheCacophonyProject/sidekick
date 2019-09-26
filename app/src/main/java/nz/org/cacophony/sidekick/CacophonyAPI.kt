@@ -3,6 +3,7 @@ package nz.org.cacophony.sidekick
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.crashlytics.android.Crashlytics
 import okhttp3.*
 import org.json.JSONException
 import org.json.JSONObject
@@ -181,6 +182,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
             prefs.edit().putString(passwordKey, password).apply()
             prefs.edit().putString(jwtKey, jwt).apply()
             prefs.edit().putString(serverURLKey, serverURL).apply()
+            Crashlytics.setUserName(nameOrEmailKey);
         }
 
         fun getNameOrEmail(c: Context) :String {

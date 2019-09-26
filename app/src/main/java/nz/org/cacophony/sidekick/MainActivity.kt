@@ -40,6 +40,7 @@ import android.widget.Toast
 import android.content.Intent
 import android.location.Location
 import android.os.Looper
+import com.crashlytics.android.Crashlytics
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationCallback
@@ -65,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setProgressBarColor()
+
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
             recDao = db.recordingDao()
