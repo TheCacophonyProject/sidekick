@@ -32,12 +32,12 @@ public interface RecordingDao {
     @Query("DELETE FROM Recording")
     void deleteAll();
 
-    @Query("SELECT * from Recording WHERE uploaded AND device_name = :deviceName")
-    List<Recording> getUploadedFromDevice(String deviceName);
+    @Query("SELECT * from Recording WHERE uploaded AND device_name = :deviceName AND group_name = :groupname")
+    List<Recording> getUploadedFromDevice(String deviceName, String groupname);
 
 
-    @Query("SELECT name from Recording WHERE device_name = :deviceName")
-    List<String> getRecordingNamesFromDevice(String deviceName);
+    @Query("SELECT name from Recording WHERE device_name = :deviceName AND group_name = :groupname")
+    List<String> getRecordingNamesFromDevice(String deviceName, String groupname);
 
     @Query("SELECT * from Recording WHERE not uploaded")
     List<Recording> getRecordingsToUpload();

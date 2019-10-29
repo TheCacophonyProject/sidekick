@@ -52,21 +52,21 @@ class Device(
         }
 
         //for now so devices without latest management will still work
-        sm.gotDeviceInfo();
+        sm.gotDeviceInfo()
         val deviceJSON : JSONObject
         try {
 
-            deviceJSON = JSONObject(apiRequest("GET", "/api/device-info").responseString);
+            deviceJSON = JSONObject(apiRequest("GET", "/api/device-info").responseString)
         } catch(e :Exception) {
             Log.e(TAG, "Exception when getting device info: $e")
             return
         }
-        devicename = deviceJSON.getString("devicename");
-        if (devicename.isNullOrEmpty()){
+        devicename = deviceJSON.getString("devicename")
+        if (devicename.isEmpty()){
             devicename = name
         }
-        groupname = deviceJSON.getString("groupname");
-        deviceID = deviceJSON.getInt("deviceID");
+        groupname = deviceJSON.getString("groupname")
+        deviceID = deviceJSON.getInt("deviceID")
 
         sm.gotDeviceInfo()
         updateStatusString()
@@ -74,7 +74,7 @@ class Device(
 
     fun updateRecordings() {
         updateRecordingsList()
-        val uploadedRecordings = dao.getUploadedFromDevice(name)
+        val uploadedRecordings = dao.getUploadedFromDevice(devicename, groupname)
         if (!checkConnectionStatus(showToast = true)) {
             return
         }
@@ -82,9 +82,7 @@ class Device(
             Log.i(TAG, "Uploaded recording: $rec")
             if (rec.name in deviceRecordings) {
                 //TODO have error message show when deletion fails
-                if (deleteRecording(rec.name)) {
-                    dao.deleteRecording(rec.id)
-                }
+                deleteRecording(rec)
             } else {
                 dao.deleteRecording(rec.id)
             }
@@ -93,25 +91,25 @@ class Device(
     }
 
     // Delete recording from device and Database. Recording file is deleted when uploaded to the server
-    private fun deleteRecording(recordingName: String) : Boolean {
+    private fun deleteRecording(recording: Recording) : Boolean {
         try {
             val request = Request.Builder()
-                    .url(URL("http", hostname, port, "/api/recording/$recordingName"))
+                    .url(URL("http", hostname, port, "/api/recording/${recording.name}"))
                     .addHeader("Authorization", getAuthString())
                     .delete()
                     .build()
 
             val response = client.newCall(request).execute()
-
             if (response.isSuccessful) {
+                dao.deleteRecording(recording.id)
                 return true
             }
             val code = response.code()
-            Log.i(TAG, "Delete recording '$recordingName' on '$name' failed with code $code")
+            Log.i(TAG, "Delete recording '${recording.name}' on '$name' failed with code $code")
             if (code == 403) {
                 makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
             } else {
-                makeToast("Failed to delete '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+                makeToast("Failed to delete '${recording.name}' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
             }
 
         } catch (e : Exception) {
@@ -143,20 +141,24 @@ class Device(
     private fun updateStatusString() {
         updateNumberOfRecordingsToDownload()
         var newStatus = ""
-
+        Log.i(TAG, "state: ${sm.state}")
         if (!sm.state.connected) {
             newStatus = sm.state.message
         } else if (!sm.hasRecordingList) {
             newStatus = "Checking for recordings"
+        } else if (deviceRecordings.isEmpty()) {
+            newStatus = "No recordings left on device"
+        } else if (sm.state == DeviceState.DOWNLOADING_RECORDINGS) {
+            newStatus = "Downloaded ${deviceRecordings.size - numRecToDownload} of ${deviceRecordings.size}"
         } else if (numRecToDownload == 0) {
-            newStatus = "No recordings to download"
+            newStatus = "All ${deviceRecordings.size} recordings downloaded"
         } else if (numRecToDownload == 1) {
             newStatus = "1 recording to download"
         } else if (numRecToDownload > 1) {
-            newStatus = "$numRecToDownload recordings to download"
+            newStatus = "$numRecToDownload recording to download"
         }
 
-        if (!newStatus.equals(statusString)) {
+        if (newStatus != statusString) {
             statusString = newStatus
             onChange?.invoke()
         }
@@ -164,7 +166,7 @@ class Device(
 
     private fun updateNumberOfRecordingsToDownload() {
         // Count the number of recordings that are on the device and not in the database
-        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename)
+        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
         var count = 0
         for (rec in deviceRecordings) {
             if (rec !in downloadedRecordings) {
@@ -191,7 +193,7 @@ class Device(
             updateRecordings()
             Log.i(TAG, "Download recordings from '$name'")
 
-            val downloadedRecordings = dao.getRecordingNamesFromDevice(name)
+            val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
             Log.i(TAG, "recordings $deviceRecordings")
 
             for (recordingName in deviceRecordings) {
@@ -212,6 +214,7 @@ class Device(
                 }
             }
             sm.downloadingRecordings(false)
+            updateStatusString()
         }
     }
 
@@ -307,10 +310,9 @@ class Device(
         }
     }
 
-    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false, retries : kotlin.Int = 3) : Boolean {
+    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false, retries : Int = 3) : Boolean {
         var connected = false
         for (i in 1..retries) {
-            sm.connecting()
             updateStatusString()
             try {
                 val conn = URL("http://$hostname").openConnection() as HttpURLConnection
@@ -321,14 +323,14 @@ class Device(
                 sm.connected()
                 connected = true
                 break
-            } catch (e : java.net.SocketException) {
+            } catch (e : SocketException) {
                 Log.i(TAG, "failed to connect to device")
                 sm.connectionFailed()
-            } catch (e : java.net.ConnectException) {
+            } catch (e : ConnectException) {
                 sm.connectionToDeviceOnly()
                 Log.i(TAG, "failed to connect to interface")
             } catch (e : Exception) {
-                Log.e(TAG, "failed connecting to device ${e.toString()}")
+                Log.e(TAG, "failed connecting to device $e")
                 sm.connectionFailed()
             }
             if (i != retries) {
@@ -344,7 +346,7 @@ class Device(
     }
 
     fun updateLocation(location : Location): Boolean {
-        val client :OkHttpClient = OkHttpClient()
+        val client = OkHttpClient()
         val body = FormBody.Builder()
                 .addEncoded("latitude", location.latitude.toString())
                 .addEncoded("longitude", location.longitude.toString())
@@ -369,7 +371,7 @@ class Device(
 
 data class HttpResponse (val connection : HttpURLConnection, val responseString : String)
 
-class StateMachine() {
+class StateMachine {
 
     var state = DeviceState.FOUND
     var hasRecordingList = false
