@@ -359,13 +359,19 @@ class Device(
                 .addHeader("Authorization", getAuthString())
                 .post(body)
                 .build()
-        val response = client.newCall(request).execute()
-        var responseBody = ""
-        if (response.body() != null) {
-            responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+        var updated = false
+        try {
+            var response = client.newCall(request).execute()
+            var responseBody = ""
+            if (response.body() != null) {
+                responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+            }
+            Log.d(TAG, "Location update response: '$responseBody'")
+            updated =  response.code() == 200
+        } catch(e : Exception) {
+            Log.i(TAG, "failed to update location on device: $e")
         }
-        Log.d(TAG, "Location update response: '$responseBody'")
-        return response.code() == 200
+        return updated
     }
 }
 
