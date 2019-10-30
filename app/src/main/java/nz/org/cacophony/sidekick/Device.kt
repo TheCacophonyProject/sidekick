@@ -141,7 +141,6 @@ class Device(
     private fun updateStatusString() {
         updateNumberOfRecordingsToDownload()
         var newStatus = ""
-        Log.i(TAG, "state: ${sm.state}")
         if (!sm.state.connected) {
             newStatus = sm.state.message
         } else if (!sm.hasRecordingList) {
