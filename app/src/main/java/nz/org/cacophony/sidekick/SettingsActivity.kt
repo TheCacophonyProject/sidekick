@@ -2,9 +2,9 @@ package nz.org.cacophony.sidekick
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import android.view.View
-
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -12,6 +12,8 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        var tvVersion = findViewById<TextView>(R.id.tvVersion)
+        tvVersion.setText("Sidekick v${BuildConfig.VERSION_NAME}")
     }
 
     @Suppress("UNUSED_PARAMETER")

@@ -47,7 +47,7 @@ class DiscoveryManager(
     @Synchronized
     fun start() {
         var localList = listener
-        if (localList != null && localList.connected){
+        if (localList != null && localList.connected) {
             return
         }
         restarting = false
@@ -118,10 +118,6 @@ class DeviceListener(
         private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
 ) : NsdManager.DiscoveryListener {
     var connected: Boolean = false
-    @Synchronized
-    fun setOnStopped(onStopped: (() -> Unit)?) {
-        this.onStopped = onStopped
-    }
 
     override fun onDiscoveryStarted(regType: String) {
         Log.d(TAG, "Discovery started")
