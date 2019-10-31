@@ -19,10 +19,13 @@
 package nz.org.cacophony.sidekick
 
 import android.app.Activity
+import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import android.util.Log
 import kotlin.concurrent.thread
+
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
 
@@ -30,13 +33,27 @@ class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
         private val activity: Activity,
-        private val makeToast: (m: String, i : Int) -> Unit,
-        private val setRefreshBar: (active : Boolean) -> Unit) {
+        private val makeToast: (m: String, i: Int) -> Unit,
+        private val setRefreshBar: (active: Boolean) -> Unit) {
     private var listener: DeviceListener? = null
+    val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    private var multicastLock = wifi.createMulticastLock("multicastLock")
+    private var restarting: Boolean = false
+
+    init {
+        multicastLock.setReferenceCounted(false)
+    }
+
+    @Synchronized
+    fun start() {
+        restarting = false
+        startListener()
+    }
 
     @Synchronized
     fun restart(clear: Boolean = false) {
-        stopListener()
+        restarting = true;
+        var listenerFound = stopListener()
         if (clear) {
             val deviceMap = devices.getMap()
             for ((name, device) in deviceMap) {
@@ -49,27 +66,43 @@ class DiscoveryManager(
                 }
             }
         }
-        startListener()
+        if (listenerFound == false) {
+            startListener()
+        }
     }
 
     @Synchronized
     fun stop() {
+        restarting = false
         stopListener()
     }
 
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
+        multicastLock.acquire()
         setRefreshBar(true)
-        listener = DeviceListener(devices, activity, makeToast) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity, makeToast, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
+
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
-    private fun stopListener() {
+    private fun stopListener(): Boolean {
         if (listener != null) {
+            multicastLock.release()
             Log.d(TAG, "Stopping discovery")
             setRefreshBar(false)
             nsdManager.stopServiceDiscovery(listener)
-            listener = null
+            if (restarting == false) {
+                listener = null
+            }
+            return true;
+        }
+        return false
+    }
+
+    private fun notifyDiscoveryStopped() {
+        if (restarting) {
+            startListener()
         }
     }
 }
@@ -77,9 +110,15 @@ class DiscoveryManager(
 class DeviceListener(
         private val devices: DeviceList,
         private val activity: Activity,
-        private val makeToast: (m: String, i : Int) -> Unit,
-        private val resolveService:(svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
-): NsdManager.DiscoveryListener {
+        private val makeToast: (m: String, i: Int) -> Unit,
+        private var onStopped: (() -> Unit)? = null,
+        private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
+) : NsdManager.DiscoveryListener {
+
+    @Synchronized
+    fun setOnStopped(onStopped: (() -> Unit)?) {
+        this.onStopped = onStopped
+    }
 
     override fun onDiscoveryStarted(regType: String) {
         Log.d(TAG, "Discovery started")
@@ -91,6 +130,9 @@ class DeviceListener(
 
     override fun onDiscoveryStopped(serviceType: String) {
         Log.i(TAG, "Discovery stopped")
+        activity.runOnUiThread {
+            onStopped?.invoke()
+        }
     }
 
     override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
@@ -104,7 +146,7 @@ class DeviceListener(
 
     override fun onServiceLost(service: NsdServiceInfo) {
         Log.i(TAG, "Service lost: $service")
-        devices.remove(service.serviceName)
+        devices.removeByName(service.serviceName)
     }
 
     private fun startResolve(service: NsdServiceInfo) {
@@ -114,7 +156,7 @@ class DeviceListener(
                 Log.i(TAG, "Resolved ${svc.serviceName}: ${svc.host.hostAddress}:${svc.port} (${svc.host.hostName})")
                 val db = RecordingRoomDatabase.getDatabase(activity.applicationContext)
                 val recDao = db.recordingDao()
-                val device = devices.getMap().get(svc.serviceName)
+                val device = devices.getMap().get(svc.host.hostAddress)
                 if (device == null) {
                     val newDevice = Device(
                             svc.serviceName,
@@ -128,22 +170,26 @@ class DeviceListener(
                     if (newDevice.sm.state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
                         devices.add(newDevice)
                     }
-                } else  {
+                } else {
                     device.checkConnectionStatus()
                     if (device.sm.state.connected) {
+                        Log.d(TAG, "Updating ${svc.host.hostAddress} host ${device.name} with name ${svc.serviceName}")
+                        device.name = svc.serviceName;
                         device.getDeviceInfo()
                         device.updateRecordings()
+                        devices.deviceNameUpdated()
                     } else {
-                        devices.remove(svc.serviceName) // Device service was still found but could not connect to device
+                        devices.remove(svc.host.hostAddress) // Device service was still found but could not connect to device
                     }
                 }
+
             }
 
             override fun onResolveFailed(svc: NsdServiceInfo?, errorCode: Int) {
                 if (svc == null) return
                 when (errorCode) {
                     NsdManager.FAILURE_ALREADY_ACTIVE -> startResolve(svc)
-                            NsdManager.FAILURE_INTERNAL_ERROR -> Log.e(TAG, "FAILURE_INTERNAL_ERROR for resolution of $svc")
+                    NsdManager.FAILURE_INTERNAL_ERROR -> Log.e(TAG, "FAILURE_INTERNAL_ERROR for resolution of $svc")
                     NsdManager.FAILURE_MAX_LIMIT -> Log.e(TAG, "FAILURE_MAX_LIMIT for resolution of $svc")
                     else -> Log.e(TAG, "Error {$errorCode} for resolution of $svc")
                 }

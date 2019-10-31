@@ -24,7 +24,12 @@ class DeviceList {
 
     @Synchronized
     fun add(d: Device) {
-        devices[d.name] = d
+        devices[d.hostname] = d
+        notifyChange()
+    }
+
+    @Synchronized
+    fun deviceNameUpdated(){
         notifyChange()
     }
 
@@ -32,6 +37,16 @@ class DeviceList {
     fun remove(name: String) {
         if (devices.remove(name) != null) {
             notifyChange()
+        }
+    }
+    @Synchronized
+    fun removeByName(serviceName: String) {
+        for ((hostname, device) in devices) {
+            if (device.name == serviceName){
+                devices.remove(hostname);
+                notifyChange()
+                break;
+            }
         }
     }
 
