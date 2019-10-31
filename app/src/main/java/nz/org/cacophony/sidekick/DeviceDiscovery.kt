@@ -70,7 +70,7 @@ class DiscoveryManager(
                 }
             }
         }
-        if (listenerFound == false) {
+        if (!listenerFound) {
             startListener()
         }
     }

@@ -82,7 +82,6 @@ class MainActivity : AppCompatActivity() {
             adapter = deviceListAdapter
         }
 
-
         val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
         discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar)
 
