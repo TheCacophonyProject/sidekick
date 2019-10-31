@@ -46,6 +46,10 @@ class DiscoveryManager(
 
     @Synchronized
     fun start() {
+        var localList = listener
+        if (localList != null && localList.connected){
+            return
+        }
         restarting = false
         startListener()
     }
@@ -82,7 +86,6 @@ class DiscoveryManager(
         multicastLock.acquire()
         setRefreshBar(true)
         listener = DeviceListener(devices, activity, makeToast, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
-
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
@@ -114,7 +117,7 @@ class DeviceListener(
         private var onStopped: (() -> Unit)? = null,
         private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
 ) : NsdManager.DiscoveryListener {
-
+    var connected: Boolean = false
     @Synchronized
     fun setOnStopped(onStopped: (() -> Unit)?) {
         this.onStopped = onStopped
@@ -122,14 +125,17 @@ class DeviceListener(
 
     override fun onDiscoveryStarted(regType: String) {
         Log.d(TAG, "Discovery started")
+        connected = true;
     }
 
     override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
         Log.e(TAG, "Discovery start failed with $errorCode")
+        connected = true;
     }
 
     override fun onDiscoveryStopped(serviceType: String) {
         Log.i(TAG, "Discovery stopped")
+        connected = false;
         activity.runOnUiThread {
             onStopped?.invoke()
         }

@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         Log.d(TAG, "onResume")
         super.onResume()
-        discovery.restart()
+        discovery.start()
         CacophonyAPI.runUpdateGroupList(applicationContext)
     }
 
