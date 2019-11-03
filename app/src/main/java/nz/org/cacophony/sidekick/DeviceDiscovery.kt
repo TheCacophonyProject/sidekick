@@ -126,7 +126,7 @@ class DeviceListener(
 
     override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
         Log.e(TAG, "Discovery start failed with $errorCode")
-        connected = true;
+        connected = false;
     }
 
     override fun onDiscoveryStopped(serviceType: String) {
@@ -152,6 +152,8 @@ class DeviceListener(
     }
 
     private fun startResolve(service: NsdServiceInfo) {
+        Log.d(TAG, "startResolve $service")
+
         val resolveListener = object : NsdManager.ResolveListener {
             override fun onServiceResolved(svc: NsdServiceInfo?) {
                 if (svc == null) return
@@ -190,7 +192,10 @@ class DeviceListener(
             override fun onResolveFailed(svc: NsdServiceInfo?, errorCode: Int) {
                 if (svc == null) return
                 when (errorCode) {
-                    NsdManager.FAILURE_ALREADY_ACTIVE -> startResolve(svc)
+                    NsdManager.FAILURE_ALREADY_ACTIVE -> {
+                        Log.e(TAG, "FAILURE_ALREADY_ACTIVE for resolution of $svc")
+                        startResolve(svc)
+                    }
                     NsdManager.FAILURE_INTERNAL_ERROR -> Log.e(TAG, "FAILURE_INTERNAL_ERROR for resolution of $svc")
                     NsdManager.FAILURE_MAX_LIMIT -> Log.e(TAG, "FAILURE_MAX_LIMIT for resolution of $svc")
                     else -> Log.e(TAG, "Error {$errorCode} for resolution of $svc")
