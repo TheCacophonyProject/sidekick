@@ -9,28 +9,36 @@ import android.provider.Browser
 import android.util.Log
 import android.widget.Toast
 import okhttp3.*
-import org.json.JSONArray
-import java.io.*
-import java.lang.Exception
-import kotlin.concurrent.thread
 import okio.Okio
+import org.json.JSONArray
 import org.json.JSONObject
-import java.net.*
+import java.io.BufferedReader
+import java.io.File
+import java.io.InputStreamReader
+import java.net.ConnectException
+import java.net.HttpURLConnection
+import java.net.SocketException
+import java.net.URL
+import kotlin.concurrent.thread
 
 
 class Device(
-        val name: String,
-        private val hostname: String,
+        @Volatile var name: String,
+        val hostname: String,
         private val port: Int,
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
-        private val makeToast: (m: String, i : Int) -> Unit,
+        private val makeToast: (m: String, i: Int) -> Unit,
         private val dao: RecordingDao) {
-    @Volatile var deviceRecordings = emptyArray<String>()
-    @Volatile var statusString = ""
-    @Volatile var numRecToDownload = 0
-    @Volatile var sm = StateMachine()
-    private val client :OkHttpClient = OkHttpClient()
+    @Volatile
+    var deviceRecordings = emptyArray<String>()
+    @Volatile
+    var statusString = ""
+    @Volatile
+    var numRecToDownload = 0
+    @Volatile
+    var sm = StateMachine()
+    private val client: OkHttpClient = OkHttpClient()
     private val pr = PermissionHelper(activity.applicationContext)
     private var devicename: String = name
     private var groupname: String? = null
@@ -53,16 +61,16 @@ class Device(
 
         //for now so devices without latest management will still work
         sm.gotDeviceInfo()
-        val deviceJSON : JSONObject
+        val deviceJSON: JSONObject
         try {
 
             deviceJSON = JSONObject(apiRequest("GET", "/api/device-info").responseString)
-        } catch(e :Exception) {
+        } catch (e: Exception) {
             Log.e(TAG, "Exception when getting device info: $e")
             return
         }
         devicename = deviceJSON.getString("devicename")
-        if (devicename.isEmpty()){
+        if (devicename.isEmpty()) {
             devicename = name
         }
         groupname = deviceJSON.getString("groupname")
@@ -91,7 +99,7 @@ class Device(
     }
 
     // Delete recording from device and Database. Recording file is deleted when uploaded to the server
-    private fun deleteRecording(recording: Recording) : Boolean {
+    private fun deleteRecording(recording: Recording): Boolean {
         try {
             val request = Request.Builder()
                     .url(URL("http", hostname, port, "/api/recording/${recording.name}"))
@@ -112,7 +120,7 @@ class Device(
                 makeToast("Failed to delete '${recording.name}' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
             }
 
-        } catch (e : Exception) {
+        } catch (e: Exception) {
             Log.e(TAG, "Exception when deleting recording from device: $e")
         }
         return false
@@ -123,10 +131,10 @@ class Device(
         if (!checkConnectionStatus()) {
             return
         }
-        val recJSON : JSONArray
+        val recJSON: JSONArray
         try {
             recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)  //TODO check response from apiRequest
-        } catch(e :Exception) {
+        } catch (e: Exception) {
             Log.e(TAG, "Exception when updating recording list: $e")
             return
         }
@@ -217,7 +225,7 @@ class Device(
         }
     }
 
-    private fun downloadRecording(recordingName: String) : Boolean {
+    private fun downloadRecording(recordingName: String): Boolean {
         try {
             val request = Request.Builder()
                     .url(URL("http", hostname, port, "/api/recording/$recordingName"))
@@ -252,7 +260,7 @@ class Device(
         return File("${Environment.getExternalStorageDirectory()}/cacophony-sidekick/$name")
     }
 
-    private fun makeDeviceDir() : Boolean {
+    private fun makeDeviceDir(): Boolean {
         return getDeviceDir().isDirectory || getDeviceDir().mkdirs()
     }
 
@@ -282,11 +290,11 @@ class Device(
                         }
                         response = responseBuffer.toString()
                     }
-                } catch(e: Exception) {
+                } catch (e: Exception) {
                     Log.i(TAG, "Error with connecting to device")
                 }
             }
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             Log.i(TAG, "Error with apiRequest")
         }
         Log.i(TAG, response)
@@ -309,7 +317,7 @@ class Device(
         }
     }
 
-    fun checkConnectionStatus(timeout : Int = 3000, showToast : Boolean = false, retries : Int = 3) : Boolean {
+    fun checkConnectionStatus(timeout: Int = 3000, showToast: Boolean = false, retries: Int = 3): Boolean {
         var connected = false
         for (i in 1..retries) {
             updateStatusString()
@@ -322,13 +330,13 @@ class Device(
                 sm.connected()
                 connected = true
                 break
-            } catch (e : SocketException) {
+            } catch (e: SocketException) {
                 Log.i(TAG, "failed to connect to device")
                 sm.connectionFailed()
-            } catch (e : ConnectException) {
+            } catch (e: ConnectException) {
                 sm.connectionToDeviceOnly()
                 Log.i(TAG, "failed to connect to interface")
-            } catch (e : Exception) {
+            } catch (e: Exception) {
                 Log.e(TAG, "failed connecting to device $e")
                 sm.connectionFailed()
             }
@@ -344,7 +352,7 @@ class Device(
         return connected
     }
 
-    fun updateLocation(location : Location): Boolean {
+    fun updateLocation(location: Location): Boolean {
         val client = OkHttpClient()
         val body = FormBody.Builder()
                 .addEncoded("latitude", location.latitude.toString())
@@ -366,15 +374,15 @@ class Device(
                 responseBody = (response.body() as ResponseBody).string()  //This also closes the body
             }
             Log.d(TAG, "Location update response: '$responseBody'")
-            updated =  response.code() == 200
-        } catch(e : Exception) {
+            updated = response.code() == 200
+        } catch (e: Exception) {
             Log.i(TAG, "failed to update location on device: $e")
         }
         return updated
     }
 }
 
-data class HttpResponse (val connection : HttpURLConnection, val responseString : String)
+data class HttpResponse(val connection: HttpURLConnection, val responseString: String)
 
 class StateMachine {
 
@@ -383,7 +391,7 @@ class StateMachine {
     var hasDeviceInfo = false
     var hasConnected = false
 
-    fun downloadingRecordings(downloading : Boolean) {
+    fun downloadingRecordings(downloading: Boolean) {
         if (downloading) {
             updateState(DeviceState.DOWNLOADING_RECORDINGS)
         } else if (state == DeviceState.DOWNLOADING_RECORDINGS) {
@@ -426,11 +434,15 @@ class StateMachine {
         hasRecordingList = true
     }
 
-    private fun updateState(newState : DeviceState) {
+    private fun updateState(newState: DeviceState) {
         if (state == newState) return
         val validSwitch = when (state) {
-            DeviceState.FOUND -> { true }
-            DeviceState.RECONNECT -> { true }
+            DeviceState.FOUND -> {
+                true
+            }
+            DeviceState.RECONNECT -> {
+                true
+            }
             DeviceState.CONNECTED -> {
                 newState in arrayListOf(
                         DeviceState.READY,
@@ -479,7 +491,7 @@ class StateMachine {
     }
 }
 
-enum class DeviceState(val message : String, val connected : Boolean) {
+enum class DeviceState(val message: String, val connected: Boolean) {
     FOUND("Found device. Trying to connect", false),
     CONNECTED("Connected.", true),
     RECONNECT("Trying to reconnect", false),

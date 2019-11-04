@@ -48,10 +48,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var discovery: DiscoveryManager
     private lateinit var deviceList: DeviceList
     private lateinit var recDao: RecordingDao
-    private lateinit var networkChangeReceiver : NetworkChangeReceiver
-    private lateinit var permissionHelper : PermissionHelper
-    private var locationRequest : LocationRequest? = null
-    @Volatile var uploading = false
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+    private lateinit var permissionHelper: PermissionHelper
+    private var locationRequest: LocationRequest? = null
+    @Volatile
+    var uploading = false
     private val locationSettingsUpdateCode = 5
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +82,7 @@ class MainActivity : AppCompatActivity() {
             adapter = deviceListAdapter
         }
 
-        val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
+        val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
         discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar)
 
         val networkIntentFilter = IntentFilter()
@@ -94,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         CacophonyAPI.runUpdateGroupList(applicationContext)
     }
 
-    class NetworkChangeReceiver(val networkUpdate : (() -> Unit)) : BroadcastReceiver() {
+    class NetworkChangeReceiver(val networkUpdate: (() -> Unit)) : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             networkUpdate()
         }
@@ -128,7 +129,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun openNetworkSettings(v : View) {
+    fun openNetworkSettings(v: View) {
         val intent = Intent()
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
@@ -136,7 +137,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun enableValidAp(v : View) {
+    fun enableValidAp(v: View) {
         val wifiHelper = WifiHelper(applicationContext)
         makeToast("Turning on hotspot")
         if (wifiHelper.enableValidAp()) {
@@ -146,7 +147,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setRefreshBar(active : Boolean) {
+    private fun setRefreshBar(active: Boolean) {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
         if (active) {
             progressBar.visibility = View.VISIBLE
@@ -172,7 +173,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun downloadAll(v : View) {
+    fun downloadAll(v: View) {
         for ((_, device) in deviceList.getMap()) {
             device.startDownloadRecordings()
         }
@@ -182,8 +183,10 @@ class MainActivity : AppCompatActivity() {
     fun uploadRecordings(v: View) {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
-        mWakeLock.acquire(5*60*1000)
-        if (uploading) { return }
+        mWakeLock.acquire(5 * 60 * 1000)
+        if (uploading) {
+            return
+        }
         uploading = true
         val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
         uploadButton.isClickable = false
@@ -202,7 +205,7 @@ class MainActivity : AppCompatActivity() {
                     CacophonyAPI.uploadRecording(applicationContext, rec)
                     recDao.setAsUploaded(rec.id)
                     File(rec.recordingPath).delete()
-                } catch (e : Exception) {
+                } catch (e: Exception) {
                     if (e.message == null) {
                         makeToast("Unknown error with uploading recordings")
                     } else {
@@ -271,21 +274,20 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         Log.d(TAG, "onPause")
         super.onPause()
-        discovery.stop()
     }
 
-    fun makeToast(message : String, length : Int = Toast.LENGTH_LONG) {
+    fun makeToast(message: String, length: Int = Toast.LENGTH_LONG) {
         runOnUiThread {
             Toast.makeText(applicationContext, message, length).show()
         }
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun setLocationButton(v : View) {
+    fun setLocationButton(v: View) {
         setDevicesLocation(true)
     }
 
-    private fun setDevicesLocation(requestUpdate : Boolean) {
+    private fun setDevicesLocation(requestUpdate: Boolean) {
         if (!permissionHelper.check(Manifest.permission.ACCESS_FINE_LOCATION)) {
             if (requestUpdate) {
                 permissionHelper.request(this, Manifest.permission.ACCESS_FINE_LOCATION, permissionHelper.locationUpdate)
@@ -318,7 +320,7 @@ class MainActivity : AppCompatActivity() {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             try {
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
-            } catch(e: SecurityException) {
+            } catch (e: SecurityException) {
                 Log.e(TAG, e.toString())
                 makeToast("Failed to request location updates")
                 resetUpdateLocationButton()
@@ -327,7 +329,7 @@ class MainActivity : AppCompatActivity() {
 
         task.addOnFailureListener { e ->
             Log.i(TAG, "Don't have required location settings.")
-            if (e is ResolvableApiException){
+            if (e is ResolvableApiException) {
                 try {
                     Log.i(TAG, "Requesting location settings to be updated")
                     e.startResolutionForResult(this@MainActivity, locationSettingsUpdateCode)
@@ -344,12 +346,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        when(requestCode) {
+        when (requestCode) {
             locationSettingsUpdateCode -> {
                 if (resultCode == -1) {
                     createLocationRequest()
                 } else {
-                    makeToast( "Don't have proper location settings to get location.")
+                    makeToast("Don't have proper location settings to get location.")
                     resetUpdateLocationButton()
                 }
             }
@@ -362,7 +364,7 @@ class MainActivity : AppCompatActivity() {
             val locationList = locationResult.locations
             if (locationList.size > 0) {
                 val location = locationList[locationList.size - 1]
-                Log.i(TAG, "lat ${location.latitude}, "+
+                Log.i(TAG, "lat ${location.latitude}, " +
                         "long: ${location.longitude}, " +
                         "alt: ${location.altitude}, " +
                         "acc: ${location.accuracy}, " +
@@ -406,7 +408,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        when(requestCode) {
+        when (requestCode) {
             permissionHelper.locationUpdate -> setDevicesLocation(false)
             else -> permissionHelper.onResult(requestCode, permissions, grantResults, ::makeToast)
         }
