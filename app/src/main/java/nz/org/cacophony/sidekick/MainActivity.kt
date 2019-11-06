@@ -54,6 +54,9 @@ class MainActivity : AppCompatActivity() {
     @Volatile
     var uploading = false
     private val locationSettingsUpdateCode = 5
+    private val locationMaxAttempts = 5
+    @Volatile var locationCount = 0
+    @Volatile var bestLocation: Location? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
@@ -305,10 +308,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun createLocationRequest() {
         val locationRequest = LocationRequest.create().apply {
-            interval = 10000
-            fastestInterval = 5000
+            interval = 3000
+            fastestInterval = 1000
+            maxWaitTime = 5000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            numUpdates = 1
+            numUpdates = locationMaxAttempts
         }
 
         val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
@@ -319,7 +323,9 @@ class MainActivity : AppCompatActivity() {
             Log.i(TAG, "Have required location settings")
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             try {
-                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+                bestLocation = null
+                locationCount = 0
+                fusedLocationClient.requestLocationUpdates(locationRequest, makeLocationCallback(fusedLocationClient), Looper.getMainLooper())
             } catch (e: SecurityException) {
                 Log.e(TAG, e.toString())
                 makeToast("Failed to request location updates")
@@ -358,28 +364,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private var locationCallback: LocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            Log.i(TAG, "location update")
-            val locationList = locationResult.locations
-            if (locationList.size > 0) {
-                val location = locationList[locationList.size - 1]
+
+    private fun makeLocationCallback(lc: FusedLocationProviderClient): LocationCallback {
+        return object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                locationCount++
+                val location = locationResult.lastLocation
                 Log.i(TAG, "lat ${location.latitude}, " +
                         "long: ${location.longitude}, " +
                         "alt: ${location.altitude}, " +
                         "acc: ${location.accuracy}, " +
                         "time: ${location.time}")
-                if (location.latitude == 0.0 && location.longitude == 0.0) {
-                    resetUpdateLocationButton()
-                    makeToast("Invalid location")
-                } else {
-                    updateDevicesLocation(location)
+
+                if (location.accuracy >= 100 || location.latitude == 0.0 && location.longitude == 0.0) {
+                    Log.d(TAG, "location not accurate enough or invalid")
+                    return
+                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy ) {
+                    bestLocation = location
                 }
-            } else {
-                makeToast("Failed to get new location")
-                resetUpdateLocationButton()
+
+                if (location != null && (bestLocation!!.accuracy < 20 || locationCount == locationMaxAttempts)) {
+                    lc.removeLocationUpdates(this)
+                    updateDevicesLocation(location)
+                } else if (locationCount == locationMaxAttempts) {
+                    lc.removeLocationUpdates(this)
+                    makeToast("Failed to find a location")
+                    resetUpdateLocationButton()
+                }
             }
-            locationRequest = null
         }
     }
 
@@ -394,7 +406,7 @@ class MainActivity : AppCompatActivity() {
                     makeToast("Failed to update location on '${device.name}'")
                 }
             }
-            makeToast("Finished updating location for devices")
+            makeToast("Finished updating location for devices with an accuracy of ${location.accuracy}")
             resetUpdateLocationButton()
         }
     }
