@@ -378,7 +378,6 @@ class MainActivity : AppCompatActivity() {
 
                 if (location.accuracy >= 100 || location.latitude == 0.0 && location.longitude == 0.0) {
                     Log.d(TAG, "location not accurate enough or invalid")
-                    return
                 } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy ) {
                     bestLocation = location
                 }
