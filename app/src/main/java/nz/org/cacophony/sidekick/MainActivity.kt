@@ -41,6 +41,7 @@ import kotlin.concurrent.thread
 
 
 const val TAG = "cacophony-manager"
+const val LOCATION_MAX_ATTEMPTS = 5
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: androidx.recyclerview.widget.RecyclerView
@@ -54,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     @Volatile
     var uploading = false
     private val locationSettingsUpdateCode = 5
-    private val locationMaxAttempts = 5
     @Volatile var locationCount = 0
     @Volatile var bestLocation: Location? = null
 
@@ -312,7 +312,7 @@ class MainActivity : AppCompatActivity() {
             fastestInterval = 1000
             maxWaitTime = 5000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            numUpdates = locationMaxAttempts
+            numUpdates = LOCATION_MAX_ATTEMPTS
         }
 
         val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
@@ -382,10 +382,10 @@ class MainActivity : AppCompatActivity() {
                     bestLocation = location
                 }
 
-                if (location != null && (bestLocation!!.accuracy < 20 || locationCount == locationMaxAttempts)) {
+                if (bestLocation != null && (bestLocation!!.accuracy < 20 || locationCount == LOCATION_MAX_ATTEMPTS)) {
                     lc.removeLocationUpdates(this)
-                    updateDevicesLocation(location)
-                } else if (locationCount == locationMaxAttempts) {
+                    updateDevicesLocation(bestLocation!!)
+                } else if (locationCount == LOCATION_MAX_ATTEMPTS) {
                     lc.removeLocationUpdates(this)
                     makeToast("Failed to find a location")
                     resetUpdateLocationButton()
