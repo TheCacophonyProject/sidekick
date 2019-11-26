@@ -19,6 +19,7 @@
 package nz.org.cacophony.sidekick
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.*
 import android.graphics.PorterDuff
 import android.location.Location
@@ -86,7 +87,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeMessage, ::setRefreshBar)
 
         val networkIntentFilter = IntentFilter()
         networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")
@@ -142,11 +143,11 @@ class MainActivity : AppCompatActivity() {
     @Suppress("UNUSED_PARAMETER")
     fun enableValidAp(v: View) {
         val wifiHelper = WifiHelper(applicationContext)
-        makeToast("Turning on hotspot")
+        makeMessage("Turning on hotspot", true)
         if (wifiHelper.enableValidAp()) {
-            makeToast("Hotspot turned on")
+            makeMessage("Hotspot turned on", true)
         } else {
-            makeToast("Failed to turn on hotspot")
+            makeMessage("Failed to turn on hotspot", false)
         }
     }
 
@@ -199,6 +200,7 @@ class MainActivity : AppCompatActivity() {
             val recordingsToUpload = recDao.recordingsToUpload
             val recLen = recordingsToUpload.size
             var recNum = 0
+            var allUploaded = true
             for (rec in recordingsToUpload) {
                 recNum++
                 uploadButton.post {
@@ -209,17 +211,20 @@ class MainActivity : AppCompatActivity() {
                     recDao.setAsUploaded(rec.id)
                     File(rec.recordingPath).delete()
                 } catch (e: Exception) {
+                    allUploaded = false
                     if (e.message == null) {
-                        makeToast("Unknown error with uploading recordings")
+                        makeMessage("Unknown error with uploading recordings", true)
                     } else {
-                        makeToast(e.message!!)
+                        makeMessage(e.message!!, true)
                     }
                 }
             }
             if (recordingsToUpload.size == 0) {
-                makeToast("No recordings to upload")
+                makeMessage("No recordings to upload", false)
+            } else if (allUploaded) {
+                makeMessage("Finished uploading recordings", false)
             } else {
-                makeToast("Finished uploading recordings")
+                makeMessage("Failed to upload some or all recordings", false)
             }
             uploadButton.post {
                 uploadButton.text = "Upload Recordings"
@@ -279,9 +284,20 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    fun makeToast(message: String, length: Int = Toast.LENGTH_LONG) {
+    fun makeMessage(message: String, toast: Boolean) {
         runOnUiThread {
-            Toast.makeText(applicationContext, message, length).show()
+            if (toast) {
+                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+            } else {
+                val dialogBuilder = AlertDialog.Builder(this)
+                dialogBuilder
+                        .setMessage(message)
+                        .setCancelable(false)
+                        .setPositiveButton("OK", { _, _ -> })
+                val alert = dialogBuilder.create()
+                alert.setTitle("Message")
+                alert.show()
+            }
         }
     }
 
@@ -328,7 +344,7 @@ class MainActivity : AppCompatActivity() {
                 fusedLocationClient.requestLocationUpdates(locationRequest, makeLocationCallback(fusedLocationClient), Looper.getMainLooper())
             } catch (e: SecurityException) {
                 Log.e(TAG, e.toString())
-                makeToast("Failed to request location updates")
+                makeMessage("Failed to request location updates", false)
                 resetUpdateLocationButton()
             }
         }
@@ -357,7 +373,7 @@ class MainActivity : AppCompatActivity() {
                 if (resultCode == -1) {
                     createLocationRequest()
                 } else {
-                    makeToast("Don't have proper location settings to get location.")
+                    makeMessage("Don't have proper location settings to get location.", false)
                     resetUpdateLocationButton()
                 }
             }
@@ -387,7 +403,7 @@ class MainActivity : AppCompatActivity() {
                     updateDevicesLocation(bestLocation!!)
                 } else if (locationCount == LOCATION_MAX_ATTEMPTS) {
                     lc.removeLocationUpdates(this)
-                    makeToast("Failed to find a location")
+                    makeMessage("Failed to find a location", false)
                     resetUpdateLocationButton()
                 }
             }
@@ -402,10 +418,10 @@ class MainActivity : AppCompatActivity() {
         thread(start = true) {
             for ((_, device) in deviceList.getMap()) {
                 if (!device.updateLocation(location)) {
-                    makeToast("Failed to update location on '${device.name}'")
+                    makeMessage("Failed to update location on '${device.name}'", false)
                 }
             }
-            makeToast("Finished updating location for devices with an accuracy of ${location.accuracy}")
+            makeMessage("Finished updating location for devices with an accuracy of ${location.accuracy}", false)
             resetUpdateLocationButton()
         }
     }
@@ -421,7 +437,7 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             permissionHelper.locationUpdate -> setDevicesLocation(false)
-            else -> permissionHelper.onResult(requestCode, permissions, grantResults, ::makeToast)
+            else -> permissionHelper.onResult(requestCode, permissions, grantResults, ::makeMessage)
         }
     }
 }

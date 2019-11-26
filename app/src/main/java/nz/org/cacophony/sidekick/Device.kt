@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.Browser
 import android.util.Log
-import android.widget.Toast
 import okhttp3.*
 import okio.Okio
 import org.json.JSONArray
@@ -28,7 +27,7 @@ class Device(
         private val port: Int,
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
-        private val makeToast: (m: String, i: Int) -> Unit,
+        private val makeMessage: (m: String, t: Boolean) -> Unit,
         private val dao: RecordingDao) {
     @Volatile
     var deviceRecordings = emptyArray<String>()
@@ -83,17 +82,20 @@ class Device(
     fun updateRecordings() {
         updateRecordingsList()
         val uploadedRecordings = dao.getUploadedFromDevice(devicename, groupname)
-        if (!checkConnectionStatus(showToast = true)) {
+        if (!checkConnectionStatus(showMessage = true)) {
             return
         }
+        var allDeleted = true
         for (rec in uploadedRecordings) {
             Log.i(TAG, "Uploaded recording: $rec")
             if (rec.name in deviceRecordings) {
-                //TODO have error message show when deletion fails
-                deleteRecording(rec)
+                allDeleted = allDeleted && deleteRecording(rec)
             } else {
                 dao.deleteRecording(rec.id)
             }
+        }
+        if (!allDeleted) {
+            makeMessage("Failed to delete some old recordings from device", false)
         }
         updateNumberOfRecordingsToDownload()
     }
@@ -115,9 +117,9 @@ class Device(
             val code = response.code()
             Log.i(TAG, "Delete recording '${recording.name}' on '$name' failed with code $code")
             if (code == 403) {
-                makeToast("Not authorized to delete recordings from '$name'", Toast.LENGTH_LONG)
+                makeMessage("Not authorized to delete recordings from '$name'", true)
             } else {
-                makeToast("Failed to delete '${recording.name}' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+                makeMessage("Failed to delete '${recording.name}' from '$name'. Response code: '$code'", true)
             }
 
         } catch (e: Exception) {
@@ -188,11 +190,11 @@ class Device(
             return
         }
         if (!pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            makeToast("App doesn't have permission to write to storage. Canceling download.", Toast.LENGTH_LONG)
+            makeMessage("App doesn't have permission to write to storage. Canceling download.", false)
             return
         }
         if (!makeDeviceDir()) {
-            makeToast("Failed to write to local storage. Canceling download.", Toast.LENGTH_SHORT)
+            makeMessage("Failed to write to local storage. Canceling download.", false)
             return
         }
         thread(start = true) {
@@ -203,6 +205,7 @@ class Device(
             val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
             Log.i(TAG, "recordings $deviceRecordings")
 
+            var allDownloaded = true
             for (recordingName in deviceRecordings) {
                 Log.i(TAG, recordingName)
                 if (recordingName !in downloadedRecordings) {
@@ -212,13 +215,17 @@ class Device(
                         val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
                         dao.insert(recording)
                     } else {
-                        if (!checkConnectionStatus(showToast = true)) break
+                        allDownloaded = false
+                        if (!checkConnectionStatus(showMessage = true)) break
                     }
                     updateStatusString()
                     //TODO note in the db if the recording failed
                 } else {
                     Log.i(TAG, "Already downloaded $recordingName")
                 }
+            }
+            if (!allDownloaded) {
+                makeMessage("Failed to download some recordings", false)
             }
             sm.downloadingRecordings(false)
             updateStatusString()
@@ -245,12 +252,12 @@ class Device(
             val code = response.code()
             Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
             if (code == 403) {
-                makeToast("Not authorized to download recordings from '$name'", Toast.LENGTH_LONG)
+                makeMessage("Not authorized to download recordings from '$name'", true)
             } else {
-                makeToast("Failed to download recording '$recordingName' from '$name'. Response code: '$code'", Toast.LENGTH_LONG)
+                makeMessage("Failed to download recording '$recordingName' from '$name'. Response code: '$code'", true)
             }
         } catch (e: Exception) {
-            makeToast("Error with downloading recording from '$name'", Toast.LENGTH_LONG)
+            makeMessage("Error with downloading recording from '$name'", true)
             Log.e(TAG, "Exception when downloading recording: $e")
         }
         return false
@@ -304,7 +311,7 @@ class Device(
     fun openManagementInterface() {
         thread(start = true) {
             Log.i(TAG, "open interface")
-            if (checkConnectionStatus(timeout = 1000, showToast = true, retries = 1)) {
+            if (checkConnectionStatus(timeout = 1000, showMessage = true, retries = 1)) {
                 val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
                 val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
                 httpBuilder.addQueryParameter("groups", groupList.joinToString("--"))
@@ -317,7 +324,7 @@ class Device(
         }
     }
 
-    fun checkConnectionStatus(timeout: Int = 3000, showToast: Boolean = false, retries: Int = 3): Boolean {
+    fun checkConnectionStatus(timeout: Int = 3000, showMessage: Boolean = false, retries: Int = 3): Boolean {
         var connected = false
         for (i in 1..retries) {
             updateStatusString()
@@ -345,8 +352,8 @@ class Device(
                 Thread.sleep(3000)
             }
         }
-        if (showToast && !connected) {
-            makeToast("$name: ${sm.state.message}", Toast.LENGTH_SHORT)
+        if (showMessage && !connected) {
+            makeMessage("$name: ${sm.state.message}", false)
         }
         updateStatusString()
         return connected
