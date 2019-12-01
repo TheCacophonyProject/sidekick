@@ -27,7 +27,7 @@ class Device(
         private val port: Int,
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
-        private val makeMessage: (m: String, t: Boolean) -> Unit,
+        private val messenger: Messenger,
         private val dao: RecordingDao) {
     @Volatile
     var deviceRecordings = emptyArray<String>()
@@ -95,7 +95,7 @@ class Device(
             }
         }
         if (!allDeleted) {
-            makeMessage("Failed to delete some old recordings from device", false)
+            messenger.alert("Failed to delete some old recordings from device")
         }
         updateNumberOfRecordingsToDownload()
     }
@@ -117,9 +117,9 @@ class Device(
             val code = response.code()
             Log.i(TAG, "Delete recording '${recording.name}' on '$name' failed with code $code")
             if (code == 403) {
-                makeMessage("Not authorized to delete recordings from '$name'", true)
+                messenger.toast("Not authorized to delete recordings from '$name'")
             } else {
-                makeMessage("Failed to delete '${recording.name}' from '$name'. Response code: '$code'", true)
+                messenger.toast("Failed to delete '${recording.name}' from '$name'. Response code: '$code'")
             }
 
         } catch (e: Exception) {
@@ -190,11 +190,11 @@ class Device(
             return
         }
         if (!pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            makeMessage("App doesn't have permission to write to storage. Canceling download.", false)
+            messenger.alert("App doesn't have permission to write to storage. Canceling download.")
             return
         }
         if (!makeDeviceDir()) {
-            makeMessage("Failed to write to local storage. Canceling download.", false)
+            messenger.alert("Failed to write to local storage. Canceling download.")
             return
         }
         thread(start = true) {
@@ -225,7 +225,7 @@ class Device(
                 }
             }
             if (!allDownloaded) {
-                makeMessage("Failed to download some recordings", false)
+                messenger.alert("Failed to download some recordings")
             }
             sm.downloadingRecordings(false)
             updateStatusString()
@@ -252,12 +252,12 @@ class Device(
             val code = response.code()
             Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
             if (code == 403) {
-                makeMessage("Not authorized to download recordings from '$name'", true)
+                messenger.toast("Not authorized to download recordings from '$name'")
             } else {
-                makeMessage("Failed to download recording '$recordingName' from '$name'. Response code: '$code'", true)
+                messenger.toast("Failed to download recording '$recordingName' from '$name'. Response code: '$code'")
             }
         } catch (e: Exception) {
-            makeMessage("Error with downloading recording from '$name'", true)
+            messenger.toast("Error with downloading recording from '$name'")
             Log.e(TAG, "Exception when downloading recording: $e")
         }
         return false
@@ -353,7 +353,7 @@ class Device(
             }
         }
         if (showMessage && !connected) {
-            makeMessage("$name: ${sm.state.message}", false)
+            messenger.alert("$name: ${sm.state.message}")
         }
         updateStatusString()
         return connected

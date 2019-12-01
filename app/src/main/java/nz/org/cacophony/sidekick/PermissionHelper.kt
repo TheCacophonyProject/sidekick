@@ -45,15 +45,15 @@ class PermissionHelper(private val c : Context) {
         ActivityCompat.requestPermissions(activity, arrayListOf(name).toTypedArray(), requestCode)
     }
 
-    fun onResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray, makeMessage: (m: String, t : Boolean) -> Unit) {
+    fun onResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray, messenger: Messenger) {
         for (p in permissionList) {
             val index = permissions.indexOf(p.permissionName)
             if (index >= 0 && grantResults[index] == PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, p.successMessage)
-                makeMessage(p.successMessage, false)
+                messenger.alert(p.successMessage)
             } else if (index >= 0) {
                 Log.i(TAG, p.failMessage)
-                makeMessage(p.failMessage, true)
+                messenger.toast(p.failMessage)
             }
         }
     }

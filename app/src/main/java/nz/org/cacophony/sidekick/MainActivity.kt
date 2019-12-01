@@ -58,11 +58,13 @@ class MainActivity : AppCompatActivity() {
     private val locationSettingsUpdateCode = 5
     @Volatile var locationCount = 0
     @Volatile var bestLocation: Location? = null
+    private lateinit var messenger: Messenger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        messenger = Messenger(this)
         setProgressBarColor()
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
@@ -87,7 +89,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeMessage, ::setRefreshBar)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, messenger, ::setRefreshBar)
 
         val networkIntentFilter = IntentFilter()
         networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")
@@ -143,11 +145,11 @@ class MainActivity : AppCompatActivity() {
     @Suppress("UNUSED_PARAMETER")
     fun enableValidAp(v: View) {
         val wifiHelper = WifiHelper(applicationContext)
-        makeMessage("Turning on hotspot", true)
+        messenger.toast("Turning on hotspot")
         if (wifiHelper.enableValidAp()) {
-            makeMessage("Hotspot turned on", true)
+            messenger.toast("Hotspot turned on")
         } else {
-            makeMessage("Failed to turn on hotspot", false)
+            messenger.alert("Failed to turn on hotspot")
         }
     }
 
@@ -213,18 +215,18 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     allUploaded = false
                     if (e.message == null) {
-                        makeMessage("Unknown error with uploading recordings", true)
+                        messenger.toast("Unknown error with uploading recordings")
                     } else {
-                        makeMessage(e.message!!, true)
+                        messenger.toast(e.message!!)
                     }
                 }
             }
             if (recordingsToUpload.size == 0) {
-                makeMessage("No recordings to upload", false)
+                messenger.alert("No recordings to upload")
             } else if (allUploaded) {
-                makeMessage("Finished uploading recordings", false)
+                messenger.alert("Finished uploading recordings")
             } else {
-                makeMessage("Failed to upload some or all recordings", false)
+                messenger.alert("Failed to upload some or all recordings")
             }
             uploadButton.post {
                 uploadButton.text = "Upload Recordings"
@@ -284,23 +286,6 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    fun makeMessage(message: String, toast: Boolean) {
-        runOnUiThread {
-            if (toast) {
-                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
-            } else {
-                val dialogBuilder = AlertDialog.Builder(this)
-                dialogBuilder
-                        .setMessage(message)
-                        .setCancelable(false)
-                        .setPositiveButton("OK", { _, _ -> })
-                val alert = dialogBuilder.create()
-                alert.setTitle("Message")
-                alert.show()
-            }
-        }
-    }
-
     @Suppress("UNUSED_PARAMETER")
     fun setLocationButton(v: View) {
         setDevicesLocation(true)
@@ -344,7 +329,7 @@ class MainActivity : AppCompatActivity() {
                 fusedLocationClient.requestLocationUpdates(locationRequest, makeLocationCallback(fusedLocationClient), Looper.getMainLooper())
             } catch (e: SecurityException) {
                 Log.e(TAG, e.toString())
-                makeMessage("Failed to request location updates", false)
+                messenger.alert("Failed to request location updates")
                 resetUpdateLocationButton()
             }
         }
@@ -373,7 +358,7 @@ class MainActivity : AppCompatActivity() {
                 if (resultCode == -1) {
                     createLocationRequest()
                 } else {
-                    makeMessage("Don't have proper location settings to get location.", false)
+                    messenger.alert("Don't have proper location settings to get location.")
                     resetUpdateLocationButton()
                 }
             }
@@ -403,7 +388,7 @@ class MainActivity : AppCompatActivity() {
                     updateDevicesLocation(bestLocation!!)
                 } else if (locationCount == LOCATION_MAX_ATTEMPTS) {
                     lc.removeLocationUpdates(this)
-                    makeMessage("Failed to find a location", false)
+                    messenger.alert("Failed to find a location")
                     resetUpdateLocationButton()
                 }
             }
@@ -418,10 +403,10 @@ class MainActivity : AppCompatActivity() {
         thread(start = true) {
             for ((_, device) in deviceList.getMap()) {
                 if (!device.updateLocation(location)) {
-                    makeMessage("Failed to update location on '${device.name}'", false)
+                    messenger.alert("Failed to update location on '${device.name}'")
                 }
             }
-            makeMessage("Finished updating location for devices with an accuracy of ${location.accuracy}", false)
+            messenger.alert("Finished updating location for devices with an accuracy of ${location.accuracy}")
             resetUpdateLocationButton()
         }
     }
@@ -437,7 +422,7 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             permissionHelper.locationUpdate -> setDevicesLocation(false)
-            else -> permissionHelper.onResult(requestCode, permissions, grantResults, ::makeMessage)
+            else -> permissionHelper.onResult(requestCode, permissions, grantResults, messenger)
         }
     }
 }

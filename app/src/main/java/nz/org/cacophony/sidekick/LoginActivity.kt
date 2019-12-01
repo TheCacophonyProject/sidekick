@@ -70,7 +70,7 @@ class LoginScreen : AppCompatActivity() {
                     }
                 }
                 runOnUiThread {
-                    makeMessage(errorMessage, false)
+                    Toast.makeText(applicationContext, errorMessage, Toast.LENGTH_LONG).show()
                 }
             }
             passwordEditText.post {
@@ -98,22 +98,5 @@ class LoginScreen : AppCompatActivity() {
     private fun gotoMainActivity() {
         val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
-    }
-
-    private fun makeMessage(message: String, toast: Boolean) {
-        runOnUiThread {
-            if (toast) {
-                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
-            } else {
-                val dialogBuilder = AlertDialog.Builder(this)
-                dialogBuilder
-                        .setMessage(message)
-                        .setCancelable(false)
-                        .setPositiveButton("OK", { _, _ -> })
-                val alert = dialogBuilder.create()
-                alert.setTitle("Message")
-                alert.show()
-            }
-        }
     }
 }
