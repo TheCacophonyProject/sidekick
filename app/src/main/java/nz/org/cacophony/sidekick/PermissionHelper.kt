@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.util.Log
-import android.widget.Toast
 
 class PermissionHelper(private val c : Context) {
     val multipleRequests = 1
@@ -46,15 +45,15 @@ class PermissionHelper(private val c : Context) {
         ActivityCompat.requestPermissions(activity, arrayListOf(name).toTypedArray(), requestCode)
     }
 
-    fun onResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray, makeToast: (m: String, i : Int) -> Unit) {
+    fun onResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray, messenger: Messenger) {
         for (p in permissionList) {
             val index = permissions.indexOf(p.permissionName)
             if (index >= 0 && grantResults[index] == PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, p.successMessage)
-                makeToast(p.successMessage, Toast.LENGTH_SHORT)
+                messenger.alert(p.successMessage)
             } else if (index >= 0) {
                 Log.i(TAG, p.failMessage)
-                makeToast(p.failMessage, Toast.LENGTH_LONG)
+                messenger.toast(p.failMessage)
             }
         }
     }

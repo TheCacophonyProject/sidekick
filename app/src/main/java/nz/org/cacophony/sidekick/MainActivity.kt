@@ -19,6 +19,7 @@
 package nz.org.cacophony.sidekick
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.*
 import android.graphics.PorterDuff
 import android.location.Location
@@ -57,11 +58,13 @@ class MainActivity : AppCompatActivity() {
     private val locationSettingsUpdateCode = 5
     @Volatile var locationCount = 0
     @Volatile var bestLocation: Location? = null
+    private lateinit var messenger: Messenger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        messenger = Messenger(this)
         setProgressBarColor()
         thread(start = true) {
             val db = RecordingRoomDatabase.getDatabase(applicationContext)
@@ -86,7 +89,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, ::makeToast, ::setRefreshBar)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, messenger, ::setRefreshBar)
 
         val networkIntentFilter = IntentFilter()
         networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")
@@ -142,11 +145,11 @@ class MainActivity : AppCompatActivity() {
     @Suppress("UNUSED_PARAMETER")
     fun enableValidAp(v: View) {
         val wifiHelper = WifiHelper(applicationContext)
-        makeToast("Turning on hotspot")
+        messenger.toast("Turning on hotspot")
         if (wifiHelper.enableValidAp()) {
-            makeToast("Hotspot turned on")
+            messenger.toast("Hotspot turned on")
         } else {
-            makeToast("Failed to turn on hotspot")
+            messenger.alert("Failed to turn on hotspot")
         }
     }
 
@@ -199,6 +202,7 @@ class MainActivity : AppCompatActivity() {
             val recordingsToUpload = recDao.recordingsToUpload
             val recLen = recordingsToUpload.size
             var recNum = 0
+            var allUploaded = true
             for (rec in recordingsToUpload) {
                 recNum++
                 uploadButton.post {
@@ -209,17 +213,20 @@ class MainActivity : AppCompatActivity() {
                     recDao.setAsUploaded(rec.id)
                     File(rec.recordingPath).delete()
                 } catch (e: Exception) {
+                    allUploaded = false
                     if (e.message == null) {
-                        makeToast("Unknown error with uploading recordings")
+                        messenger.toast("Unknown error with uploading recordings")
                     } else {
-                        makeToast(e.message!!)
+                        messenger.toast(e.message!!)
                     }
                 }
             }
             if (recordingsToUpload.size == 0) {
-                makeToast("No recordings to upload")
+                messenger.alert("No recordings to upload")
+            } else if (allUploaded) {
+                messenger.alert("Finished uploading recordings")
             } else {
-                makeToast("Finished uploading recordings")
+                messenger.alert("Failed to upload some or all recordings")
             }
             uploadButton.post {
                 uploadButton.text = "Upload Recordings"
@@ -279,12 +286,6 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    fun makeToast(message: String, length: Int = Toast.LENGTH_LONG) {
-        runOnUiThread {
-            Toast.makeText(applicationContext, message, length).show()
-        }
-    }
-
     @Suppress("UNUSED_PARAMETER")
     fun setLocationButton(v: View) {
         setDevicesLocation(true)
@@ -328,7 +329,7 @@ class MainActivity : AppCompatActivity() {
                 fusedLocationClient.requestLocationUpdates(locationRequest, makeLocationCallback(fusedLocationClient), Looper.getMainLooper())
             } catch (e: SecurityException) {
                 Log.e(TAG, e.toString())
-                makeToast("Failed to request location updates")
+                messenger.alert("Failed to request location updates")
                 resetUpdateLocationButton()
             }
         }
@@ -357,7 +358,7 @@ class MainActivity : AppCompatActivity() {
                 if (resultCode == -1) {
                     createLocationRequest()
                 } else {
-                    makeToast("Don't have proper location settings to get location.")
+                    messenger.alert("Don't have proper location settings to get location.")
                     resetUpdateLocationButton()
                 }
             }
@@ -387,7 +388,7 @@ class MainActivity : AppCompatActivity() {
                     updateDevicesLocation(bestLocation!!)
                 } else if (locationCount == LOCATION_MAX_ATTEMPTS) {
                     lc.removeLocationUpdates(this)
-                    makeToast("Failed to find a location")
+                    messenger.alert("Failed to find a location")
                     resetUpdateLocationButton()
                 }
             }
@@ -402,10 +403,10 @@ class MainActivity : AppCompatActivity() {
         thread(start = true) {
             for ((_, device) in deviceList.getMap()) {
                 if (!device.updateLocation(location)) {
-                    makeToast("Failed to update location on '${device.name}'")
+                    messenger.alert("Failed to update location on '${device.name}'")
                 }
             }
-            makeToast("Finished updating location for devices with an accuracy of ${location.accuracy}")
+            messenger.alert("Finished updating location for devices with an accuracy of ${location.accuracy}")
             resetUpdateLocationButton()
         }
     }
@@ -421,7 +422,7 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             permissionHelper.locationUpdate -> setDevicesLocation(false)
-            else -> permissionHelper.onResult(requestCode, permissions, grantResults, ::makeToast)
+            else -> permissionHelper.onResult(requestCode, permissions, grantResults, messenger)
         }
     }
 }
