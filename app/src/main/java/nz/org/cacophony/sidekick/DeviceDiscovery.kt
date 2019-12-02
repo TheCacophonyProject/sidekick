@@ -39,7 +39,7 @@ class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
         private val activity: Activity,
-        private val makeToast: (m: String, i: Int) -> Unit,
+        private val messenger: Messenger,
         private val setRefreshBar: (active: Boolean) -> Unit) {
     private var listener: DeviceListener? = null
     val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -91,7 +91,7 @@ class DiscoveryManager(
         Log.d(TAG, "Starting discovery")
         multicastLock.acquire()
         setRefreshBar(true)
-        listener = DeviceListener(devices, activity, makeToast, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
         mdns();
     }
@@ -127,7 +127,7 @@ class DiscoveryManager(
 class DeviceListener(
         private val devices: DeviceList,
         private val activity: Activity,
-        private val makeToast: (m: String, i: Int) -> Unit,
+        private val messenger: Messenger,
         private var onStopped: (() -> Unit)? = null,
         private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
 ) : NsdManager.DiscoveryListener {
@@ -182,7 +182,7 @@ class DeviceListener(
                             svc.port,
                             activity,
                             devices.getOnChanged(),
-                            makeToast,
+                            messenger,
                             recDao)
                     //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
                     if (newDevice.sm.state != DeviceState.ERROR_CONNECTING_TO_DEVICE) {
