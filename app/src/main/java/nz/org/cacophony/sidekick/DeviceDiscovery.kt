@@ -220,7 +220,7 @@ class DeviceListener(
     }
 
     public fun deviceConnected(serviceName: String, hostAddress: String, port: Int) {
-        if (!checkConnectionStatus(serviceName, retries = 1)) {
+        if (!checkConnectionStatus(hostAddress, retries = 1)) {
             devices.remove(hostAddress);
             return;
         }
