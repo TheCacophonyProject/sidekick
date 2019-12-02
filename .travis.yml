@@ -19,9 +19,6 @@ licenses:
   - google-gdk-license-.+
 before_install:
   - chmod +x gradlew
-  - gem update --system
-  - gem install bundler
-  - bundle install
   - echo 'count=0' > /home/travis/.android/repositories.cfg
   - echo y | sdkmanager "platform-tools" >/dev/null
   - echo y | sdkmanager "tools" >/dev/null
