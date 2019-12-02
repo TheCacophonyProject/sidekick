@@ -271,6 +271,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "onResume")
         super.onResume()
         discovery.restart(clear = true)
+        discovery.mdns()
         CacophonyAPI.runUpdateGroupList(applicationContext)
     }
 

@@ -24,7 +24,13 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.util.Log
+import net.posick.mDNS.Lookup
+import org.xbill.DNS.DClass
+import org.xbill.DNS.Resolver
+import org.xbill.DNS.Type
 import kotlin.concurrent.thread
+
+
 
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
@@ -87,8 +93,16 @@ class DiscoveryManager(
         setRefreshBar(true)
         listener = DeviceListener(devices, activity, makeToast, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
+        mdns();
     }
 
+     fun mdns() {
+        val lookup = Lookup(MANAGEMENT_SERVICE_TYPE, Type.ANY, DClass.IN);
+        val services = lookup.lookupServices()
+        for (service in services) {
+            Log.d("MDNSS","Service $service")
+        }
+    }
     private fun stopListener(): Boolean {
         if (listener != null) {
             multicastLock.release()
