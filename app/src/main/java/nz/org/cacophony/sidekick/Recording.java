@@ -1,12 +1,13 @@
 package nz.org.cacophony.sidekick;
 
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
-import androidx.annotation.NonNull;
+
 @Entity(tableName = "recording", indices = {@Index(value = "recording_path", unique = true)})
 public class Recording {
 
@@ -21,15 +22,15 @@ public class Recording {
     Integer id;
 
     @NonNull
-    @ColumnInfo(name  = "device_name")
+    @ColumnInfo(name = "device_name")
     String deviceName;
 
     @Nullable
-    @ColumnInfo(name  = "group_name")
+    @ColumnInfo(name = "group_name")
     String groupName;
 
     @NonNull
-    @ColumnInfo(name  = "device_id")
+    @ColumnInfo(name = "device_id")
     int deviceID;
 
     @NonNull
@@ -38,7 +39,7 @@ public class Recording {
 
     @NonNull
     @ColumnInfo(name = "uploaded") // Set to true when the recording had been uploaded to the server
-    Boolean uploaded = false;
+            Boolean uploaded = false;
 
     @ColumnInfo(name = "size")
     Integer size;

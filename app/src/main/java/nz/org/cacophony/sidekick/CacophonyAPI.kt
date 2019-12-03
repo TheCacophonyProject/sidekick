@@ -10,23 +10,22 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import okhttp3.HttpUrl
 import kotlin.concurrent.thread
 
 
-class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
+class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
     companion object {
-        private const val DEFAULT_API_SERVER :String = "https://api.cacophony.org.nz"
+        private const val DEFAULT_API_SERVER: String = "https://api.cacophony.org.nz"
 
-        private var passwordKey :String = "PASSWORD"
-        private var nameOrEmailKey :String = "USERNAME"
-        private var serverURLKey :String = "SERVER_URL"
-        private var jwtKey :String = "JWT"
+        private var passwordKey: String = "PASSWORD"
+        private var nameOrEmailKey: String = "USERNAME"
+        private var serverURLKey: String = "SERVER_URL"
+        private var jwtKey: String = "JWT"
         private var groupListKey = "GROUPS"
-        private val client :OkHttpClient = OkHttpClient()
+        private val client: OkHttpClient = OkHttpClient()
 
-        fun login(c :Context, nameOrEmail: String, password: String, serverURL: String) {
+        fun login(c: Context, nameOrEmail: String, password: String, serverURL: String) {
             val body = FormBody.Builder()
                     .addEncoded("nameOrEmail", nameOrEmail)
                     .addEncoded("password", password)
@@ -44,13 +43,13 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                 try {
                     responseBody = (response.body() as ResponseBody).string()  //This also closes the body
                     responseBodyJSON = JSONObject(responseBody)
-                } catch (e : JSONException) {
+                } catch (e: JSONException) {
                     Log.i(TAG, "failed to parse to JSON: $responseBody")
                     throw Exception("Failed to parse response from server.")
                 }
             }
 
-            when(response.code()) {
+            when (response.code()) {
                 401 -> throw Exception("Invalid password")
                 422 -> throw Exception(responseBodyJSON.getString("message"))
                 200 -> saveUserData(c, responseBodyJSON.getString("token"), password, nameOrEmail, serverURL)
@@ -86,7 +85,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                     .addFormDataPart("data", data.toString())
                     .build()
 
-            var endpoint="";
+            var endpoint = "";
             if (recording.deviceID > 0) {
                 endpoint = "device/${recording.deviceID}"
             } else {
@@ -106,13 +105,13 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                 try {
                     responseBody = (response.body() as ResponseBody).string()  //This also closes the body
                     responseBodyJSON = JSONObject(responseBody)
-                } catch (e : JSONException) {
+                } catch (e: JSONException) {
                     Log.i(TAG, "failed to parse to JSON: $responseBody")
                     throw Exception("Failed to parse response from server.")
                 }
             }
 
-            when(response.code()) {
+            when (response.code()) {
                 422 -> throw Exception(responseBodyJSON.getString("message"))
                 200 -> return
                 else -> {
@@ -138,13 +137,13 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                 try {
                     responseBody = (response.body() as ResponseBody).string()  //This also closes the body
                     responseBodyJSON = JSONObject(responseBody)
-                } catch (e : JSONException) {
+                } catch (e: JSONException) {
                     Log.i(TAG, "failed to parse to JSON: $responseBody")
                     throw Exception("Failed to parse response from server.")
                 }
             }
 
-            when(response.code()) {
+            when (response.code()) {
                 422 -> throw Exception(responseBodyJSON.getString("message"))
                 200 -> {
                     val groupSet = mutableSetOf<String>()
@@ -163,10 +162,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
         }
 
         fun runUpdateGroupList(c: Context) {
-            thread(start=true) {
+            thread(start = true) {
                 try {
                     updateGroupList(c)
-                } catch(e: Exception) {
+                } catch (e: Exception) {
                     Log.e(TAG, e.toString())
                 }
             }
@@ -185,19 +184,19 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
             Crashlytics.setUserName(nameOrEmail);
         }
 
-        fun getNameOrEmail(c: Context) :String {
+        fun getNameOrEmail(c: Context): String {
             return getPrefs(c).getString(nameOrEmailKey, "")
         }
 
-        fun getPassword(c: Context) : String {
+        fun getPassword(c: Context): String {
             return getPrefs(c).getString(passwordKey, "")
         }
 
-        fun getJWT(c: Context) : String {
+        fun getJWT(c: Context): String {
             return getPrefs(c).getString(jwtKey, "")
         }
 
-        fun getServerURL(c :Context) : String {
+        fun getServerURL(c: Context): String {
             val serverURL = getPrefs(c).getString(serverURLKey, DEFAULT_API_SERVER)
             if (serverURL == "") {
                 return DEFAULT_API_SERVER
