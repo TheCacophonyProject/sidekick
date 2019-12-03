@@ -29,7 +29,7 @@ class DeviceList {
     }
 
     @Synchronized
-    fun deviceNameUpdated(){
+    fun deviceNameUpdated() {
         notifyChange()
     }
 
@@ -39,10 +39,11 @@ class DeviceList {
             notifyChange()
         }
     }
+
     @Synchronized
     fun removeByName(serviceName: String) {
         for ((hostname, device) in devices) {
-            if (device.name == serviceName){
+            if (device.name == serviceName) {
                 devices.remove(hostname);
                 notifyChange()
                 break;
@@ -77,17 +78,17 @@ class DeviceList {
         return this.onChanged
     }
 
-    private fun notifyChange() {
+    fun notifyChange() {
         onChanged?.invoke()
     }
 
     @Synchronized
-    fun has(name: String) :Boolean {
+    fun has(name: String): Boolean {
         return devices.containsKey(name)
     }
 
     @Synchronized
-    fun getMap() : Map<String, Device> {
+    fun getMap(): Map<String, Device> {
         return devices
     }
 }
