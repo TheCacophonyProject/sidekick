@@ -19,7 +19,6 @@
 package nz.org.cacophony.sidekick
 
 import android.graphics.Color
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -62,10 +61,9 @@ class DeviceListAdapter(private val devices: DeviceList)
             holder.downloadRecordingsButton.isClickable = true
             holder.downloadRecordingsButton.alpha = 1f
         }
-        if (position%2 == 0) {
+        if (position % 2 == 0) {
             holder.itemView.setBackgroundColor(Color.parseColor("#FFFFFF"))
-        }
-        else {
+        } else {
             holder.itemView.setBackgroundColor(Color.parseColor("#f4f4f4"))
         }
     }

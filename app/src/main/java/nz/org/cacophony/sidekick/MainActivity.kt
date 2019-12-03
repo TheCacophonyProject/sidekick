@@ -19,7 +19,6 @@
 package nz.org.cacophony.sidekick
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.*
 import android.graphics.PorterDuff
 import android.location.Location
@@ -31,7 +30,10 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.*
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.gms.common.api.ResolvableApiException
@@ -56,8 +58,10 @@ class MainActivity : AppCompatActivity() {
     @Volatile
     var uploading = false
     private val locationSettingsUpdateCode = 5
-    @Volatile var locationCount = 0
-    @Volatile var bestLocation: Location? = null
+    @Volatile
+    var locationCount = 0
+    @Volatile
+    var bestLocation: Location? = null
     private lateinit var messenger: Messenger
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -379,7 +383,7 @@ class MainActivity : AppCompatActivity() {
 
                 if (location.accuracy >= 100 || location.latitude == 0.0 && location.longitude == 0.0) {
                     Log.d(TAG, "location not accurate enough or invalid")
-                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy ) {
+                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy) {
                     bestLocation = location
                 }
 

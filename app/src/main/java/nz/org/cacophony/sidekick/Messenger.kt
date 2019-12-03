@@ -5,8 +5,8 @@ import android.app.AlertDialog
 
 class Messenger(private val activity: Activity) {
 
-    fun toast(message :String) {
-        activity.runOnUiThread{
+    fun toast(message: String) {
+        activity.runOnUiThread {
             android.widget.Toast.makeText(activity.applicationContext, message, android.widget.Toast.LENGTH_LONG).show()
         }
     }

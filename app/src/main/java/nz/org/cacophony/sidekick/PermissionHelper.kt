@@ -1,14 +1,14 @@
 package nz.org.cacophony.sidekick
 
-import android.content.Context
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import android.util.Log
 
-class PermissionHelper(private val c : Context) {
+class PermissionHelper(private val c: Context) {
     val multipleRequests = 1
     val locationUpdate = 2
 
@@ -21,7 +21,7 @@ class PermissionHelper(private val c : Context) {
                     "Can not check wifi setting without location permission")
     )
 
-    fun checkAll(activity: Activity, requestPermissions : Boolean = true) : Boolean {
+    fun checkAll(activity: Activity, requestPermissions: Boolean = true): Boolean {
         val notGrantedPermission = mutableListOf<String>()
         for (p in permissionList) {
             if (!check(p.permissionName)) {
@@ -37,11 +37,11 @@ class PermissionHelper(private val c : Context) {
         return false
     }
 
-    fun check(name : String) : Boolean {
+    fun check(name: String): Boolean {
         return ContextCompat.checkSelfPermission(c, name) == PackageManager.PERMISSION_GRANTED
     }
 
-    fun request(activity: Activity, name: String, requestCode : Int) {
+    fun request(activity: Activity, name: String, requestCode: Int) {
         ActivityCompat.requestPermissions(activity, arrayListOf(name).toTypedArray(), requestCode)
     }
 
@@ -59,4 +59,4 @@ class PermissionHelper(private val c : Context) {
     }
 }
 
-class Permission(val permissionName : String, val successMessage : String, val failMessage : String)
+class Permission(val permissionName: String, val successMessage: String, val failMessage: String)

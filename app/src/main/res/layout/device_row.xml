@@ -20,9 +20,9 @@
         <LinearLayout
             android:id="@+id/device_info"
             android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_height="wrap_content">
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/device_name"
@@ -31,20 +31,21 @@
                 android:layout_gravity="top|start"
                 android:layout_margin="0dp"
                 android:layout_weight="1"
-                android:textSize="20sp"
                 android:text="Device Name"
-                />
+                android:textSize="20sp" />
+
             <TextView
                 android:id="@+id/recording_download_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
                 android:layout_weight="1"
                 android:text="16/23"
-                android:layout_marginLeft="20dp"
                 android:textStyle="bold" />
 
 
         </LinearLayout>
+
         <Button
             android:id="@+id/download_recordings"
             android:layout_width="124dp"
@@ -52,7 +53,6 @@
             android:text="Download" />
 
     </LinearLayout>
-
 
 
 </LinearLayout>
