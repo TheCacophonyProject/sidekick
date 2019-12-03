@@ -80,7 +80,7 @@ class DiscoveryManager(
             if (localListener != null) {
                 localListener.updateConnected();
             }
-        }else{
+        } else {
             startListener()
         }
     }
