@@ -18,8 +18,6 @@ licenses:
 - android-sdk-license-.+
 - google-gdk-license-.+
 before_install:
-- openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
-  -in signing.tar.enc -out signing.tar -d
 - chmod +x gradlew
 - gem update --system
 - gem install bundler
@@ -46,5 +44,5 @@ deploy:
   file: "*.aab"
   skip_cleanup: true
   on:
-    repo: gferraro/sidekick
+    repo: TheCacophonyProject/sidekick
     tags: true
