@@ -6,20 +6,41 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
+
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def performSigning = keystorePropertiesFile.exists()
+if (performSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     compileSdkVersion 29
+     if (performSigning) {
+        signingConfigs {
+            config {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
     defaultConfig {
         applicationId "nz.org.cacophony.sidekick"
         minSdkVersion 16
         targetSdkVersion 29
-        versionCode 8
-        versionName "1.5"
+        versionCode 10
+        versionName "1.5.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (performSigning) {
+                signingConfig signingConfigs.config
+            }
         }
     }
 }
@@ -37,15 +58,12 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'com.github.kittinunf.fuel:fuel-android:1.16.0'
 
-    def roomVersion = "1.1.1"
-    def archLifecycleVersion = '1.1.1'
-
-    implementation 'androidx.room:room-runtime:2.2.1'
-    kapt 'androidx.room:room-compiler:2.2.1'
-    androidTestImplementation 'androidx.room:room-testing:2.2.1'
+    implementation 'androidx.room:room-runtime:2.2.2'
+    kapt 'androidx.room:room-compiler:2.2.2'
+    androidTestImplementation 'androidx.room:room-testing:2.2.2'
 
     implementation 'androidx.lifecycle:lifecycle-extensions:2.1.0'
     kapt 'androidx.lifecycle:lifecycle-compiler:2.1.0'
@@ -59,7 +77,7 @@ dependencies {
 
     implementation 'com.squareup.okhttp3:okhttp:3.11.0'
     implementation "com.google.android.gms:play-services-location:17.0.0"
-    implementation 'com.google.firebase:firebase-analytics:17.2.0'
+    implementation 'com.google.firebase:firebase-analytics:17.2.1'
     implementation 'com.crashlytics.sdk.android:crashlytics:2.10.1'
 }
 

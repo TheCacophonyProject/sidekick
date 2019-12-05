@@ -172,8 +172,8 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
             }
         }
 
-        fun getGroupList(c: Context): List<String> {
-            return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>()).sorted()
+        fun getGroupList(c: Context): List<String>? {
+           return  getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())?.sorted()
         }
 
         fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
@@ -185,21 +185,21 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
             Crashlytics.setUserName(nameOrEmail);
         }
 
-        fun getNameOrEmail(c: Context) :String {
+        fun getNameOrEmail(c: Context) :String? {
             return getPrefs(c).getString(nameOrEmailKey, "")
         }
 
-        fun getPassword(c: Context) : String {
+        fun getPassword(c: Context) : String? {
             return getPrefs(c).getString(passwordKey, "")
         }
 
-        fun getJWT(c: Context) : String {
+        fun getJWT(c: Context) : String? {
             return getPrefs(c).getString(jwtKey, "")
         }
 
         fun getServerURL(c :Context) : String {
             val serverURL = getPrefs(c).getString(serverURLKey, DEFAULT_API_SERVER)
-            if (serverURL == "") {
+            if (serverURL == "" || serverURL == null) {
                 return DEFAULT_API_SERVER
             }
             return serverURL
