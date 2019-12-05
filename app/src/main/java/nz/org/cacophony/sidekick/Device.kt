@@ -314,7 +314,7 @@ class Device(
             if (checkConnectionStatus(timeout = 1000, showMessage = true, retries = 1)) {
                 val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
                 val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
-                httpBuilder.addQueryParameter("groups", groupList.joinToString("--"))
+                httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
                 val uri = Uri.parse(httpBuilder.build().toString())
                 Log.d(TAG, "opening browser to: $uri")
                 val urlIntent = Intent(Intent.ACTION_VIEW, uri)
