@@ -24,10 +24,10 @@ platform :android do
 
 
   desc "Submit a new Beta Build to Playstore"
-  lane :beta do
+  lane :alpha do
     gradle(task: 'bundle', build_type: 'Release')
     upload_to_play_store(
-      track: 'beta',
+      track: 'alpha',
       skip_upload_apk:true
     )
   end
