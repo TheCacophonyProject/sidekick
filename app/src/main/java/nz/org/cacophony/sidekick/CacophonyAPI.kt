@@ -86,13 +86,15 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context :Context) {
                     .addFormDataPart("data", data.toString())
                     .build()
 
-            var endpoint="";
+            var endpoint :String
             if (recording.deviceID > 0) {
                 endpoint = "device/${recording.deviceID}"
             } else {
-                endpoint = "device/${recording.deviceName}/group/${recording.groupName}"
+                endpoint = "device/${recording.deviceName}"
+                if (recording.groupName != null && recording.groupName != "") {
+                    endpoint += "/group/${recording.groupName}"
+                }
             }
-
             val request = Request.Builder()
                     .url("${getServerURL(c)}/api/v1/recordings/${endpoint}")
                     .addHeader("Authorization", getJWT(c))

@@ -47,7 +47,17 @@ class Device(
         Log.i(TAG, "Created new device: $name")
         makeDeviceDir()
         thread(start = true) {
-            checkConnectionStatus()
+            for (i in 3.downTo(0)) {
+                checkConnectionStatus()
+                if (sm.state == DeviceState.CONNECTED) {
+                    break
+                }
+                if (i > 0) {
+                    Log.i(TAG, "failed to connect to interface, trying $i more times")
+                } else {
+                    Log.e(TAG, "failed to connect to interface")
+                }
+            }
             getDeviceInfo()
             updateRecordings()
         }
