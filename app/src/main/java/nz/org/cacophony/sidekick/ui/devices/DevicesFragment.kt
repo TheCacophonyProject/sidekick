@@ -28,7 +28,7 @@ class DevicesFragment : Fragment() {
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
-
+        container?.removeAllViews()
         devicesViewModel = ViewModelProviders.of(this).get(DevicesViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_device, container, false)
         val textView: TextView = root.findViewById(R.id.text_devices)

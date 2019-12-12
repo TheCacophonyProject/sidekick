@@ -2,19 +2,20 @@ package nz.org.cacophony.sidekick
 
 import android.os.Bundle
 import android.util.Log
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.snackbar.Snackbar
+import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import androidx.drawerlayout.widget.DrawerLayout
+import com.google.android.gms.common.internal.Constants
 import com.google.android.material.navigation.NavigationView
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import android.view.Menu
-import android.view.View
+import nz.org.cacophony.sidekick.ui.devices.DevicesFragment
+import nz.org.cacophony.sidekick.ui.home.HomeFragment
+import nz.org.cacophony.sidekick.ui.recordings.RecordingsFragment
 
 class Main2Activity : AppCompatActivity() {
 
@@ -41,5 +42,27 @@ class Main2Activity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment)
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+    }
+
+    fun openDevicesFragment(v: View) {
+        val ft = supportFragmentManager.beginTransaction()
+        ft.replace(R.id.nav_host_fragment, DevicesFragment())
+        ft.commitAllowingStateLoss()
+    }
+
+    fun openRecordingsFragment(v: View) {
+        val ft = supportFragmentManager.beginTransaction()
+        ft.replace(R.id.nav_host_fragment, RecordingsFragment())
+        ft.commit()
+    }
+
+    private fun openHomeFragment() {
+        val ft = supportFragmentManager.beginTransaction()
+        ft.replace(R.id.nav_host_fragment, HomeFragment())
+        ft.commit()
+    }
+
+    override fun onBackPressed() {
+        openHomeFragment()
     }
 }

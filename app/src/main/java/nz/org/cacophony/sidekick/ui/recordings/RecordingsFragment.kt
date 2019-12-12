@@ -19,6 +19,7 @@ class RecordingsFragment : Fragment() {
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
+        container?.removeAllViews()
         recordingsViewModel = ViewModelProviders.of(this).get(RecordingsViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_recordings, container, false)
         val textView: TextView = root.findViewById(R.id.text_recordings)
