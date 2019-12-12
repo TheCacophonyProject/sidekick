@@ -4,9 +4,7 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -35,35 +33,32 @@ class DevicesFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_device, container, false)
         val textView: TextView = root.findViewById(R.id.text_devices)
         devicesViewModel.text.observe(this, Observer { textView.text = it })
-
-        Log.i(TAG, "Parent ${activity!!.parent}")
-        val act = activity!!
-        messenger = Messenger(act)
-
-        thread(start = true) {
-            val db = RecordingRoomDatabase.getDatabase(requireContext())
-            recDao = db.recordingDao()
-        }
-
-        permissionHelper = PermissionHelper(requireContext())
-        permissionHelper.checkAll(act)
-
-        deviceList = DeviceList()
-        deviceListAdapter = DeviceListAdapter(deviceList)
-        deviceList.setOnChanged { notifyDeviceListChanged() }
-
         val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
         recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list2).apply {
             setHasFixedSize(true)
             layoutManager = recyclerLayoutManager
             adapter = deviceListAdapter
         }
+        setHasOptionsMenu(true)
+        return root
+    }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val act = activity!!
+        messenger = Messenger(act)
+        thread(start = true) {
+            val db = RecordingRoomDatabase.getDatabase(requireContext())
+            recDao = db.recordingDao()
+        }
+        permissionHelper = PermissionHelper(requireContext())
+        permissionHelper.checkAll(act)
+        deviceList = DeviceList()
+        deviceListAdapter = DeviceListAdapter(deviceList)
+        deviceList.setOnChanged { notifyDeviceListChanged() }
         val nsdManager = requireContext().getSystemService(Context.NSD_SERVICE) as NsdManager
         discovery = DiscoveryManager(nsdManager, deviceList, act, messenger, ::setRefreshBar)
         discovery.restart(clear = true)
-
-        return root
+        super.onCreate(savedInstanceState)
     }
 
     override fun onResume() {
@@ -71,8 +66,24 @@ class DevicesFragment : Fragment() {
         super.onResume()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.devices, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.update_devices_location -> {
+                Log.i(TAG, "updating devices location")
+            }
+            R.id.devices_troubleshooter -> {
+                Log.i(TAG, "devices troubleshooter")
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     private fun notifyDeviceListChanged() {
-        Log.i(TAG, "Here....")
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
