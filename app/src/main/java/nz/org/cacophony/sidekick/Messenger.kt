@@ -2,8 +2,9 @@ package nz.org.cacophony.sidekick
 
 import android.app.Activity
 import android.app.AlertDialog
+import androidx.fragment.app.FragmentActivity
 
-class Messenger(private val activity: Activity) {
+class Messenger(private val activity: FragmentActivity) {
 
     fun toast(message :String) {
         activity.runOnUiThread{
