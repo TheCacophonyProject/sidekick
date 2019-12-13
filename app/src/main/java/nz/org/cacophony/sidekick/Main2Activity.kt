@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -64,5 +65,14 @@ class Main2Activity : AppCompatActivity() {
 
     override fun onBackPressed() {
         openHomeFragment()
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun logout(v: View) {
+        CacophonyAPI.logout(applicationContext)
+        val intent = Intent(applicationContext, LoginScreen::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+        startActivity(intent)
+        finish()
     }
 }
