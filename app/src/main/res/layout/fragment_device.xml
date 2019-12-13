@@ -3,50 +3,59 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#FAFAFA"
     xmlns:tools="http://schemas.android.com/tools">
 
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        >
-
-        <TextView
-            android:id="@+id/text_devices"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="8dp"
-            android:textAlignment="center"
-            android:textSize="20sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-
-
-        <TextView
-            android:id="@+id/placeholder_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Searching for devices..."
-            android:padding="8dp"
-            android:textSize="24sp" />
+        android:orientation="vertical" >
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/device_list2"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:padding="8dp"
+            android:layout_height="wrap_content"
+
             android:scrollbars="vertical"
-            android:layout_weight="1"
+            android:background="#FFFFFF"
             tools:layout_editor_absoluteY="47dp" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <View
+
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+
+            android:background="#FFFFFF" >
+
+            <Button
+                android:id="@+id/button"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@drawable/rounded_button"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:text="GET RECORDINGS" />
+
+        </LinearLayout>
+
     </LinearLayout>
-
-
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

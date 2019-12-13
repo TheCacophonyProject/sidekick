@@ -5,10 +5,12 @@ import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import androidx.recyclerview.widget.DividerItemDecoration
 import nz.org.cacophony.sidekick.*
 import kotlin.concurrent.thread
 
@@ -31,14 +33,13 @@ class DevicesFragment : Fragment() {
         container?.removeAllViews()
         devicesViewModel = ViewModelProviders.of(this).get(DevicesViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_device, container, false)
-        val textView: TextView = root.findViewById(R.id.text_devices)
-        devicesViewModel.text.observe(this, Observer { textView.text = it })
         val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
         recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list2).apply {
             setHasFixedSize(true)
             layoutManager = recyclerLayoutManager
             adapter = deviceListAdapter
         }
+        recyclerView.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         setHasOptionsMenu(true)
         return root
     }
@@ -88,12 +89,14 @@ class DevicesFragment : Fragment() {
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
         activity!!.runOnUiThread() {
+            /*
             val placeholderText = activity!!.findViewById<TextView>(R.id.placeholder_text)
             if (deviceList.size() == 0) {
                 placeholderText.visibility = View.VISIBLE
             } else {
                 placeholderText.visibility = View.GONE
             }
+            */
             deviceListAdapter.notifyDataSetChanged()
         }
     }
