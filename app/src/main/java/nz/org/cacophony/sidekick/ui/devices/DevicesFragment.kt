@@ -1,11 +1,13 @@
 package nz.org.cacophony.sidekick.ui.devices
 
 import android.content.Context
+import android.graphics.Color
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -88,15 +90,16 @@ class DevicesFragment : Fragment() {
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
-        activity!!.runOnUiThread() {
-            /*
-            val placeholderText = activity!!.findViewById<TextView>(R.id.placeholder_text)
+        activity!!.runOnUiThread {
+            val scanningLayout = view!!.findViewById<LinearLayout>(R.id.device_scanning_layout)
+            val deviceLayout = view!!.findViewById<LinearLayout>(R.id.device_layout)
             if (deviceList.size() == 0) {
-                placeholderText.visibility = View.VISIBLE
+                deviceLayout.visibility = View.GONE
+                scanningLayout.visibility = View.VISIBLE
             } else {
-                placeholderText.visibility = View.GONE
+                scanningLayout.visibility = View.GONE
+                deviceLayout.visibility = View.VISIBLE
             }
-            */
             deviceListAdapter.notifyDataSetChanged()
         }
     }
