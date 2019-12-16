@@ -7,25 +7,25 @@
 
     <fragment
         android:id="@+id/nav_home"
-        android:name="nz.org.cacophony.sidekick.ui.home.HomeFragment"
+        android:name="nz.org.cacophony.sidekick.fragments.HomeFragment"
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
         android:id="@+id/nav_devices"
-        android:name="nz.org.cacophony.sidekick.ui.devices.DevicesFragment"
+        android:name="nz.org.cacophony.sidekick.fragments.DevicesFragment"
         android:label="@string/menu_devices"
         tools:layout="@layout/fragment_device" />
 
     <fragment
         android:id="@+id/nav_recordings"
-        android:name="nz.org.cacophony.sidekick.ui.recordings.RecordingsFragment"
+        android:name="nz.org.cacophony.sidekick.fragments.RecordingsFragment"
         android:label="@string/menu_recordings"
         tools:layout="@layout/fragment_recordings" />
 
     <fragment
         android:id="@+id/nav_settings"
-        android:name="nz.org.cacophony.sidekick.ui.settings.SettingsFragment"
+        android:name="nz.org.cacophony.sidekick.fragments.SettingsFragment"
         android:label="@string/menu_settings"
         tools:layout="@layout/fragment_settings" />
 

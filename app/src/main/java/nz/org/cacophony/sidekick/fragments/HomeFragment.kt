@@ -1,18 +1,19 @@
-package nz.org.cacophony.sidekick.ui.home
+package nz.org.cacophony.sidekick.fragments
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
+import java.lang.Exception
 
 class HomeFragment : Fragment() {
+    private val title = "Cacophony Sidekick"
 
-    private lateinit var homeViewModel: HomeViewModel
+    private lateinit var mainViewModel: MainViewModel
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -20,7 +21,16 @@ class HomeFragment : Fragment() {
             savedInstanceState: Bundle?
     ): View? {
         container?.removeAllViews()
-        homeViewModel = ViewModelProviders.of(this).get(HomeViewModel::class.java)
         return inflater.inflate(R.layout.fragment_home, container, false)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        mainViewModel = activity?.run {
+            ViewModelProviders.of(this)[MainViewModel::class.java]
+        } ?: throw Exception("Invalid Activity")
+
+        mainViewModel.title.value = title
     }
 }

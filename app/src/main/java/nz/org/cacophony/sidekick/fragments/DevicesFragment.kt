@@ -1,24 +1,21 @@
-package nz.org.cacophony.sidekick.ui.devices
+package nz.org.cacophony.sidekick.fragments
 
 import android.content.Context
-import android.graphics.Color
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
 import nz.org.cacophony.sidekick.*
+import java.lang.Exception
 import kotlin.concurrent.thread
 
 class DevicesFragment : Fragment() {
+    private val title = "Devices"
 
-    private lateinit var devicesViewModel: DevicesViewModel
     private lateinit var permissionHelper: PermissionHelper
     private lateinit var messenger: Messenger
     private lateinit var deviceList: DeviceList
@@ -26,6 +23,7 @@ class DevicesFragment : Fragment() {
     private lateinit var recyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var discovery: DiscoveryManager
     private lateinit var recDao: RecordingDao
+    private lateinit var mainViewModel: MainViewModel
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -33,7 +31,6 @@ class DevicesFragment : Fragment() {
             savedInstanceState: Bundle?
     ): View? {
         container?.removeAllViews()
-        devicesViewModel = ViewModelProviders.of(this).get(DevicesViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_device, container, false)
         val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
         recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list2).apply {
@@ -62,6 +59,12 @@ class DevicesFragment : Fragment() {
         discovery = DiscoveryManager(nsdManager, deviceList, act, messenger, ::setRefreshBar)
         discovery.restart(clear = true)
         super.onCreate(savedInstanceState)
+
+        mainViewModel = activity?.run {
+            ViewModelProviders.of(this)[MainViewModel::class.java]
+        } ?: throw Exception("Invalid Activity")
+
+        mainViewModel.title.value = title
     }
 
     override fun onResume() {

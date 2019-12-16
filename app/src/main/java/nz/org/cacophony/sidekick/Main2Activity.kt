@@ -8,15 +8,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.google.android.material.navigation.NavigationView
-import nz.org.cacophony.sidekick.ui.devices.DevicesFragment
-import nz.org.cacophony.sidekick.ui.home.HomeFragment
-import nz.org.cacophony.sidekick.ui.recordings.RecordingsFragment
-import nz.org.cacophony.sidekick.ui.settings.SettingsFragment
+import nz.org.cacophony.sidekick.fragments.DevicesFragment
+import nz.org.cacophony.sidekick.fragments.HomeFragment
+import nz.org.cacophony.sidekick.fragments.RecordingsFragment
+import nz.org.cacophony.sidekick.fragments.SettingsFragment
 
 class Main2Activity : AppCompatActivity() {
 
@@ -24,6 +26,7 @@ class Main2Activity : AppCompatActivity() {
     private lateinit var navView: NavigationView
     private lateinit var toolbar: Toolbar
     private lateinit var drawerLayout: DrawerLayout
+    private lateinit var mainViewModel: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +37,17 @@ class Main2Activity : AppCompatActivity() {
         toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
+        mainViewModel = ViewModelProviders.of(this)[MainViewModel::class.java]
+        setViewModelObserves()
+
         setUpNavigationView()
+    }
+
+    private fun setViewModelObserves() {
+        // Update toolbar title
+        mainViewModel.title.observe(this, Observer {
+            toolbar.title = it
+        })
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -95,7 +108,7 @@ class Main2Activity : AppCompatActivity() {
                         loadFragment(RecordingsFragment())
                     }
                 }
-                toolbar.title = "$menuItem"
+                //toolbar.title = "$menuItem"
                 return true
             }
         })
