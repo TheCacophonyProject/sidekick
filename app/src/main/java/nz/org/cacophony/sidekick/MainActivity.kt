@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, messenger, ::setRefreshBar)
+        discovery = DiscoveryManager(nsdManager, deviceList, this, messenger)
 
         val networkIntentFilter = IntentFilter()
         networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")

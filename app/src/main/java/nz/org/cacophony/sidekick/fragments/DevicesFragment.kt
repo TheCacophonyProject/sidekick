@@ -16,13 +16,7 @@ import kotlin.concurrent.thread
 class DevicesFragment : Fragment() {
     private val title = "Devices"
 
-    private lateinit var permissionHelper: PermissionHelper
-    private lateinit var messenger: Messenger
-    private lateinit var deviceList: DeviceList
-    private lateinit var deviceListAdapter: DeviceListAdapter
     private lateinit var recyclerView: androidx.recyclerview.widget.RecyclerView
-    private lateinit var discovery: DiscoveryManager
-    private lateinit var recDao: RecordingDao
     private lateinit var mainViewModel: MainViewModel
 
     override fun onCreateView(
@@ -36,7 +30,7 @@ class DevicesFragment : Fragment() {
         recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list2).apply {
             setHasFixedSize(true)
             layoutManager = recyclerLayoutManager
-            adapter = deviceListAdapter
+            adapter = mainViewModel.deviceListAdapter.value
         }
         recyclerView.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         setHasOptionsMenu(true)
@@ -44,20 +38,7 @@ class DevicesFragment : Fragment() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val act = activity!!
-        messenger = Messenger(act)
-        thread(start = true) {
-            val db = RecordingRoomDatabase.getDatabase(requireContext())
-            recDao = db.recordingDao()
-        }
-        permissionHelper = PermissionHelper(requireContext())
-        permissionHelper.checkAll(act)
-        deviceList = DeviceList()
-        deviceListAdapter = DeviceListAdapter(deviceList)
-        deviceList.setOnChanged { notifyDeviceListChanged() }
-        val nsdManager = requireContext().getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, act, messenger, ::setRefreshBar)
-        discovery.restart(clear = true)
+        Log.i(TAG, "$title on create")
         super.onCreate(savedInstanceState)
 
         mainViewModel = activity?.run {
@@ -65,11 +46,9 @@ class DevicesFragment : Fragment() {
         } ?: throw Exception("Invalid Activity")
 
         mainViewModel.title.value = title
-    }
 
-    override fun onResume() {
-        discovery.restart(clear = false)
-        super.onResume()
+        mainViewModel.deviceList.value!!.setOnChanged { notifyDeviceListChanged() }
+        mainViewModel.discovery.value!!.start()
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -85,6 +64,16 @@ class DevicesFragment : Fragment() {
             R.id.devices_troubleshooter -> {
                 Log.i(TAG, "devices troubleshooter")
             }
+            R.id.devices_refresh -> {
+                thread {
+                    mainViewModel.discovery.value!!.stop()
+                    mainViewModel.discovery.value!!.clearDevices()
+                    // Wait a second or the device can load quick enough so it doesn't
+                    // look like anything changed in the UI
+                    Thread.sleep(1000)
+                    mainViewModel.discovery.value!!.start()
+                }
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -96,25 +85,14 @@ class DevicesFragment : Fragment() {
         activity!!.runOnUiThread {
             val scanningLayout = view!!.findViewById<LinearLayout>(R.id.device_scanning_layout)
             val deviceLayout = view!!.findViewById<LinearLayout>(R.id.device_layout)
-            if (deviceList.size() == 0) {
+            if (mainViewModel.deviceList.value!!.size() == 0) {
                 deviceLayout.visibility = View.GONE
                 scanningLayout.visibility = View.VISIBLE
             } else {
                 scanningLayout.visibility = View.GONE
                 deviceLayout.visibility = View.VISIBLE
             }
-            deviceListAdapter.notifyDataSetChanged()
+            mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
         }
-    }
-
-    private fun setRefreshBar(active: Boolean) {
-        /*
-        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
-        if (active) {
-            progressBar.visibility = View.VISIBLE
-        } else {
-            progressBar.visibility = View.INVISIBLE
-        }
-        */
     }
 }

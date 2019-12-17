@@ -1,9 +1,13 @@
 package nz.org.cacophony.sidekick
 
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.os.NetworkOnMainThreadException
 import android.view.MenuItem
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -27,6 +31,7 @@ class Main2Activity : AppCompatActivity() {
     private lateinit var toolbar: Toolbar
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var mainViewModel: MainViewModel
+    private lateinit var networkChangeReceiver: MainActivity.NetworkChangeReceiver
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +43,7 @@ class Main2Activity : AppCompatActivity() {
         setSupportActionBar(toolbar)
 
         mainViewModel = ViewModelProviders.of(this)[MainViewModel::class.java]
+        mainViewModel.init(this)
         setViewModelObserves()
 
         setUpNavigationView()
@@ -48,6 +54,12 @@ class Main2Activity : AppCompatActivity() {
         mainViewModel.title.observe(this, Observer {
             toolbar.title = it
         })
+    }
+
+    override fun onDestroy() {
+        mainViewModel.discovery.value!!.stop()
+        unregisterReceiver(networkChangeReceiver)
+        super.onDestroy()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -108,9 +120,9 @@ class Main2Activity : AppCompatActivity() {
                         loadFragment(RecordingsFragment())
                     }
                 }
-                //toolbar.title = "$menuItem"
                 return true
             }
         })
     }
+
 }
