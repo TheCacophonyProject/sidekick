@@ -17,6 +17,10 @@ class MainViewModel : ViewModel() {
     val deviceListAdapter = MutableLiveData<DeviceListAdapter>()
     val discovery = MutableLiveData<DiscoveryManager>()
     val recordingDao = MutableLiveData<RecordingDao>()
+    val uploadingRecordings = MutableLiveData<Boolean>().apply { value = false }
+    val recordingUploadingProgress = MutableLiveData<Int>().apply { value = 0 }
+    val recordingUploadingCount = MutableLiveData<Int>().apply { value = 0 }
+
     lateinit var wifiHelper: WifiHelper
     val networkIntentFilter = IntentFilter()
 

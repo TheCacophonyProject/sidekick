@@ -190,7 +190,7 @@ class MainActivity : AppCompatActivity() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
         mWakeLock.acquire(5 * 60 * 1000)
-        if (uploading) {
+            if (uploading) {
             return
         }
         uploading = true

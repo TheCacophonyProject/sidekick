@@ -1,7 +1,9 @@
 package nz.org.cacophony.sidekick
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
@@ -20,6 +22,7 @@ import nz.org.cacophony.sidekick.fragments.DevicesFragment
 import nz.org.cacophony.sidekick.fragments.HomeFragment
 import nz.org.cacophony.sidekick.fragments.RecordingsFragment
 import nz.org.cacophony.sidekick.fragments.SettingsFragment
+import java.io.File
 import kotlin.concurrent.thread
 
 class Main2Activity : AppCompatActivity() {
@@ -163,6 +166,54 @@ class Main2Activity : AppCompatActivity() {
                     }
                 }
             }
+        }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun uploadRecordings(v: View) {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
+        mWakeLock.acquire(5 * 60 * 1000)
+        if (mainViewModel.uploadingRecordings.value!!) {
+            return
+        }
+        mainViewModel.uploadingRecordings.value = true
+
+        thread {
+            val recordingsToUpload = mainViewModel.recordingDao.value!!.recordingsToUpload
+            runOnUiThread {
+                mainViewModel.recordingUploadingCount.value = recordingsToUpload.size
+                mainViewModel.recordingUploadingProgress.value = 0
+            }
+            var allUploaded = true
+            for (rec in recordingsToUpload) {
+                runOnUiThread {
+                    mainViewModel.recordingUploadingProgress.value = mainViewModel.recordingUploadingProgress.value!! + 1
+                }
+                try {
+                    CacophonyAPI.uploadRecording(applicationContext, rec)
+                    mainViewModel.recordingDao.value!!.setAsUploaded(rec.id)
+                    File(rec.recordingPath).delete()
+                } catch (e: Exception) {
+                    allUploaded = false
+                    if (e.message == null) {
+                        messenger.toast("Unknown error with uploading recordings")
+                    } else {
+                        messenger.toast(e.message!!)
+                    }
+                }
+            }
+            if (recordingsToUpload.size == 0) {
+                messenger.alert("No recordings to upload")
+            } else if (allUploaded) {
+                messenger.alert("Finished uploading recordings")
+            } else {
+                messenger.alert("Failed to upload some or all recordings")
+            }
+            runOnUiThread {
+                mainViewModel.uploadingRecordings.value = false
+            }
+            mWakeLock.release()
         }
     }
 }
