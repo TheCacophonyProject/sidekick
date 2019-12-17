@@ -44,6 +44,7 @@ class DeviceListAdapter(private val devices: DeviceList): RecyclerView.Adapter<D
         val device = devices.elementAt(position)
         holder.deviceNameView.text = device.name
         holder.clickDevice.setOnClickListener { device.openManagementInterface() }
+        holder.recordingCountView.text = device.statusString
     }
 
     override fun getItemCount() = devices.size()
