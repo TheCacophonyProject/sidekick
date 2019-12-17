@@ -1,13 +1,9 @@
 package nz.org.cacophony.sidekick
 
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Bundle
-import android.os.NetworkOnMainThreadException
 import android.view.MenuItem
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -32,6 +28,7 @@ class Main2Activity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var mainViewModel: MainViewModel
     private lateinit var networkChangeReceiver: MainActivity.NetworkChangeReceiver
+    private lateinit var messenger: Messenger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +41,7 @@ class Main2Activity : AppCompatActivity() {
 
         mainViewModel = ViewModelProviders.of(this)[MainViewModel::class.java]
         mainViewModel.init(this)
+        messenger = mainViewModel.messenger.value!!
         setViewModelObserves()
 
         setUpNavigationView()
@@ -67,10 +65,12 @@ class Main2Activity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun openDevicesFragment(v: View) {
         loadFragment(DevicesFragment())
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun openRecordingsFragment(v: View) {
         loadFragment(RecordingsFragment())
     }
@@ -125,4 +125,22 @@ class Main2Activity : AppCompatActivity() {
         })
     }
 
+    @Suppress("UNUSED_PARAMETER")
+    fun enableValidAp(v: View) {
+        val wifiHelper = WifiHelper(applicationContext)
+        messenger.toast("Turning on hotspot")
+        if (wifiHelper.enableValidAp()) {
+            messenger.toast("Hotspot turned on")
+        } else {
+            messenger.alert("Failed to turn on hotspot")
+        }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun openNetworkSettings(v: View) {
+        val intent = Intent()
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
+        startActivity(intent)
+    }
 }

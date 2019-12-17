@@ -1,11 +1,15 @@
 package nz.org.cacophony.sidekick.fragments
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -18,6 +22,8 @@ class DevicesFragment : Fragment() {
 
     private lateinit var recyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var mainViewModel: MainViewModel
+    private lateinit var networkWarningLayout: LinearLayout
+    private lateinit var networkErrorLayout: LinearLayout
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -34,6 +40,14 @@ class DevicesFragment : Fragment() {
         }
         recyclerView.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         setHasOptionsMenu(true)
+
+        val validSSID = getResources().getString(R.string.valid_ssid)
+        root.findViewById<TextView>(R.id.network_error_message_text).text =
+                "Not connected to a '$validSSID' network."
+        root.findViewById<TextView>(R.id.network_warning_message_text).text =
+                "Check that you are connected to a '$validSSID' network"
+        networkErrorLayout = root.findViewById<LinearLayout>(R.id.network_error_message_layout)
+        networkWarningLayout = root.findViewById<LinearLayout>(R.id.network_warning_message_layout)
         return root
     }
 
@@ -49,6 +63,31 @@ class DevicesFragment : Fragment() {
 
         mainViewModel.deviceList.value!!.setOnChanged { notifyDeviceListChanged() }
         mainViewModel.discovery.value!!.start()
+
+        val networkChangeReceiver = NetworkChangeReceiver(::networkUpdate)
+        activity?.registerReceiver(networkChangeReceiver, mainViewModel.networkIntentFilter)
+    }
+
+    class NetworkChangeReceiver(val networkUpdate: (() -> Unit)) : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            networkUpdate()
+        }
+    }
+
+    private fun networkUpdate() {
+        if (mainViewModel.wifiHelper.canAccessApConfig()) {
+            if (mainViewModel.wifiHelper.isConnectedToValidNetwork()) {
+                networkErrorLayout.visibility = View.GONE
+            } else {
+                networkErrorLayout.visibility = View.VISIBLE
+            }
+        } else if (mainViewModel.wifiHelper.canAccessWifiSsid()) {
+            if (mainViewModel.wifiHelper.isApOn() || mainViewModel.wifiHelper.validWifi()) {
+                networkWarningLayout.visibility = View.GONE
+            } else {
+                networkWarningLayout.visibility = View.VISIBLE
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
