@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -19,6 +20,7 @@ import nz.org.cacophony.sidekick.fragments.DevicesFragment
 import nz.org.cacophony.sidekick.fragments.HomeFragment
 import nz.org.cacophony.sidekick.fragments.RecordingsFragment
 import nz.org.cacophony.sidekick.fragments.SettingsFragment
+import kotlin.concurrent.thread
 
 class Main2Activity : AppCompatActivity() {
 
@@ -142,5 +144,25 @@ class Main2Activity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
         startActivity(intent)
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun downloadAll(v: View) {
+        val downloadButton = findViewById<Button>(R.id.download_recordings_button)
+        downloadButton.isClickable = false
+        downloadButton.alpha = .5f
+        downloadButton.text = "GETTING RECORDINGS"
+        for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
+            thread {
+                device.startDownloadRecordings()
+                if (!mainViewModel.deviceList.value!!.downloading()) {
+                    runOnUiThread {
+                        downloadButton.isClickable = true
+                        downloadButton.alpha = 1f
+                        downloadButton.text = "GET RECORDINGS"
+                    }
+                }
+            }
+        }
     }
 }

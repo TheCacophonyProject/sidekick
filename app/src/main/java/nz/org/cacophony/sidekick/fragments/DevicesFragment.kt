@@ -24,6 +24,8 @@ class DevicesFragment : Fragment() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var networkWarningLayout: LinearLayout
     private lateinit var networkErrorLayout: LinearLayout
+    private lateinit var scanningLayout: LinearLayout
+    private lateinit var deviceLayout: LinearLayout
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -46,8 +48,11 @@ class DevicesFragment : Fragment() {
                 "Not connected to a '$validSSID' network."
         root.findViewById<TextView>(R.id.network_warning_message_text).text =
                 "Check that you are connected to a '$validSSID' network"
-        networkErrorLayout = root.findViewById<LinearLayout>(R.id.network_error_message_layout)
-        networkWarningLayout = root.findViewById<LinearLayout>(R.id.network_warning_message_layout)
+        networkErrorLayout = root.findViewById(R.id.network_error_message_layout)
+        networkWarningLayout = root.findViewById(R.id.network_warning_message_layout)
+        scanningLayout = root.findViewById(R.id.device_scanning_layout)
+        deviceLayout = root.findViewById(R.id.device_layout)
+        notifyDeviceListChanged()
         return root
     }
 
@@ -122,8 +127,6 @@ class DevicesFragment : Fragment() {
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
         activity!!.runOnUiThread {
-            val scanningLayout = view!!.findViewById<LinearLayout>(R.id.device_scanning_layout)
-            val deviceLayout = view!!.findViewById<LinearLayout>(R.id.device_layout)
             if (mainViewModel.deviceList.value!!.size() == 0) {
                 deviceLayout.visibility = View.GONE
                 scanningLayout.visibility = View.VISIBLE

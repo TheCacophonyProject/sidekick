@@ -67,10 +67,7 @@ class DiscoveryManager(
 
     @Synchronized
     fun clearDevices() {
-        val deviceMap = devices.getMap()
-        for ((name, _) in deviceMap) {
-            devices.remove(name)
-        }
+        devices.clear()
     }
 
     @Synchronized

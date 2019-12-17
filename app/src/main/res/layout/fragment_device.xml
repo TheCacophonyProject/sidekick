@@ -102,7 +102,7 @@
             android:background="#FFFFFF" >
 
             <Button
-                android:id="@+id/button"
+                android:id="@+id/download_recordings_button"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:background="@drawable/rounded_button"
@@ -110,6 +110,7 @@
                 android:layout_marginRight="20dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="10dp"
+                android:onClick="downloadAll"
                 android:text="GET RECORDINGS" />
 
         </LinearLayout>
