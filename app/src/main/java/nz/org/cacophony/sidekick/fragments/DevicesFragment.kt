@@ -127,9 +127,11 @@ class DevicesFragment : Fragment() {
             R.id.update_devices_location -> {
                 Log.i(TAG, "updating devices location")
             }
+            /*
             R.id.devices_troubleshooter -> {
                 Log.i(TAG, "devices troubleshooter")
             }
+            */
             R.id.devices_refresh -> {
                 thread {
                     mainViewModel.discovery.value!!.stop()

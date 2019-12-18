@@ -47,27 +47,28 @@
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        >
+                        android:orientation="horizontal" >
 
                         <TextView
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent"
+                            android:layout_height="wrap_content"
                             android:text="OPEN DEVICES"
-                            android:textSize="16sp"/>
+                            android:layout_gravity="center_vertical"
+                            android:textColor="#2d8067"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
 
                         <ImageView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            app:srcCompat="@drawable/ic_menu_camera" />
-
+                            app:srcCompat="@drawable/ic_keyboard_arrow_right_24px" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
-                    app:srcCompat="@mipmap/ic_launcher_round" />
+                    app:srcCompat="@drawable/ic_home_devices" />
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -113,22 +114,24 @@
 
                         <TextView
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:textSize="16sp"
-                            android:text="OPEN RECORDINGS" />
+                            android:layout_height="wrap_content"
+                            android:text="OPEN DEVICES"
+                            android:layout_gravity="center_vertical"
+                            android:textColor="#2d8067"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
 
                         <ImageView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            app:srcCompat="@drawable/ic_menu_camera" />
-
+                            app:srcCompat="@drawable/ic_keyboard_arrow_right_24px" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
-                    app:srcCompat="@mipmap/ic_launcher_round" />
+                    app:srcCompat="@drawable/ic_home_recordings" />
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>

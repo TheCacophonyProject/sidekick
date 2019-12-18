@@ -49,6 +49,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginRight="10dp"
-        app:srcCompat="@drawable/ic_menu_camera" />
+        app:srcCompat="@drawable/ic_keyboard_arrow_right_24px" />
 
 </LinearLayout>

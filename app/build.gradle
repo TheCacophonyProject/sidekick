@@ -27,6 +27,7 @@ android {
         }
     }
     defaultConfig {
+        vectorDrawables.useSupportLibrary = true
         applicationId "nz.org.cacophony.sidekick"
         minSdkVersion 16
         targetSdkVersion 29
