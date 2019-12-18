@@ -11,6 +11,7 @@ import android.view.*
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
 import nz.org.cacophony.sidekick.*
@@ -26,6 +27,8 @@ class DevicesFragment : Fragment() {
     private lateinit var networkErrorLayout: LinearLayout
     private lateinit var scanningLayout: LinearLayout
     private lateinit var deviceLayout: LinearLayout
+    private lateinit var locationLayout: LinearLayout
+    private lateinit var locationStatus: TextView
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -52,6 +55,9 @@ class DevicesFragment : Fragment() {
         networkWarningLayout = root.findViewById(R.id.network_warning_message_layout)
         scanningLayout = root.findViewById(R.id.device_scanning_layout)
         deviceLayout = root.findViewById(R.id.device_layout)
+        locationLayout = root.findViewById(R.id.location_layout)
+        locationStatus = root.findViewById(R.id.location_status)
+        locationLayout.visibility = View.VISIBLE
         notifyDeviceListChanged()
         return root
     }
@@ -71,6 +77,22 @@ class DevicesFragment : Fragment() {
 
         val networkChangeReceiver = NetworkChangeReceiver(::networkUpdate)
         activity?.registerReceiver(networkChangeReceiver, mainViewModel.networkIntentFilter)
+
+        setViewModelObservers()
+    }
+
+    private fun setViewModelObservers() {
+        mainViewModel.locationStatusText.observe(this, Observer { updateLocationView(it!!) })
+    }
+
+    private fun updateLocationView(status: String) {
+        locationStatus.text = status
+        locationLayout.visibility = View.VISIBLE
+        if (status == "") {
+            locationLayout.visibility = View.GONE
+        } else {
+            locationLayout.visibility = View.VISIBLE
+        }
     }
 
     class NetworkChangeReceiver(val networkUpdate: (() -> Unit)) : BroadcastReceiver() {

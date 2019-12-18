@@ -11,7 +11,6 @@ class MainViewModel : ViewModel() {
 
     val title = MutableLiveData<String>().apply { value = "" }
 
-    val permissionHelper = MutableLiveData<PermissionHelper>()
     val messenger = MutableLiveData<Messenger>()
     val deviceList = MutableLiveData<DeviceList>()
     val deviceListAdapter = MutableLiveData<DeviceListAdapter>()
@@ -20,13 +19,12 @@ class MainViewModel : ViewModel() {
     val uploadingRecordings = MutableLiveData<Boolean>().apply { value = false }
     val recordingUploadingProgress = MutableLiveData<Int>().apply { value = 0 }
     val recordingUploadingCount = MutableLiveData<Int>().apply { value = 0 }
+    val locationStatusText = MutableLiveData<String>().apply { value = "" }
 
     lateinit var wifiHelper: WifiHelper
     val networkIntentFilter = IntentFilter()
 
     fun init(activity: Activity) {
-        permissionHelper.value = PermissionHelper(activity.applicationContext)
-        permissionHelper.value!!.checkAll(activity)
         messenger.value = Messenger(activity)
         val dl = DeviceList()
         deviceList.value = dl
