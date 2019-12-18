@@ -44,7 +44,6 @@ class Main2Activity : AppCompatActivity() {
     private lateinit var toolbar: Toolbar
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var mainViewModel: MainViewModel
-    private lateinit var networkChangeReceiver: NetworkChangeReceiver
     private lateinit var messenger: Messenger
     private lateinit var permissionHelper: PermissionHelper
     @Volatile var bestLocation: Location? = null
@@ -81,7 +80,6 @@ class Main2Activity : AppCompatActivity() {
 
     override fun onDestroy() {
         mainViewModel.discovery.value!!.stop()
-        unregisterReceiver(networkChangeReceiver)
         super.onDestroy()
     }
 
@@ -358,11 +356,5 @@ class Main2Activity : AppCompatActivity() {
             mainViewModel.locationStatusText.value = ""
         }
 
-    }
-
-    class NetworkChangeReceiver(val networkUpdate: (() -> Unit)) : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            networkUpdate()
-        }
     }
 }
