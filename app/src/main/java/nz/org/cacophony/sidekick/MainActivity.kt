@@ -1,145 +1,151 @@
-/*
- * sidekick - Network discovery for Cacophony Project devices
- * Copyright (C) 2018, The Cacophony Project
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- */
-
 package nz.org.cacophony.sidekick
 
 import android.Manifest
-import android.app.AlertDialog
-import android.content.*
-import android.graphics.PorterDuff
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentSender
 import android.location.Location
-import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.*
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.appcompat.widget.Toolbar
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
+import androidx.navigation.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.navigateUp
+import androidx.navigation.ui.setupActionBarWithNavController
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
+import com.google.android.material.navigation.NavigationView
+import nz.org.cacophony.sidekick.fragments.DevicesFragment
+import nz.org.cacophony.sidekick.fragments.HomeFragment
+import nz.org.cacophony.sidekick.fragments.RecordingsFragment
+import nz.org.cacophony.sidekick.fragments.SettingsFragment
 import java.io.File
 import kotlin.concurrent.thread
-
 
 const val TAG = "cacophony-manager"
 const val LOCATION_MAX_ATTEMPTS = 5
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var recyclerView: androidx.recyclerview.widget.RecyclerView
-    private lateinit var deviceListAdapter: DeviceListAdapter
-    private lateinit var discovery: DiscoveryManager
-    private lateinit var deviceList: DeviceList
-    private lateinit var recDao: RecordingDao
-    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+class Main2Activity : AppCompatActivity() {
+
+    private lateinit var appBarConfiguration: AppBarConfiguration
+    private lateinit var navView: NavigationView
+    private lateinit var toolbar: Toolbar
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var mainViewModel: MainViewModel
+    private lateinit var messenger: Messenger
     private lateinit var permissionHelper: PermissionHelper
-    private var locationRequest: LocationRequest? = null
-    @Volatile
-    var uploading = false
+    @Volatile var bestLocation: Location? = null
     private val locationSettingsUpdateCode = 5
     @Volatile var locationCount = 0
-    @Volatile var bestLocation: Location? = null
-    private lateinit var messenger: Messenger
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        messenger = Messenger(this)
-        setProgressBarColor()
-        thread(start = true) {
-            val db = RecordingRoomDatabase.getDatabase(applicationContext)
-            recDao = db.recordingDao()
-        }
+        setContentView(R.layout.activity_main2)
 
+        drawerLayout = findViewById(R.id.drawer_layout)
+        navView = findViewById(R.id.nav_view)
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        mainViewModel = ViewModelProviders.of(this)[MainViewModel::class.java]
+        mainViewModel.init(this)
+        messenger = mainViewModel.messenger.value!!
         permissionHelper = PermissionHelper(applicationContext)
         permissionHelper.checkAll(this)
 
-        findViewById<TextView>(R.id.network_error_message_text).text =
-                "Not connected to a '${getResources().getString(R.string.valid_ssid)}' network."
+        setViewModelObserves()
 
-        deviceList = DeviceList()
-        deviceListAdapter = DeviceListAdapter(deviceList)
-        deviceList.setOnChanged { notifyDeviceListChanged() }
-
-        val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
-        recyclerView = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list).apply {
-            setHasFixedSize(true)
-            layoutManager = recyclerLayoutManager
-            adapter = deviceListAdapter
-        }
-
-        val nsdManager = applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery = DiscoveryManager(nsdManager, deviceList, this, messenger, ::setRefreshBar)
-
-        val networkIntentFilter = IntentFilter()
-        networkIntentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE")
-        networkIntentFilter.addAction("android.net.wifi.WIFI_STATE_CHANGED")
-        networkIntentFilter.addAction("android.net.wifi.WIFI_AP_STATE_CHANGED")
-        networkChangeReceiver = NetworkChangeReceiver(::networkUpdate)
-        registerReceiver(networkChangeReceiver, networkIntentFilter)
-        networkUpdate()
-        CacophonyAPI.runUpdateGroupList(applicationContext)
+        setUpNavigationView()
     }
 
-    class NetworkChangeReceiver(val networkUpdate: (() -> Unit)) : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            networkUpdate()
-        }
+    private fun setViewModelObserves() {
+        // Update toolbar title
+        mainViewModel.title.observe(this, Observer {
+            toolbar.title = it
+        })
     }
 
     override fun onDestroy() {
-        unregisterReceiver(networkChangeReceiver)
+        mainViewModel.discovery.value!!.stop()
         super.onDestroy()
     }
 
-    private fun networkUpdate() {
-        val wifiHelper = WifiHelper(applicationContext)
-        val networkErrorMessageLayout = findViewById<LinearLayout>(R.id.network_error_message_layout)
-        val networkWarningMessageLayout = findViewById<LinearLayout>(R.id.network_warning_message_layout)
-        val networkWarningText = findViewById<TextView>(R.id.network_warning_message_text)
-
-        if (wifiHelper.canAccessApConfig()) {
-            if (wifiHelper.isConnectedToValidNetwork()) {
-                networkErrorMessageLayout.visibility = View.GONE
-            } else {
-                networkErrorMessageLayout.visibility = View.VISIBLE
-            }
-        } else if (wifiHelper.canAccessWifiSsid()) {
-            if (wifiHelper.isApOn() || wifiHelper.validWifi()) {
-                networkWarningMessageLayout.visibility = View.GONE
-            } else {
-                networkWarningText.text = "Check that you are connected to a '${getResources().getString(R.string.valid_ssid)}' network"
-                networkWarningMessageLayout.visibility = View.VISIBLE
-            }
-        }
+    override fun onSupportNavigateUp(): Boolean {
+        val navController = findNavController(R.id.nav_host_fragment)
+        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun openNetworkSettings(v: View) {
-        val intent = Intent()
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
+    fun openDevicesFragment(v: View) {
+        loadFragment(DevicesFragment())
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun openRecordingsFragment(v: View) {
+        loadFragment(RecordingsFragment())
+    }
+
+    override fun onBackPressed() {
+        loadFragment(HomeFragment())
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun logout(v: View) {
+        CacophonyAPI.logout(applicationContext)
+        val intent = Intent(applicationContext, LoginScreen::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
         startActivity(intent)
+        finish()
+    }
+
+    fun loadFragment(f: Fragment) {
+        val ft = supportFragmentManager.beginTransaction()
+        ft.replace(R.id.nav_host_fragment, f)
+        ft.commit()
+        drawerLayout.closeDrawers()
+    }
+
+
+    private fun setUpNavigationView() {
+        val navController = findNavController(R.id.nav_host_fragment)
+        appBarConfiguration = AppBarConfiguration(setOf(
+                R.id.nav_home, R.id.nav_devices, R.id.nav_recordings), drawerLayout)
+        setupActionBarWithNavController(navController, appBarConfiguration)
+
+        navView.setNavigationItemSelectedListener(object : NavigationView.OnNavigationItemSelectedListener {
+
+            override fun onNavigationItemSelected(menuItem: MenuItem): Boolean {
+
+                when (menuItem.itemId) {
+                    R.id.nav_home -> {
+                        loadFragment(HomeFragment())
+                    }
+                    R.id.nav_devices -> {
+                        loadFragment(DevicesFragment())
+                    }
+                    R.id.nav_settings -> {
+                        loadFragment(SettingsFragment())
+                    }
+                    R.id.nav_recordings -> {
+                        loadFragment(RecordingsFragment())
+                    }
+                }
+                return true
+            }
+        })
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -153,35 +159,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setRefreshBar(active: Boolean) {
-        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
-        if (active) {
-            progressBar.visibility = View.VISIBLE
-        } else {
-            progressBar.visibility = View.INVISIBLE
-        }
-    }
-
-    override fun onBackPressed() {
-        val intent = Intent(Intent.ACTION_MAIN)
-        intent.addCategory(Intent.CATEGORY_HOME)
+    @Suppress("UNUSED_PARAMETER")
+    fun openNetworkSettings(v: View) {
+        val intent = Intent()
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intent.action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
         startActivity(intent)
-    }
-
-    private fun setProgressBarColor() {
-        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
-        progressBar.indeterminateDrawable.setColorFilter(
-                ContextCompat.getColor(this, R.color.colorPrimary),
-                PorterDuff.Mode.SRC_ATOP
-        )
-        progressBar.visibility = View.INVISIBLE
     }
 
     @Suppress("UNUSED_PARAMETER")
     fun downloadAll(v: View) {
-        for ((_, device) in deviceList.getMap()) {
-            device.startDownloadRecordings()
+        val downloadButton = findViewById<Button>(R.id.download_recordings_button)
+        downloadButton.isClickable = false
+        downloadButton.alpha = .5f
+        downloadButton.text = "GETTING RECORDINGS"
+        for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
+            thread {
+                device.startDownloadRecordings()
+                if (!mainViewModel.deviceList.value!!.downloading()) {
+                    runOnUiThread {
+                        downloadButton.isClickable = true
+                        downloadButton.alpha = 1f
+                        downloadButton.text = "GET RECORDINGS"
+                    }
+                }
+            }
         }
     }
 
@@ -190,27 +192,25 @@ class MainActivity : AppCompatActivity() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
         mWakeLock.acquire(5 * 60 * 1000)
-        if (uploading) {
+        if (mainViewModel.uploadingRecordings.value!!) {
             return
         }
-        uploading = true
-        val uploadButton = findViewById<Button>(R.id.upload_recordings_button)
-        uploadButton.isClickable = false
-        uploadButton.alpha = .5f
+        mainViewModel.uploadingRecordings.value = true
 
-        thread(start = true) {
-            val recordingsToUpload = recDao.recordingsToUpload
-            val recLen = recordingsToUpload.size
-            var recNum = 0
+        thread {
+            val recordingsToUpload = mainViewModel.recordingDao.value!!.recordingsToUpload
+            runOnUiThread {
+                mainViewModel.recordingUploadingCount.value = recordingsToUpload.size
+                mainViewModel.recordingUploadingProgress.value = 0
+            }
             var allUploaded = true
             for (rec in recordingsToUpload) {
-                recNum++
-                uploadButton.post {
-                    uploadButton.text = "Uploading $recNum of $recLen"
+                runOnUiThread {
+                    mainViewModel.recordingUploadingProgress.value = mainViewModel.recordingUploadingProgress.value!! + 1
                 }
                 try {
                     CacophonyAPI.uploadRecording(applicationContext, rec)
-                    recDao.setAsUploaded(rec.id)
+                    mainViewModel.recordingDao.value!!.setAsUploaded(rec.id)
                     File(rec.recordingPath).delete()
                 } catch (e: Exception) {
                     allUploaded = false
@@ -228,66 +228,15 @@ class MainActivity : AppCompatActivity() {
             } else {
                 messenger.alert("Failed to upload some or all recordings")
             }
-            uploadButton.post {
-                uploadButton.text = "Upload Recordings"
-                uploadButton.isClickable = true
-                uploadButton.alpha = 1f
+            runOnUiThread {
+                mainViewModel.uploadingRecordings.value = false
             }
-            uploading = false
             mWakeLock.release()
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        // Put settings button into action bar
-        menuInflater.inflate(R.menu.settings, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.settings_button) {
-            Log.d(TAG, "settings")
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     @Suppress("UNUSED_PARAMETER")
-    fun refreshDevices(v: View) {
-        Log.d(TAG, "refresh")
-        discovery.restart(clear = true)
-    }
-
-    private fun notifyDeviceListChanged() {
-        // notifyDataSetChanged has to be called on the UI thread.
-        // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
-        // given the small number of items and low update rate, it's probably fine for now.
-        runOnUiThread {
-            val placeholderText = findViewById<TextView>(R.id.placeholder_text)
-            if (deviceList.size() == 0) {
-                placeholderText.visibility = View.VISIBLE
-            } else {
-                placeholderText.visibility = View.GONE
-            }
-            deviceListAdapter.notifyDataSetChanged()
-        }
-    }
-
-    override fun onResume() {
-        Log.d(TAG, "onResume")
-        super.onResume()
-        discovery.restart(clear = true)
-        CacophonyAPI.runUpdateGroupList(applicationContext)
-    }
-
-    override fun onPause() {
-        Log.d(TAG, "onPause")
-        super.onPause()
-    }
-
-    @Suppress("UNUSED_PARAMETER")
-    fun setLocationButton(v: View) {
+    fun setLocationButton(item: MenuItem) {
         setDevicesLocation(true)
     }
 
@@ -298,12 +247,7 @@ class MainActivity : AppCompatActivity() {
             }
             return
         }
-        runOnUiThread {
-            val updateLocationButton = findViewById<Button>(R.id.set_location)
-            updateLocationButton.isClickable = false
-            updateLocationButton.text = "Getting location..."
-
-        }
+        mainViewModel.locationStatusText.value = "Getting location"
         createLocationRequest()
     }
 
@@ -339,7 +283,7 @@ class MainActivity : AppCompatActivity() {
             if (e is ResolvableApiException) {
                 try {
                     Log.i(TAG, "Requesting location settings to be updated")
-                    e.startResolutionForResult(this@MainActivity, locationSettingsUpdateCode)
+                    e.startResolutionForResult(this, locationSettingsUpdateCode)
                 } catch (sendEx: IntentSender.SendIntentException) {
                     Log.e(TAG, e.toString())
                     resetUpdateLocationButton()
@@ -364,7 +308,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun makeLocationCallback(lc: FusedLocationProviderClient): LocationCallback {
         return object : LocationCallback() {
@@ -396,12 +339,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updateDevicesLocation(location: Location) {
-        runOnUiThread {
-            val updateLocationButton = findViewById<Button>(R.id.set_location)
-            updateLocationButton.text = "Updating location for nearby devices"
-        }
+        mainViewModel.locationStatusText.value = "Updating location for nearby devices"
         thread(start = true) {
-            for ((_, device) in deviceList.getMap()) {
+            for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
                 if (!device.updateLocation(location)) {
                     messenger.alert("Failed to update location on '${device.name}'")
                 }
@@ -413,16 +353,8 @@ class MainActivity : AppCompatActivity() {
 
     fun resetUpdateLocationButton() {
         runOnUiThread {
-            val updateLocationButton = findViewById<Button>(R.id.set_location)
-            updateLocationButton.isClickable = true
-            updateLocationButton.text = "Update All Devices Location"
+            mainViewModel.locationStatusText.value = ""
         }
-    }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        when (requestCode) {
-            permissionHelper.locationUpdate -> setDevicesLocation(false)
-            else -> permissionHelper.onResult(requestCode, permissions, grantResults, messenger)
-        }
     }
 }

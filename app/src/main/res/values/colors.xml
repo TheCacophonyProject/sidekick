@@ -5,4 +5,6 @@
     <color name="colorAccent">#9f9f9f</color>
     <color name="alert">#FF5454</color>
     <color name="warning">#ffcc00</color>
+    <color name="buttonBackground">#f8f9fa</color>
+    <color name="hyperlink">#027db4</color>
 </resources>

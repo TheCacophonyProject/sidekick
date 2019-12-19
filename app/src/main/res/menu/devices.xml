@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/update_devices_location"
+        android:orderInCategory="100"
+        android:title="Update devices location"
+        android:onClick="setLocationButton"
+        app:showAsAction="never" />
+    <!--
+    <item
+        android:id="@+id/devices_troubleshooter"
+        android:orderInCategory="100"
+        android:title="Troubleshooter"
+        app:showAsAction="never" /> -->
+    <item
+        android:id="@+id/devices_refresh"
+        android:orderInCategory="100"
+        android:title="Refresh"
+        app:showAsAction="never" />
+</menu>

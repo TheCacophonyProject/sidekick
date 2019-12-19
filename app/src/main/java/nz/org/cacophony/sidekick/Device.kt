@@ -37,6 +37,8 @@ class Device(
     var numRecToDownload = 0
     @Volatile
     var sm = StateMachine()
+    @Volatile
+    var downloading = false
     private val client: OkHttpClient = OkHttpClient()
     private val pr = PermissionHelper(activity.applicationContext)
     private var devicename: String = name
@@ -207,39 +209,42 @@ class Device(
             messenger.alert("Failed to write to local storage. Canceling download.")
             return
         }
-        thread(start = true) {
-            sm.downloadingRecordings(true)
-            updateRecordings()
-            Log.i(TAG, "Download recordings from '$name'")
-
-            val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
-            Log.i(TAG, "recordings $deviceRecordings")
-
-            var allDownloaded = true
-            for (recordingName in deviceRecordings) {
-                Log.i(TAG, recordingName)
-                if (recordingName !in downloadedRecordings) {
-                    Log.i(TAG, "Downloading recording $recordingName")
-                    if (downloadRecording(recordingName)) {
-                        val outFile = File(getDeviceDir(), recordingName)
-                        val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
-                        dao.insert(recording)
-                    } else {
-                        allDownloaded = false
-                        if (!checkConnectionStatus(showMessage = true)) break
-                    }
-                    updateStatusString()
-                    //TODO note in the db if the recording failed
-                } else {
-                    Log.i(TAG, "Already downloaded $recordingName")
-                }
-            }
-            if (!allDownloaded) {
-                messenger.alert("Failed to download some recordings")
-            }
-            sm.downloadingRecordings(false)
-            updateStatusString()
+        if (downloading) {
+            return
         }
+        downloading = true
+        sm.downloadingRecordings(true)
+        updateRecordings()
+        Log.i(TAG, "Download recordings from '$name'")
+
+        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
+        Log.i(TAG, "recordings $deviceRecordings")
+
+        var allDownloaded = true
+        for (recordingName in deviceRecordings) {
+            Log.i(TAG, recordingName)
+            if (recordingName !in downloadedRecordings) {
+                Log.i(TAG, "Downloading recording $recordingName")
+                if (downloadRecording(recordingName)) {
+                    val outFile = File(getDeviceDir(), recordingName)
+                    val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
+                    dao.insert(recording)
+                } else {
+                    allDownloaded = false
+                    if (!checkConnectionStatus(showMessage = true)) break
+                }
+                updateStatusString()
+                //TODO note in the db if the recording failed
+            } else {
+                Log.i(TAG, "Already downloaded $recordingName")
+            }
+        }
+        if (!allDownloaded) {
+            messenger.alert("Failed to download some recordings")
+        }
+        sm.downloadingRecordings(false)
+        downloading = false
+        updateStatusString()
     }
 
     private fun downloadRecording(recordingName: String): Boolean {
