@@ -1,6 +1,5 @@
 package nz.org.cacophony.sidekick
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -96,7 +95,7 @@ class LoginScreen : AppCompatActivity() {
     }
 
     private fun gotoMainActivity() {
-        val intent = Intent(this, Main2Activity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
     }
 }
