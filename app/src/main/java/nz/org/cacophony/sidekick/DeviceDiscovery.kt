@@ -36,8 +36,7 @@ class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
         private val activity: Activity,
-        private val messenger: Messenger,
-        private val setRefreshBar: (active: Boolean) -> Unit) {
+        private val messenger: Messenger) {
     private var listener: DeviceListener? = null
     val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var multicastLock = wifi.createMulticastLock("multicastLock")
@@ -63,16 +62,7 @@ class DiscoveryManager(
         var listenerFound = stopListener()
 
         if (clear) {
-            val deviceMap = devices.getMap()
-            for ((name, device) in deviceMap) {
-                thread(start = true) {
-                    device.checkConnectionStatus()
-                    device.getDeviceInfo()
-                    if (device.sm.state == DeviceState.ERROR_CONNECTING_TO_DEVICE) {
-                        devices.remove(name)
-                    }
-                }
-            }
+            clearDevices()
         }
 
         if (listenerFound) {
@@ -86,6 +76,11 @@ class DiscoveryManager(
     }
 
     @Synchronized
+    fun clearDevices() {
+        devices.clear()
+    }
+
+    @Synchronized
     fun stop() {
         restarting = false
         stopListener()
@@ -94,7 +89,6 @@ class DiscoveryManager(
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
         multicastLock.acquire()
-        setRefreshBar(true)
         listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
@@ -104,7 +98,6 @@ class DiscoveryManager(
         if (listener != null) {
             multicastLock.release()
             Log.d(TAG, "Stopping discovery")
-            setRefreshBar(false)
             nsdManager.stopServiceDiscovery(listener)
             if (restarting == false) {
                 listener = null

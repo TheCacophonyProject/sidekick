@@ -24,7 +24,7 @@ public abstract class RecordingRoomDatabase extends RoomDatabase {
         }
     };
 
-    static RecordingRoomDatabase getDatabase(final Context context) {
+    public static RecordingRoomDatabase getDatabase(final Context context) {
         if (INSTANCE == null) {
             synchronized (RecordingRoomDatabase.class) {
                 if (INSTANCE == null) {

@@ -37,6 +37,8 @@ class Device(
     var numRecToDownload = 0
     @Volatile
     var sm = StateMachine()
+    @Volatile
+    var downloading = false
     private val client: OkHttpClient = OkHttpClient()
     private val pr = PermissionHelper(activity.applicationContext)
     private var devicename: String = name
@@ -47,7 +49,17 @@ class Device(
         Log.i(TAG, "Created new device: $name")
         makeDeviceDir()
         thread(start = true) {
-            checkConnectionStatus()
+            for (i in 3.downTo(0)) {
+                checkConnectionStatus()
+                if (sm.state == DeviceState.CONNECTED) {
+                    break
+                }
+                if (i > 0) {
+                    Log.i(TAG, "failed to connect to interface, trying $i more times")
+                } else {
+                    Log.e(TAG, "failed to connect to interface")
+                }
+            }
             getDeviceInfo()
             updateRecordings()
         }
@@ -197,39 +209,42 @@ class Device(
             messenger.alert("Failed to write to local storage. Canceling download.")
             return
         }
-        thread(start = true) {
-            sm.downloadingRecordings(true)
-            updateRecordings()
-            Log.i(TAG, "Download recordings from '$name'")
-
-            val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
-            Log.i(TAG, "recordings $deviceRecordings")
-
-            var allDownloaded = true
-            for (recordingName in deviceRecordings) {
-                Log.i(TAG, recordingName)
-                if (recordingName !in downloadedRecordings) {
-                    Log.i(TAG, "Downloading recording $recordingName")
-                    if (downloadRecording(recordingName)) {
-                        val outFile = File(getDeviceDir(), recordingName)
-                        val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
-                        dao.insert(recording)
-                    } else {
-                        allDownloaded = false
-                        if (!checkConnectionStatus(showMessage = true)) break
-                    }
-                    updateStatusString()
-                    //TODO note in the db if the recording failed
-                } else {
-                    Log.i(TAG, "Already downloaded $recordingName")
-                }
-            }
-            if (!allDownloaded) {
-                messenger.alert("Failed to download some recordings")
-            }
-            sm.downloadingRecordings(false)
-            updateStatusString()
+        if (downloading) {
+            return
         }
+        downloading = true
+        sm.downloadingRecordings(true)
+        updateRecordings()
+        Log.i(TAG, "Download recordings from '$name'")
+
+        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
+        Log.i(TAG, "recordings $deviceRecordings")
+
+        var allDownloaded = true
+        for (recordingName in deviceRecordings) {
+            Log.i(TAG, recordingName)
+            if (recordingName !in downloadedRecordings) {
+                Log.i(TAG, "Downloading recording $recordingName")
+                if (downloadRecording(recordingName)) {
+                    val outFile = File(getDeviceDir(), recordingName)
+                    val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
+                    dao.insert(recording)
+                } else {
+                    allDownloaded = false
+                    if (!checkConnectionStatus(showMessage = true)) break
+                }
+                updateStatusString()
+                //TODO note in the db if the recording failed
+            } else {
+                Log.i(TAG, "Already downloaded $recordingName")
+            }
+        }
+        if (!allDownloaded) {
+            messenger.alert("Failed to download some recordings")
+        }
+        sm.downloadingRecordings(false)
+        downloading = false
+        updateStatusString()
     }
 
     private fun downloadRecording(recordingName: String): Boolean {
@@ -314,7 +329,7 @@ class Device(
             if (checkConnectionStatus(timeout = 1000, showMessage = true, retries = 1)) {
                 val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
                 val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
-                httpBuilder.addQueryParameter("groups", groupList.joinToString("--"))
+                httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
                 val uri = Uri.parse(httpBuilder.build().toString())
                 Log.d(TAG, "opening browser to: $uri")
                 val urlIntent = Intent(Intent.ACTION_VIEW, uri)

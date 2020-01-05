@@ -4,99 +4,138 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#ffffff"
     tools:context=".LoginScreen">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
+        android:gravity="center_horizontal"
         android:orientation="vertical">
 
+
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            >
 
-            <EditText
-                android:id="@+id/username_email_login"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:backgroundTint="@android:color/holo_green_light"
-                android:ems="10"
-                android:hint="Username/Email"
-                android:inputType="text" />
-
-            <EditText
-                android:id="@+id/password_login"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:backgroundTint="@android:color/holo_green_light"
-                android:ems="10"
-                android:hint="password"
-                android:inputType="textPassword" />
-
-            <LinearLayout
+            <ImageView
+                android:id="@+id/show_api_image"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:orientation="horizontal">
+                android:layout_height="match_parent"
+                android:onClick="imageClick"
+                app:srcCompat="@mipmap/ic_launcher_foreground"
+                />
 
-                <Button
-                    android:id="@+id/login_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_weight="1"
-                    android:onClick="login"
-                    android:text="Login" />
-
-                <Button
-                    android:id="@+id/register_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:onClick="openRegisterPage"
-                    android:text="Register" />
-
-            </LinearLayout>
         </LinearLayout>
+
+        <EditText
+            android:id="@+id/username_email_login"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginLeft="30dp"
+            android:layout_marginRight="30dp"
+            android:background="@color/buttonBackground"
+            android:height="50dp"
+            android:layout_marginBottom="10dp"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingStart="10dp"
+            android:hint="Username or email"
+            android:inputType="text"
+            />
+
+        <EditText
+            android:id="@+id/password_login"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginLeft="30dp"
+            android:layout_marginRight="30dp"
+            android:layout_marginBottom="20dp"
+            android:background="@color/buttonBackground"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingStart="10dp"
+            android:hint="Password"
+            android:inputType="textPassword"
+            />
+
+        <Button
+            android:id="@+id/login_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="30dp"
+            android:layout_marginRight="30dp"
+            android:onClick="login"
+            android:text="Login"
+            />
 
         <LinearLayout
             android:id="@+id/api_linear_layout"
+            android:layout_marginTop="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginTop="10dp"
+            android:visibility="gone"
             android:orientation="horizontal"
-            android:visibility="invisible">
+            >
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="API:"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                />
 
             <AutoCompleteTextView
                 android:id="@+id/api_url_input"
                 android:layout_width="300dp"
-                android:layout_height="wrap_content"
                 android:clickable="true"
                 android:focusable="true"
+                android:text="https://api.cacophony.org.nz"
                 android:selectAllOnFocus="true"
-                android:text="https://api.cacophony.org.nz" />
+                android:layout_height="wrap_content"
+                />
 
         </LinearLayout>
 
-        <ImageView
-            android:id="@+id/show_api_image"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="219dp"
-            android:onClick="imageClick"
-            app:srcCompat="@mipmap/ic_launcher_foreground" />
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            >
 
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                />
+
+            <TextView
+                android:id="@+id/text_register"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Don't have a Cacophony account yet?"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/register_here"
+                android:textColor="@color/hyperlink"
+                android:textStyle=""
+                android:layout_marginBottom="30dp"
+                android:onClick="openRegisterPage"
+                />
+
+        </LinearLayout>
 
     </LinearLayout>
 

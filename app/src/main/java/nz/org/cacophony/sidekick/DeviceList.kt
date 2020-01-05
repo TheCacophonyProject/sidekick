@@ -91,5 +91,15 @@ class DeviceList {
     fun getMap(): Map<String, Device> {
         return devices
     }
+
+    // Return true if any devices are downloading recordings
+    fun downloading(): Boolean {
+        for ((_, device) in getMap()) {
+            if (device.downloading) {
+                return true
+            }
+        }
+        return false
+    }
 }
 
