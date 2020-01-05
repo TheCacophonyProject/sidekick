@@ -3,8 +3,6 @@ package nz.org.cacophony.sidekick.fragments
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.net.nsd.NsdManager
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -14,8 +12,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
-import nz.org.cacophony.sidekick.*
-import java.lang.Exception
+import nz.org.cacophony.sidekick.MainViewModel
+import nz.org.cacophony.sidekick.R
+import nz.org.cacophony.sidekick.TAG
 import kotlin.concurrent.thread
 
 class DevicesFragment : Fragment() {

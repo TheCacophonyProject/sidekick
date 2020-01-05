@@ -18,14 +18,14 @@
 
 package nz.org.cacophony.sidekick
 
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 
-class DeviceListAdapter(private val devices: DeviceList): RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
+class DeviceListAdapter(private val devices: DeviceList) : RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder>() {
 
     class DeviceViewHolder(v: View) : RecyclerView.ViewHolder(v) {
         val deviceNameView = v.findViewById(R.id.device_name) as TextView

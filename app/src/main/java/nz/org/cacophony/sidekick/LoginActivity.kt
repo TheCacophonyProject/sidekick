@@ -1,14 +1,13 @@
 package nz.org.cacophony.sidekick
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Browser
-import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import com.crashlytics.android.Crashlytics
 import java.net.UnknownHostException
 import kotlin.concurrent.thread

@@ -1,7 +1,6 @@
 package nz.org.cacophony.sidekick
 
 import android.Manifest
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
@@ -46,10 +45,11 @@ class Main2Activity : AppCompatActivity() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var messenger: Messenger
     private lateinit var permissionHelper: PermissionHelper
-    @Volatile var bestLocation: Location? = null
+    @Volatile
+    var bestLocation: Location? = null
     private val locationSettingsUpdateCode = 5
-    @Volatile var locationCount = 0
-
+    @Volatile
+    var locationCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -322,7 +322,7 @@ class Main2Activity : AppCompatActivity() {
 
                 if (location.accuracy >= 100 || location.latitude == 0.0 && location.longitude == 0.0) {
                     Log.d(TAG, "location not accurate enough or invalid")
-                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy ) {
+                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy) {
                     bestLocation = location
                 }
 

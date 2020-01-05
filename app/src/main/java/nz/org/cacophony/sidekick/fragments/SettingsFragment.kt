@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.BuildConfig
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
-import java.lang.Exception
 
 class SettingsFragment : Fragment() {
     private var title = "Settings"
