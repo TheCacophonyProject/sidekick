@@ -1,7 +1,6 @@
 package nz.org.cacophony.sidekick
 
 import android.Manifest
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
@@ -46,9 +45,11 @@ class Main2Activity : AppCompatActivity() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var messenger: Messenger
     private lateinit var permissionHelper: PermissionHelper
-    @Volatile var bestLocation: Location? = null
+    @Volatile
+    var bestLocation: Location? = null
     private val locationSettingsUpdateCode = 5
-    @Volatile var locationCount = 0
+    @Volatile
+    var locationCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

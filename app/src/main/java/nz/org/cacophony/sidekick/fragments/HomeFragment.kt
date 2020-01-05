@@ -8,7 +8,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
-import java.lang.Exception
 
 class HomeFragment : Fragment() {
     private val title = "Cacophony Sidekick"

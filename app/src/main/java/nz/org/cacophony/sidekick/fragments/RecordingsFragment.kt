@@ -12,7 +12,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
-import java.lang.Exception
 import kotlin.concurrent.thread
 
 class RecordingsFragment : Fragment() {
@@ -63,7 +62,6 @@ class RecordingsFragment : Fragment() {
         updateView()
         super.onResume()
     }
-
 
 
     private fun updateView() {
