@@ -95,7 +95,7 @@ class LoginScreen : AppCompatActivity() {
     }
 
     private fun gotoMainActivity() {
-        val intent = Intent(this, Main2Activity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
     }
 }

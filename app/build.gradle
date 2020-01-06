@@ -30,7 +30,7 @@ android {
     defaultConfig {
         vectorDrawables.useSupportLibrary = true
         applicationId "nz.org.cacophony.sidekick"
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion 28
         versionCode 10
         versionName "1.5.2"
