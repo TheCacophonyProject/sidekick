@@ -1,21 +1,28 @@
 package nz.org.cacophony.sidekick;
 
 
-import androidx.sqlite.db.SupportSQLiteDatabase;
+import android.content.Context;
+import android.os.AsyncTask;
+
+import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
-import android.content.Context;
-import android.os.AsyncTask;
-import androidx.annotation.NonNull;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 @Database(entities = {Recording.class}, version = 3, exportSchema = false)
 public abstract class RecordingRoomDatabase extends RoomDatabase {
 
-    public abstract RecordingDao recordingDao();
-
     // marking the instance as volatile to ensure atomic access to the variable
     private static volatile RecordingRoomDatabase INSTANCE;
+    private static RoomDatabase.Callback sRoomDatabaseCallback = new RoomDatabase.Callback() {
+
+        @Override
+        public void onOpen(@NonNull SupportSQLiteDatabase db) {
+            super.onOpen(db);
+            new PopulateDbAsync(INSTANCE).execute();
+        }
+    };
 
     public static RecordingRoomDatabase getDatabase(final Context context) {
         if (INSTANCE == null) {
@@ -34,14 +41,7 @@ public abstract class RecordingRoomDatabase extends RoomDatabase {
         return INSTANCE;
     }
 
-    private static RoomDatabase.Callback sRoomDatabaseCallback = new RoomDatabase.Callback() {
-
-        @Override
-        public void onOpen(@NonNull SupportSQLiteDatabase db) {
-            super.onOpen(db);
-            new PopulateDbAsync(INSTANCE).execute();
-        }
-    };
+    public abstract RecordingDao recordingDao();
 
     private static class PopulateDbAsync extends AsyncTask<Void, Void, Void> {
 

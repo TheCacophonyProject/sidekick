@@ -45,10 +45,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var messenger: Messenger
     private lateinit var permissionHelper: PermissionHelper
-    @Volatile var bestLocation: Location? = null
+    @Volatile
+    var bestLocation: Location? = null
     private val locationSettingsUpdateCode = 5
-    @Volatile var locationCount = 0
-
+    @Volatile
+    var locationCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -321,7 +322,7 @@ class MainActivity : AppCompatActivity() {
 
                 if (location.accuracy >= 100 || location.latitude == 0.0 && location.longitude == 0.0) {
                     Log.d(TAG, "location not accurate enough or invalid")
-                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy ) {
+                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy) {
                     bestLocation = location
                 }
 
