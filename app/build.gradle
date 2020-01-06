@@ -14,6 +14,14 @@ if (performSigning) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+
+ext.versionMajor = 2
+ext.versionMinor = 0
+ext.versionPatch = 0
+ext.versionClassifier = null
+ext.isSnapshot = false
+ext.minimumSdkVersion = 19
+
 android {
 
     compileSdkVersion 29
@@ -30,10 +38,10 @@ android {
     defaultConfig {
         vectorDrawables.useSupportLibrary = true
         applicationId "nz.org.cacophony.sidekick"
-        minSdkVersion 19
+        minSdkVersion project.ext.minimumSdkVersion
         targetSdkVersion 28
-        versionCode 11
-        versionName "2.0.0"
+        versionCode generateVersionCode()
+        versionName generateVersionName()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -50,6 +58,22 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+}
+
+private Integer generateVersionCode() {
+    return ext.minimumSdkVersion * 10000000 + ext.versionMajor * 10000 + ext.versionMinor * 100 + ext.versionPatch
+}
+
+private String generateVersionName() {
+    String versionName = "${ext.versionMajor}.${ext.versionMinor}.${ext.versionPatch}"
+    if (ext.versionClassifier == null && ext.isSnapshot) {
+        ext.versionClassifier = "SNAPSHOT"
+    }
+
+    if (ext.versionClassifier != null) {
+        versionName += "-" + ext.versionClassifier
+    }
+    return versionName;
 }
 
 repositories {
