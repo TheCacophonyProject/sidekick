@@ -231,7 +231,9 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 mainViewModel.uploadingRecordings.value = false
             }
-            mWakeLock.release()
+            if (mWakeLock.isHeld) {
+                mWakeLock.release()
+            }
         }
     }
 
