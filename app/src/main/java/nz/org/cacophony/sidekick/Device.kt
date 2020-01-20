@@ -279,7 +279,7 @@ class Device(
     }
 
     private fun getDeviceDir(): File {
-        return File("${Environment.getExternalStorageDirectory()}/cacophony-sidekick/$name")
+        return File("${activity.getExternalFilesDir(null)}/devices/$name")
     }
 
     private fun makeDeviceDir(): Boolean {

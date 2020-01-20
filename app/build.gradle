@@ -39,7 +39,7 @@ android {
         vectorDrawables.useSupportLibrary = true
         applicationId "nz.org.cacophony.sidekick"
         minSdkVersion project.ext.minimumSdkVersion
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode generateVersionCode()
         versionName generateVersionName()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
