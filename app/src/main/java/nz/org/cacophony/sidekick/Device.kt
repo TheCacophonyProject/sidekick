@@ -279,7 +279,8 @@ class Device(
     }
 
     private fun getDeviceDir(): File {
-        return File("${Environment.getExternalStorageDirectory()}/cacophony-sidekick/$name")
+        val prefs = Preferences(activity.applicationContext)
+        return File("${prefs.getString(STORAGE_LOCATION)}/devices/$name")
     }
 
     private fun makeDeviceDir(): Boolean {

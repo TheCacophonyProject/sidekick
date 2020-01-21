@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.BuildConfig
 import nz.org.cacophony.sidekick.MainViewModel
@@ -15,6 +16,7 @@ class SettingsFragment : Fragment() {
     private var title = "Settings"
 
     private lateinit var mainViewModel: MainViewModel
+    private lateinit var storageLocation: TextView
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -24,7 +26,9 @@ class SettingsFragment : Fragment() {
         container?.removeAllViews()
         val root = inflater.inflate(R.layout.fragment_settings, container, false)
         val versionText = root.findViewById<TextView>(R.id.app_version_text)
-        versionText.setText("Sidekick v${BuildConfig.VERSION_NAME}")
+        versionText.text = "v${BuildConfig.VERSION_NAME}"
+        storageLocation = root.findViewById(R.id.settings_storage_location)
+        setViewModelObservers()
         return root
     }
 
@@ -36,5 +40,13 @@ class SettingsFragment : Fragment() {
         } ?: throw Exception("Invalid Activity")
 
         mainViewModel.title.value = title
+    }
+
+    private fun setViewModelObservers() {
+        mainViewModel.storageLocation.observe(this, Observer { updateStorageLocation(it!!) })
+    }
+
+    private fun updateStorageLocation(path: String) {
+        storageLocation.text = path
     }
 }

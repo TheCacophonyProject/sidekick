@@ -2,16 +2,19 @@ package nz.org.cacophony.sidekick
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentSender
 import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.os.PowerManager
+import android.os.StatFs
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -357,6 +360,32 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             mainViewModel.locationStatusText.value = ""
         }
+    }
 
+    @Suppress("UNUSED_PARAMETER")
+    fun chooseStorageLocation(v: View) {
+        val extDirs = getExternalFilesDirs(null)
+        val dirs = Array(extDirs.size){""}
+        for (i in extDirs.indices) {
+            val file = extDirs[i]
+            val stat = StatFs(file.path)
+            val gbAvailable = stat.blockSizeLong * stat.availableBlocksLong / 1073741824.toFloat()
+            val gbCount = stat.blockSizeLong * stat.blockCountLong / 1073741824.toFloat()
+            Log.i(TAG, "File $file has $gbAvailable GB available from $gbCount GB")
+            dirs[i] = "${file.path.split("Android")[0]}\n%.2f GB of %.2f GB free\n".format(gbAvailable, gbCount)
+        }
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Choose storage location")
+        builder.setItems(dirs, object:DialogInterface.OnClickListener {
+            override fun onClick(dialog:DialogInterface, which:Int) {
+                val newStoragePath = extDirs[which].path
+                Log.i(TAG, "Setting new storage path to $newStoragePath")
+                val prefs = Preferences(applicationContext)
+                mainViewModel.storageLocation.value = newStoragePath
+                prefs.setString(STORAGE_LOCATION, newStoragePath)
+            }
+        })
+        builder.show()
     }
 }
