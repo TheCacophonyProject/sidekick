@@ -2,16 +2,19 @@ package nz.org.cacophony.sidekick
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentSender
 import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.os.PowerManager
+import android.os.StatFs
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -35,6 +38,7 @@ import kotlin.concurrent.thread
 
 const val TAG = "cacophony-manager"
 const val LOCATION_MAX_ATTEMPTS = 5
+const val GIGABYTE = 1073741824
 
 class MainActivity : AppCompatActivity() {
 
@@ -169,6 +173,9 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun downloadAll(v: View) {
+        if (!validStorageLocation()) {
+            return
+        }
         val downloadButton = findViewById<Button>(R.id.download_recordings_button)
         downloadButton.isClickable = false
         downloadButton.alpha = .5f
@@ -357,6 +364,42 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             mainViewModel.locationStatusText.value = ""
         }
+    }
 
+    @Suppress("UNUSED_PARAMETER")
+    fun chooseStorageLocation(v: View) {
+        val extDirs = getExternalFilesDirs(null)
+        val dirs = Array(extDirs.size){""}
+        for (i in extDirs.indices) {
+            val file = extDirs[i]
+            val stat = StatFs(file.path)
+            val gbAvailable = stat.blockSizeLong * stat.availableBlocksLong / GIGABYTE.toFloat()
+            val gbCount = stat.blockSizeLong * stat.blockCountLong / GIGABYTE.toFloat()
+            Log.i(TAG, "File $file has $gbAvailable GB available from $gbCount GB")
+            dirs[i] = "${file.path.split("Android")[0]}\n%.2f GB of %.2f GB free\n".format(gbAvailable, gbCount)
+        }
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Choose storage location")
+        builder.setItems(dirs, object:DialogInterface.OnClickListener {
+            override fun onClick(dialog:DialogInterface, which:Int) {
+                val newStoragePath = extDirs[which].path
+                Log.i(TAG, "Setting new storage path to $newStoragePath")
+                mainViewModel.storageLocation.value = newStoragePath
+                Preferences(applicationContext).setString(STORAGE_LOCATION, newStoragePath)
+            }
+        })
+        builder.show()
+    }
+
+    private fun validStorageLocation(showAlert: Boolean = true): Boolean {
+        if (Preferences(applicationContext).getString(STORAGE_LOCATION) == null
+                && !mainViewModel.loadDefaultStoragePath(applicationContext)) {
+            if (showAlert) {
+                messenger.alert("Failed to get a storage location. Please check app permissions")
+            }
+            return false
+        }
+        return true
     }
 }
