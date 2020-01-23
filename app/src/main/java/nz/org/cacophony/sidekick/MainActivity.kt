@@ -38,6 +38,7 @@ import kotlin.concurrent.thread
 
 const val TAG = "cacophony-manager"
 const val LOCATION_MAX_ATTEMPTS = 5
+const val GIGABYTE = 1073741824
 
 class MainActivity : AppCompatActivity() {
 
@@ -172,6 +173,9 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun downloadAll(v: View) {
+        if (!validStorageLocation()) {
+            return
+        }
         val downloadButton = findViewById<Button>(R.id.download_recordings_button)
         downloadButton.isClickable = false
         downloadButton.alpha = .5f
@@ -369,8 +373,8 @@ class MainActivity : AppCompatActivity() {
         for (i in extDirs.indices) {
             val file = extDirs[i]
             val stat = StatFs(file.path)
-            val gbAvailable = stat.blockSizeLong * stat.availableBlocksLong / 1073741824.toFloat()
-            val gbCount = stat.blockSizeLong * stat.blockCountLong / 1073741824.toFloat()
+            val gbAvailable = stat.blockSizeLong * stat.availableBlocksLong / GIGABYTE.toFloat()
+            val gbCount = stat.blockSizeLong * stat.blockCountLong / GIGABYTE.toFloat()
             Log.i(TAG, "File $file has $gbAvailable GB available from $gbCount GB")
             dirs[i] = "${file.path.split("Android")[0]}\n%.2f GB of %.2f GB free\n".format(gbAvailable, gbCount)
         }
@@ -381,11 +385,21 @@ class MainActivity : AppCompatActivity() {
             override fun onClick(dialog:DialogInterface, which:Int) {
                 val newStoragePath = extDirs[which].path
                 Log.i(TAG, "Setting new storage path to $newStoragePath")
-                val prefs = Preferences(applicationContext)
                 mainViewModel.storageLocation.value = newStoragePath
-                prefs.setString(STORAGE_LOCATION, newStoragePath)
+                Preferences(applicationContext).setString(STORAGE_LOCATION, newStoragePath)
             }
         })
         builder.show()
+    }
+
+    private fun validStorageLocation(showAlert: Boolean = true): Boolean {
+        if (Preferences(applicationContext).getString(STORAGE_LOCATION) == null
+                && !mainViewModel.loadDefaultStoragePath(applicationContext)) {
+            if (showAlert) {
+                messenger.alert("Failed to get a storage location. Please check app permissions")
+            }
+            return false
+        }
+        return true
     }
 }

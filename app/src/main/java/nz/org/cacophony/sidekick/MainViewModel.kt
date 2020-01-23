@@ -41,11 +41,16 @@ class MainViewModel : ViewModel() {
         networkIntentFilter.addAction("android.net.wifi.WIFI_STATE_CHANGED")
         networkIntentFilter.addAction("android.net.wifi.WIFI_AP_STATE_CHANGED")
 
-        val prefs = Preferences(activity)
-        storageLocation.value = prefs.getString(STORAGE_LOCATION)
-        if (storageLocation.value == "") {
-            storageLocation.value = activity.applicationContext.getExternalFilesDir(null)!!.path
-            prefs.setString(STORAGE_LOCATION, storageLocation.value!!)
+        storageLocation.value = Preferences(activity).getString(STORAGE_LOCATION)
+        if (storageLocation.value == null) {
+            loadDefaultStoragePath(activity.applicationContext)
         }
+    }
+
+    fun loadDefaultStoragePath(c: Context): Boolean {
+        val extPath = c.getExternalFilesDir(null)?.path ?: return false
+        storageLocation.value = extPath
+        Preferences(c).setString(STORAGE_LOCATION, extPath)
+        return true
     }
 }
