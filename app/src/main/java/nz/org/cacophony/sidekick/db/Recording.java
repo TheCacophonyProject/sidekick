@@ -1,5 +1,4 @@
-package nz.org.cacophony.sidekick;
-
+package nz.org.cacophony.sidekick.db;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,34 +18,34 @@ public class Recording {
 
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id")
-    Integer id;
+    public Integer id;
 
     @NonNull
     @ColumnInfo(name = "device_name")
-    String deviceName;
+    public String deviceName;
 
     @Nullable
     @ColumnInfo(name = "group_name")
-    String groupName;
+    public String groupName;
 
     @NonNull
     @ColumnInfo(name = "device_id")
-    int deviceID;
+    public int deviceID;
 
     @NonNull
     @ColumnInfo(name = "recording_path")
-    String recordingPath;
+    public String recordingPath;
 
     @NonNull
     @ColumnInfo(name = "uploaded") // Set to true when the recording had been uploaded to the server
             Boolean uploaded = false;
 
     @ColumnInfo(name = "size")
-    Integer size;
+    public Integer size;
 
     @NonNull
     @ColumnInfo(name = "name")
-    String name;
+    public String name;
 
     public Recording(@NonNull String deviceName, @NonNull String recordingPath, @NonNull String name, @Nullable String groupName, @NonNull int deviceID) {
         this.deviceName = deviceName;

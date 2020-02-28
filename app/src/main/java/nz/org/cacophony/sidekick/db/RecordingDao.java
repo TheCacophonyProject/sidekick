@@ -1,4 +1,4 @@
-package nz.org.cacophony.sidekick;
+package nz.org.cacophony.sidekick.db;
 
 import androidx.room.Dao;
 import androidx.room.Insert;

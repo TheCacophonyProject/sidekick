@@ -1,6 +1,7 @@
 package nz.org.cacophony.sidekick.fragments
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +13,9 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
+import nz.org.cacophony.sidekick.TAG
+import nz.org.cacophony.sidekick.db.EventDao
+import nz.org.cacophony.sidekick.db.RecordingDao
 import kotlin.concurrent.thread
 
 class RecordingsFragment : Fragment() {
@@ -21,8 +25,11 @@ class RecordingsFragment : Fragment() {
     private lateinit var noRecordingsLayout: LinearLayout
     private lateinit var recordingsLayout: LinearLayout
     private lateinit var recordingNumberText: TextView
+    private lateinit var eventNumberText: TextView
     private lateinit var uploadButton: Button
     private lateinit var uploadStatus: TextView
+    private lateinit var recordingDao: RecordingDao
+    private lateinit var eventDao: EventDao
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -34,6 +41,7 @@ class RecordingsFragment : Fragment() {
         noRecordingsLayout = root.findViewById(R.id.no_recordings_layout)
         recordingsLayout = root.findViewById(R.id.recordings_layout)
         recordingNumberText = root.findViewById(R.id.recording_count)
+        eventNumberText = root.findViewById(R.id.event_count)
         uploadButton = root.findViewById(R.id.upload_recordings_button)
         uploadStatus = root.findViewById(R.id.upload_recordings_status)
         updateView()
@@ -47,15 +55,22 @@ class RecordingsFragment : Fragment() {
             ViewModelProviders.of(this)[MainViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
 
+        val db = mainViewModel.db.value ?: throw Exception("failed to get DB from main view model")
+        recordingDao = db.recordingDao()
+        eventDao = db.eventDao()
+
         mainViewModel.title.value = title
         setViewModelObserves()
-
     }
 
     private fun setViewModelObserves() {
-        mainViewModel.uploadingRecordings.observe(this, Observer { updateView() })
-        mainViewModel.recordingDao.observe(this, Observer { updateView() })
+        mainViewModel.db.observe(this, Observer {
+            Log.i(TAG, "observe DB")
+            updateView()
+        })
+        mainViewModel.uploading.observe(this, Observer { updateView() })
         mainViewModel.recordingUploadingProgress.observe(this, Observer { updateView() })
+        mainViewModel.eventUploadingProgress.observe(this, Observer { updateView() })
     }
 
     override fun onResume() {
@@ -63,23 +78,28 @@ class RecordingsFragment : Fragment() {
         super.onResume()
     }
 
-
     private fun updateView() {
+        Log.i(TAG, "update recordings fragment")
         thread {
-            val numToUpload = mainViewModel.recordingDao.value!!.recordingsToUpload.size
+            val numRecordingsToUpload = recordingDao.recordingsToUpload.size
+            val numEventsToUpload = eventDao.getEventsToUpload().size
+            Log.i(TAG, "$numEventsToUpload, $numRecordingsToUpload")
             activity!!.runOnUiThread {
-                if (numToUpload > 0) {
-                    recordingNumberText.text = "$numToUpload"
+                if (numRecordingsToUpload == 0 && numEventsToUpload == 0) {
+                    noRecordingsLayout.visibility = View.VISIBLE
+                    recordingsLayout.visibility = View.GONE
+                } else {
                     noRecordingsLayout.visibility = View.GONE
                     recordingsLayout.visibility = View.VISIBLE
-                } else {
-                    recordingsLayout.visibility = View.GONE
-                    noRecordingsLayout.visibility = View.VISIBLE
                 }
+                recordingNumberText.text = "$numRecordingsToUpload"
+                eventNumberText.text = "$numEventsToUpload"
 
-                if (mainViewModel.uploadingRecordings.value!!) {
+                if (mainViewModel.uploading.value == true) {
                     uploadStatus.text =
-                            "Sending ${mainViewModel.recordingUploadingProgress.value} of ${mainViewModel.recordingUploadingCount.value} recordings"
+                            "Sending \n" +
+                                    "${mainViewModel.eventUploadingProgress.value} of ${mainViewModel.eventsBeingUploadedCount.value} events,\n" +
+                                    "${mainViewModel.recordingUploadingProgress.value} of ${mainViewModel.recordingsBeingUploadedCount.value} recordings\n"
                     uploadStatus.visibility = View.VISIBLE
                     uploadButton.isClickable = false
                     uploadButton.alpha = .5f

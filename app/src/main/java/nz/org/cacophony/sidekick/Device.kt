@@ -4,9 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
-import android.os.Environment
 import android.provider.Browser
 import android.util.Log
+import nz.org.cacophony.sidekick.db.*
 import okhttp3.*
 import okio.Okio
 import org.json.JSONArray
@@ -28,13 +28,17 @@ class Device(
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
         private val messenger: Messenger,
-        private val dao: RecordingDao) {
+        db: RoomDatabase) {
     @Volatile
     var deviceRecordings = emptyArray<String>()
+    @Volatile
+    var deviceEvents = emptyArray<Int>()
     @Volatile
     var statusString = ""
     @Volatile
     var numRecToDownload = 0
+    @Volatile
+    var numEventsToDownload = 0
     @Volatile
     var sm = StateMachine()
     @Volatile
@@ -44,6 +48,9 @@ class Device(
     private var devicename: String = name
     private var groupname: String? = null
     private var deviceID: Int = 0
+    private val recordingDao: RecordingDao = db.recordingDao()
+    private val eventDao: EventDao = db.eventDao()
+    private var apiVersion: Int = 0
 
     init {
         Log.i(TAG, "Created new device: $name")
@@ -61,7 +68,7 @@ class Device(
                 }
             }
             getDeviceInfo()
-            updateRecordings()
+            deleteUploadedData()
         }
     }
 
@@ -69,12 +76,11 @@ class Device(
         if (sm.state != DeviceState.CONNECTED && sm.state != DeviceState.READY) {
             return
         }
-
+        getAPIVersion()
         //for now so devices without latest management will still work
         sm.gotDeviceInfo()
         val deviceJSON: JSONObject
         try {
-
             deviceJSON = JSONObject(apiRequest("GET", "/api/device-info").responseString)
         } catch (e: Exception) {
             Log.e(TAG, "Exception when getting device info: $e")
@@ -91,19 +97,36 @@ class Device(
         updateStatusString()
     }
 
-    fun updateRecordings() {
-        updateRecordingsList()
-        val uploadedRecordings = dao.getUploadedFromDevice(devicename, groupname)
+    private fun getAPIVersion() {
+        try {
+            val versionJSON = JSONObject(apiRequest("GET", "/api/version").responseString)
+            apiVersion = versionJSON.getInt("apiVersion")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get API version")
+        }
+    }
+
+    /**
+     * deleteUploadedData will delete data (events and recordings) that have been uploaded to the server.
+     */
+    private fun deleteUploadedData() {
         if (!checkConnectionStatus(showMessage = true)) {
             return
         }
+        checkDataOnDevice()
+        deleteUploadedEvents()
+        deleteUploadedRecordings()
+    }
+
+    fun deleteUploadedRecordings() {
+        val uploadedRecordings = recordingDao.getUploadedFromDevice(devicename, groupname)
         var allDeleted = true
         for (rec in uploadedRecordings) {
             Log.i(TAG, "Uploaded recording: $rec")
             if (rec.name in deviceRecordings) {
                 allDeleted = allDeleted && deleteRecording(rec)
             } else {
-                dao.deleteRecording(rec.id)
+                recordingDao.deleteRecording(rec.id)
             }
         }
         if (!allDeleted) {
@@ -123,7 +146,7 @@ class Device(
 
             val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                dao.deleteRecording(recording.id)
+                recordingDao.deleteRecording(recording.id)
                 return true
             }
             val code = response.code()
@@ -140,43 +163,107 @@ class Device(
         return false
     }
 
-    // Get list of recordings on the device
-    private fun updateRecordingsList() {
+    private fun deleteUploadedEvents() {
+        val uploadedEventIDs = eventDao.getUploadedFromDevice(deviceID)
+        val eventsToDelete = mutableListOf<Int>()
+        for (uploadedEventID in uploadedEventIDs) {
+            if (uploadedEventID in deviceEvents) {
+                eventsToDelete.add(uploadedEventID)
+            }
+        }
+
+        try {
+            var url = HttpUrl.parse(URL("http", hostname, port, "/api/events").toString())
+            if (url == null) {
+                Log.e(TAG, "failed to make events url")
+                return
+            }
+            url = url.newBuilder()
+                    .addQueryParameter("keys", "[${eventsToDelete.joinToString(",")}]")
+                    .build() ?: throw Exception("failed to parse URL")
+
+            val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", getAuthString())
+                    .delete()
+                    .build()
+
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                Log.e(TAG, "failed to delete events from $devicename. response: ${response.message()} url: $url")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error with deleting recordings $e")
+        }
+    }
+
+    /**
+     * checkDataOnDevice will get the list of recordings and events on the device to compare against
+     * what is already collected and uploaded.
+     */
+    fun checkDataOnDevice() {
         if (!checkConnectionStatus()) {
             return
         }
+        checkEventsOnDevice()
+        checkRecordingsOnDevice()
+        updateStatusString()
+    }
+
+    /**
+     * checkRecordingsOnDevice will get the list of recordings that are on the device
+     */
+    private fun checkRecordingsOnDevice(): Boolean {
         val recJSON: JSONArray
         try {
-            recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)  //TODO check response from apiRequest
+            recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)
         } catch (e: Exception) {
             Log.e(TAG, "Exception when updating recording list: $e")
-            return
+            return false
         }
-        deviceRecordings = emptyArray<String>()
+        deviceRecordings = emptyArray()
         for (i in 0 until recJSON.length()) {
             deviceRecordings = deviceRecordings.plus(recJSON.get(i) as String)
         }
         sm.updatedRecordingList()
-        updateStatusString()
+        return true
+    }
+
+    /**
+     * checkEventsOnDevice will get the list of events that are on the device
+     */
+    private fun checkEventsOnDevice(): Boolean {
+        if (apiVersion < 2) {
+            return false
+        }
+        val eventsJSON: JSONArray
+        try {
+            eventsJSON = JSONArray(apiRequest("GET","/api/event-keys").responseString)
+        } catch(e: Exception) {
+            Log.e(TAG, "Exception when updating event keys: $e")
+            return false
+        }
+        deviceEvents = emptyArray()
+        for (i in 0 until eventsJSON.length()) {
+            deviceEvents = deviceEvents.plus(eventsJSON.get(i) as Int)
+        }
+        Log.i(TAG, "Event keys: ${deviceEvents.size}")
+        return true
     }
 
     private fun updateStatusString() {
         updateNumberOfRecordingsToDownload()
+        updateNumberOfEventsToDownload()
+
         var newStatus = ""
         if (!sm.state.connected) {
             newStatus = sm.state.message
         } else if (!sm.hasRecordingList) {
             newStatus = "Checking for recordings"
-        } else if (deviceRecordings.isEmpty()) {
-            newStatus = "No recordings left on device"
-        } else if (sm.state == DeviceState.DOWNLOADING_RECORDINGS) {
-            newStatus = "Downloaded ${deviceRecordings.size - numRecToDownload} of ${deviceRecordings.size}"
-        } else if (numRecToDownload == 0) {
-            newStatus = "All ${deviceRecordings.size} recordings downloaded"
-        } else if (numRecToDownload == 1) {
-            newStatus = "1 recording to download"
-        } else if (numRecToDownload > 1) {
-            newStatus = "$numRecToDownload recording to download"
+        } else {
+            newStatus =
+                    "${deviceRecordings.size - numRecToDownload} of ${deviceRecordings.size} of recordings collected\n" +
+                    "${deviceEvents.size - numEventsToDownload} of ${deviceEvents.size} of events collected\n"
         }
 
         if (newStatus != statusString) {
@@ -185,9 +272,22 @@ class Device(
         }
     }
 
+    private fun updateNumberOfEventsToDownload() {
+        // Count the number of events that are on the device and not in the database
+        val downloadedEventsIDs = eventDao.getDeviceEventIDsNotUploaded(deviceID)
+        var count = 0
+        for (event in deviceEvents) {
+            if (event !in downloadedEventsIDs) {
+                Log.i(TAG, "don't have event: $event")
+                count++
+            }
+        }
+        numEventsToDownload = count
+    }
+
     private fun updateNumberOfRecordingsToDownload() {
         // Count the number of recordings that are on the device and not in the database
-        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
+        val downloadedRecordings = recordingDao.getRecordingNamesFromDevice(devicename, groupname)
         var count = 0
         for (rec in deviceRecordings) {
             if (rec !in downloadedRecordings) {
@@ -214,10 +314,10 @@ class Device(
         }
         downloading = true
         sm.downloadingRecordings(true)
-        updateRecordings()
+        checkRecordingsOnDevice()
         Log.i(TAG, "Download recordings from '$name'")
 
-        val downloadedRecordings = dao.getRecordingNamesFromDevice(devicename, groupname)
+        val downloadedRecordings = recordingDao.getRecordingNamesFromDevice(devicename, groupname)
         Log.i(TAG, "recordings $deviceRecordings")
 
         var allDownloaded = true
@@ -228,7 +328,7 @@ class Device(
                 if (downloadRecording(recordingName)) {
                     val outFile = File(getDeviceDir(), recordingName)
                     val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
-                    dao.insert(recording)
+                    recordingDao.insert(recording)
                 } else {
                     allDownloaded = false
                     if (!checkConnectionStatus(showMessage = true)) break
@@ -277,6 +377,77 @@ class Device(
         }
         return false
     }
+
+    // Will compare deviceEvents with the events already in the DB and just return the missing ones
+    private fun getMissingEventKeys(): Array<Int> {
+        var missing = emptyArray<Int>()
+        for (eventKey in deviceEvents) {
+            if (eventDao.getDeviceEvent(deviceID, eventKey) == null) {
+                missing = missing.plus(eventKey)
+            }
+        }
+        return missing
+    }
+
+    fun downloadEvents() {
+        val missingEventKeys = getMissingEventKeys()
+        if (missingEventKeys.isEmpty()) {
+            Log.i(TAG, "No events to get from device")
+        }
+        val keys = "[${missingEventKeys.joinToString(",")}]"
+        Log.i(TAG, "Getting events: $keys")
+        try {
+            var url = HttpUrl.parse(URL("http", hostname, port, "/api/events").toString())
+            if (url == null) {
+                Log.e(TAG, "failed to make events url")
+                return
+            }
+            url = url.newBuilder()
+                    .addQueryParameter("keys", keys)
+                    .build() ?: throw Exception("failed to parse URL")
+            val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", getAuthString())
+                    .get()
+                    .build()
+
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                if (response.body() == null) {
+                    Log.e(TAG, "response body is null")
+                    return
+                }
+                val responseJSON = JSONObject((response.body() as ResponseBody).string())
+                Log.i(TAG, responseJSON.toString())
+                for (eventKey in responseJSON.keys()) {
+                    addEvent(eventKey.toInt(), responseJSON.getJSONObject(eventKey))
+                }
+
+            } else {
+                Log.e(TAG, "Exception with getting recordings: ${response.code()}")
+            }
+        } catch (e : Exception) {
+            Log.e(TAG, e.toString())
+        }
+        Log.i(TAG, eventDao.getDeviceEvents(deviceID).joinToString("\n"))
+    }
+
+    private fun addEvent(eventKey: Int, eventResponse: JSONObject) {
+        if (!eventResponse.getBoolean("success")) {
+            Log.e(TAG, "event $eventKey failed: ${eventResponse.get("error")}")
+            return
+        }
+
+        val eventJSON = eventResponse.getJSONObject("event")
+        val timestamp = eventJSON.getString("Timestamp")
+        val type = eventJSON.getString("Type")
+        val details = eventJSON.getJSONObject("Details").toString()
+        //TODO check that the timestamp, type, details... are sensible values
+        val event = Event(deviceID, eventKey, timestamp, type, details)
+        Log.i(TAG, "Adding event: $event")
+        eventDao.insertAll(event)
+    }
+
 
     private fun getDeviceDir(): File {
         val prefs = Preferences(activity.applicationContext)

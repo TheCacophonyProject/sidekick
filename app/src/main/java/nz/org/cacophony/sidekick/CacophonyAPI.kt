@@ -4,12 +4,16 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.crashlytics.android.Crashlytics
+import nz.org.cacophony.sidekick.db.Recording
 import okhttp3.*
+import okhttp3.internal.http2.Header
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.charset.Charset
 import kotlin.concurrent.thread
 
 
@@ -123,7 +127,41 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        fun updateGroupList(c: Context) {
+        fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String) {
+            val description = JSONObject()
+            description.put("type", type)
+            description.put("details", details)
+            val t = JSONArray()
+            for (time in timestamps) {
+                t.put(time)
+            }
+            val data = JSONObject()
+            data.put("description", description)
+            data.put("dateTimes", t)
+
+            val urlStr = "${getServerURL(c)}/api/v1/events/device/${deviceID}"
+            val url = HttpUrl.parse(urlStr) ?: throw Exception("unable to parse url: '$urlStr'")
+
+            val requestBody = RequestBody.create(
+                    MediaType.parse("application/json; charset=utf-8"),
+                    data.toString().toByteArray(Charsets.UTF_8))
+
+            val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", getJWT(c))
+                    .post(requestBody)
+                    .build()
+
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                Log.i(TAG, "successful upload of event")
+            } else {
+                throw Exception(response.message())
+            }
+        }
+
+        private fun updateGroupList(c: Context) {
             val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/groups")!!.newBuilder()
 
             httpBuilder.addQueryParameter("where", "{}")
@@ -194,8 +232,8 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             return getPrefs(c).getString(passwordKey, "")
         }
 
-        fun getJWT(c: Context): String? {
-            return getPrefs(c).getString(jwtKey, "")
+        private fun getJWT(c: Context): String {
+            return getPrefs(c).getString(jwtKey, "") ?: ""
         }
 
         fun getServerURL(c: Context): String {

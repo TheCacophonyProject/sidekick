@@ -1,4 +1,4 @@
-package nz.org.cacophony.sidekick;
+package nz.org.cacophony.sidekick.db;
 
 
 import android.content.Context;
@@ -7,15 +7,14 @@ import android.os.AsyncTask;
 import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
-import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
-@Database(entities = {Recording.class}, version = 3, exportSchema = false)
-public abstract class RecordingRoomDatabase extends RoomDatabase {
+@Database(entities = {Recording.class, Event.class}, version = 4, exportSchema = false)
+public abstract class RoomDatabase extends androidx.room.RoomDatabase {
 
     // marking the instance as volatile to ensure atomic access to the variable
-    private static volatile RecordingRoomDatabase INSTANCE;
-    private static RoomDatabase.Callback sRoomDatabaseCallback = new RoomDatabase.Callback() {
+    private static volatile RoomDatabase INSTANCE;
+    private static androidx.room.RoomDatabase.Callback sRoomDatabaseCallback = new androidx.room.RoomDatabase.Callback() {
 
         @Override
         public void onOpen(@NonNull SupportSQLiteDatabase db) {
@@ -24,15 +23,14 @@ public abstract class RecordingRoomDatabase extends RoomDatabase {
         }
     };
 
-    public static RecordingRoomDatabase getDatabase(final Context context) {
+    public static RoomDatabase getDatabase(final Context context) {
+
         if (INSTANCE == null) {
-            synchronized (RecordingRoomDatabase.class) {
+            synchronized (RoomDatabase.class) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
-                            RecordingRoomDatabase.class, "recording_database")
-                            // Wipes and rebuilds instead of migrating if no Migration object.
-                            // Migration is not part of this codelab.
-                            .fallbackToDestructiveMigration()
+                            RoomDatabase.class, "recording_database")
+                            .addMigrations(Migrations.getMIGRATION_3_4())
                             .addCallback(sRoomDatabaseCallback)
                             .build();
                 }
@@ -43,11 +41,13 @@ public abstract class RecordingRoomDatabase extends RoomDatabase {
 
     public abstract RecordingDao recordingDao();
 
+    public abstract EventDao eventDao();
+
     private static class PopulateDbAsync extends AsyncTask<Void, Void, Void> {
 
         private final RecordingDao mDao;
 
-        PopulateDbAsync(RecordingRoomDatabase db) {
+        PopulateDbAsync(RoomDatabase db) {
             mDao = db.recordingDao();
         }
 

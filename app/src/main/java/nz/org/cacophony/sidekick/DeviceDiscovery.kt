@@ -25,6 +25,7 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.util.Log
 import net.posick.mDNS.Lookup
+import nz.org.cacophony.sidekick.db.RoomDatabase
 import org.xbill.DNS.DClass
 import org.xbill.DNS.Type
 import java.net.*
@@ -218,8 +219,7 @@ class DeviceListener(
             return;
         }
         Log.i(TAG, "deviceConnected ${serviceName}: ${hostAddress}:${port}")
-        val db = RecordingRoomDatabase.getDatabase(activity.applicationContext)
-        val recDao = db.recordingDao()
+        val db = RoomDatabase.getDatabase(activity.applicationContext)
         val device = devices.getMap().get(hostAddress)
         if (device == null) {
             val newDevice = Device(
@@ -229,7 +229,7 @@ class DeviceListener(
                     activity,
                     devices.getOnChanged(),
                     messenger,
-                    recDao)
+                    db)
             //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
             devices.add(newDevice)
 
@@ -239,7 +239,7 @@ class DeviceListener(
                 Log.d(TAG, "Updating ${hostAddress} host ${device.name} with name ${serviceName}")
                 device.name = serviceName;
                 device.getDeviceInfo()
-                device.updateRecordings()
+                device.checkDataOnDevice()
                 devices.deviceNameUpdated()
             } else {
                 devices.remove(hostAddress) // Device service was still found but could not connect to device

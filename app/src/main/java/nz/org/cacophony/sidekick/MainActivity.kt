@@ -29,6 +29,8 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.android.material.navigation.NavigationView
+import nz.org.cacophony.sidekick.db.EventDao
+import nz.org.cacophony.sidekick.db.RecordingDao
 import nz.org.cacophony.sidekick.fragments.DevicesFragment
 import nz.org.cacophony.sidekick.fragments.HomeFragment
 import nz.org.cacophony.sidekick.fragments.RecordingsFragment
@@ -49,6 +51,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var messenger: Messenger
     private lateinit var permissionHelper: PermissionHelper
+    private lateinit var eventDao: EventDao
+    private lateinit var recordingDao: RecordingDao
     @Volatile
     var bestLocation: Location? = null
     private val locationSettingsUpdateCode = 5
@@ -69,6 +73,9 @@ class MainActivity : AppCompatActivity() {
         messenger = mainViewModel.messenger.value!!
         permissionHelper = PermissionHelper(applicationContext)
         permissionHelper.checkAll(this)
+
+        eventDao = mainViewModel.db.value!!.eventDao()
+        recordingDao = mainViewModel.db.value!!.recordingDao()
 
         setViewModelObserves()
 
@@ -182,6 +189,7 @@ class MainActivity : AppCompatActivity() {
         downloadButton.text = "GETTING RECORDINGS"
         for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
             thread {
+                device.downloadEvents()
                 device.startDownloadRecordings()
                 if (!mainViewModel.deviceList.value!!.downloading()) {
                     runOnUiThread {
@@ -195,53 +203,108 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun uploadRecordings(v: View) {
+    fun upload(v: View) {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
         mWakeLock.acquire(5 * 60 * 1000)
-        if (mainViewModel.uploadingRecordings.value!!) {
+        if (mainViewModel.uploading.value == true) {
             return
         }
-        mainViewModel.uploadingRecordings.value = true
-
+        mainViewModel.uploading.value = true
         thread {
-            val recordingsToUpload = mainViewModel.recordingDao.value!!.recordingsToUpload
-            runOnUiThread {
-                mainViewModel.recordingUploadingCount.value = recordingsToUpload.size
-                mainViewModel.recordingUploadingProgress.value = 0
-            }
-            var allUploaded = true
-            for (rec in recordingsToUpload) {
-                runOnUiThread {
-                    mainViewModel.recordingUploadingProgress.value = mainViewModel.recordingUploadingProgress.value!! + 1
-                }
-                try {
-                    CacophonyAPI.uploadRecording(applicationContext, rec)
-                    mainViewModel.recordingDao.value!!.setAsUploaded(rec.id)
-                    File(rec.recordingPath).delete()
-                } catch (e: Exception) {
-                    allUploaded = false
-                    if (e.message == null) {
-                        messenger.toast("Unknown error with uploading recordings")
-                    } else {
-                        messenger.toast(e.message!!)
-                    }
-                }
-            }
-            if (recordingsToUpload.size == 0) {
-                messenger.alert("No recordings to upload")
-            } else if (allUploaded) {
-                messenger.alert("Finished uploading recordings")
-            } else {
-                messenger.alert("Failed to upload some or all recordings")
-            }
-            runOnUiThread {
-                mainViewModel.uploadingRecordings.value = false
-            }
+            uploadEvents()
+            uploadRecordings()
+
             if (mWakeLock.isHeld) {
                 mWakeLock.release()
             }
+            runOnUiThread {
+                mainViewModel.uploading.value = false
+            }
         }
+    }
+
+    private fun uploadRecordings(maxFailCount: Int = 3): Int {
+        val recordingsToUpload = recordingDao.recordingsToUpload
+        runOnUiThread {
+            mainViewModel.recordingsBeingUploadedCount.value = recordingsToUpload.size
+            mainViewModel.recordingUploadingProgress.value = 0
+        }
+        if (recordingsToUpload.isEmpty()) {
+            return 0
+        }
+        var failedUploadCount = 0
+        for (rec in recordingsToUpload) {
+            Thread.sleep(1000)
+            runOnUiThread {
+                mainViewModel.recordingUploadingProgress.value = mainViewModel.recordingUploadingProgress.value ?: 0 + 1
+            }
+            try {
+                CacophonyAPI.uploadRecording(applicationContext, rec)
+                recordingDao.setAsUploaded(rec.id)
+                File(rec.recordingPath).delete()
+            } catch (e: Exception) {
+                failedUploadCount++
+                messenger.toast(e.message ?: "Unknown error with uploading recordings")
+                if (failedUploadCount >= maxFailCount) {
+                    break
+                }
+            }
+        }
+        when {
+            failedUploadCount == 0 ->
+                messenger.alert("Finished uploading recordings")
+            failedUploadCount < maxFailCount ->
+                messenger.alert("Failed to upload some or all recordings")
+            failedUploadCount >= maxFailCount ->
+                messenger.alert("Stopping uploading as too many failed")
+        }
+        return failedUploadCount
+    }
+
+    private fun uploadEvents(maxFailCount: Int = 3): Int {
+        val eventsToUpload = eventDao.getEventsToUpload()
+        runOnUiThread {
+            mainViewModel.eventsBeingUploadedCount.value = eventsToUpload.size
+            mainViewModel.eventUploadingProgress.value = 0
+        }
+        if (eventsToUpload.isEmpty()) {
+            messenger.toast("No events to upload")
+            return 0
+        }
+        var failedUploadCount = 0
+        while (eventDao.getOneNotUploaded() != null) {
+            Thread.sleep(1000)
+            Log.i(TAG, "uploading some recordings")
+            val event = eventDao.getOneNotUploaded() ?: break   //If null break from loop
+            val events = eventDao.getSimilarToUpload(event.deviceID, event.type, event.details)
+            var timestamps = emptyArray<String>()
+            for (e in events) {
+                timestamps = timestamps.plus(e.timestamp)
+            }
+            try {
+                CacophonyAPI.uploadEvents(applicationContext, event.deviceID, timestamps, event.type, event.details)
+                for (e in events) {
+                    eventDao.setAsUploaded(e.id)
+                }
+            } catch(e : Exception) {
+                failedUploadCount++
+                messenger.toast(e.message ?: "Unknown error with uploading recordings")
+                Log.e(TAG, e.toString())
+                if (failedUploadCount >= maxFailCount) {
+                    break
+                }
+            }
+        }
+        when {
+            failedUploadCount == 0 ->
+                messenger.alert("Finished uploading all event")
+            failedUploadCount < maxFailCount ->
+                messenger.alert("Failed to upload %d event groups")
+            failedUploadCount >= maxFailCount ->
+                messenger.alert("Stopping uploading as too many failed")
+        }
+        return failedUploadCount
     }
 
     @Suppress("UNUSED_PARAMETER")
