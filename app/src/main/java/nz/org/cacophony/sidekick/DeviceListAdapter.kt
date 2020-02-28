@@ -34,7 +34,7 @@ class DeviceListAdapter(private val devices: DeviceList) : RecyclerView.Adapter<
     }
 
     override fun onCreateViewHolder(parent: ViewGroup,
-                                    viewType: Int): DeviceListAdapter.DeviceViewHolder {
+                                    viewType: Int): DeviceViewHolder {
         val rowView = LayoutInflater.from(parent.context)
                 .inflate(R.layout.device_row, parent, false)
         return DeviceViewHolder(rowView)

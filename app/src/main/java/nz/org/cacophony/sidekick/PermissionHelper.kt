@@ -9,7 +9,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class PermissionHelper(private val c: Context) {
-    val multipleRequests = 1
+    private val multipleRequests = 1
     val locationUpdate = 2
 
     private val permissionList = listOf(

@@ -28,7 +28,6 @@ public class Recording {
     @ColumnInfo(name = "group_name")
     public String groupName;
 
-    @NonNull
     @ColumnInfo(name = "device_id")
     public int deviceID;
 
@@ -47,7 +46,7 @@ public class Recording {
     @ColumnInfo(name = "name")
     public String name;
 
-    public Recording(@NonNull String deviceName, @NonNull String recordingPath, @NonNull String name, @Nullable String groupName, @NonNull int deviceID) {
+    public Recording(@NonNull String deviceName, @NonNull String recordingPath, @NonNull String name, @Nullable String groupName, int deviceID) {
         this.deviceName = deviceName;
         this.recordingPath = recordingPath;
         this.name = name;
@@ -56,10 +55,6 @@ public class Recording {
     }
 
     @NonNull
-    public Recording getRecording() {
-        return this;
-    }
-
     @Override
     public String toString() {
         return "{ id: " + id + ", deviceName: " + deviceName + ", groupName: " + groupName + ", deviceID: " + deviceID + ", recordingPath: " + recordingPath + ", uploaded: " + uploaded + " }";

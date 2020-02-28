@@ -118,7 +118,7 @@ class Device(
         deleteUploadedRecordings()
     }
 
-    fun deleteUploadedRecordings() {
+    private fun deleteUploadedRecordings() {
         val uploadedRecordings = recordingDao.getUploadedFromDevice(devicename, groupname)
         var allDeleted = true
         for (rec in uploadedRecordings) {
@@ -255,14 +255,10 @@ class Device(
         updateNumberOfRecordingsToDownload()
         updateNumberOfEventsToDownload()
 
-        var newStatus = ""
-        if (!sm.state.connected) {
-            newStatus = sm.state.message
-        } else if (!sm.hasRecordingList) {
-            newStatus = "Checking for recordings"
-        } else {
-            newStatus =
-                    "${deviceRecordings.size - numRecToDownload} of ${deviceRecordings.size} of recordings collected\n" +
+        val newStatus = when {
+            !sm.state.connected -> sm.state.message
+            !sm.hasRecordingList -> "Checking for recordings"
+            else -> "${deviceRecordings.size - numRecToDownload} of ${deviceRecordings.size} of recordings collected\n" +
                     "${deviceEvents.size - numEventsToDownload} of ${deviceEvents.size} of events collected\n"
         }
 
@@ -562,7 +558,7 @@ class Device(
                 .build()
         var updated = false
         try {
-            var response = client.newCall(request).execute()
+            val response = client.newCall(request).execute()
             var responseBody = ""
             if (response.body() != null) {
                 responseBody = (response.body() as ResponseBody).string()  //This also closes the body
@@ -582,8 +578,8 @@ class StateMachine {
 
     var state = DeviceState.FOUND
     var hasRecordingList = false
-    var hasDeviceInfo = false
-    var hasConnected = false
+    private var hasDeviceInfo = false
+    private var hasConnected = false
 
     fun downloadingRecordings(downloading: Boolean) {
         if (downloading) {
@@ -611,12 +607,6 @@ class StateMachine {
 
     fun connectionFailed() {
         updateState(DeviceState.ERROR_CONNECTING_TO_DEVICE)
-    }
-
-    fun connecting() {
-        if (hasConnected) {
-            updateState(DeviceState.RECONNECT)
-        }
     }
 
     fun gotDeviceInfo() {

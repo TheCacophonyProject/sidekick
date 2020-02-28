@@ -235,7 +235,6 @@ class MainActivity : AppCompatActivity() {
         }
         var failedUploadCount = 0
         for (rec in recordingsToUpload) {
-            Thread.sleep(1000)
             runOnUiThread {
                 mainViewModel.recordingUploadingProgress.value = mainViewModel.recordingUploadingProgress.value ?: 0 + 1
             }
@@ -274,7 +273,6 @@ class MainActivity : AppCompatActivity() {
         }
         var failedUploadCount = 0
         while (eventDao.getOneNotUploaded() != null) {
-            Thread.sleep(1000)
             Log.i(TAG, "uploading some recordings")
             val event = eventDao.getOneNotUploaded() ?: break   //If null break from loop
             val events = eventDao.getSimilarToUpload(event.deviceID, event.type, event.details)

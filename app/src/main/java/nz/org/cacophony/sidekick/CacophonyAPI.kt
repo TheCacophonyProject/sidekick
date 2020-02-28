@@ -68,15 +68,6 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             saveUserData(c, "", "", "", "")
         }
 
-        private fun getCon(domain: String, path: String): HttpURLConnection {
-            val url = URL(domain + path)
-            if (url.protocol !in arrayOf("http", "https")) {
-                throw IllegalArgumentException("unsupported protocol");
-            }
-            return url.openConnection() as HttpURLConnection
-        }
-
-
         fun uploadRecording(c: Context, recording: Recording) {
             val data = JSONObject()
             data.put("type", "thermalRaw")
@@ -188,7 +179,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                 200 -> {
                     val groupSet = mutableSetOf<String>()
                     val groups = responseBodyJSON.getJSONArray("groups")
-                    for (i in 0..(groups.length() - 1)) {
+                    for (i in 0 until groups.length()) {
                         groupSet.add(groups.getJSONObject(i).getString("groupname"))
                     }
                     Log.i(TAG, groupSet.toString())
@@ -215,21 +206,17 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())?.sorted()
         }
 
-        fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
+        private fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
             val prefs = getPrefs(c)
             prefs.edit().putString(nameOrEmailKey, nameOrEmail).apply()
             prefs.edit().putString(passwordKey, password).apply()
             prefs.edit().putString(jwtKey, jwt).apply()
             prefs.edit().putString(serverURLKey, serverURL).apply()
-            Crashlytics.setUserName(nameOrEmail);
+            Crashlytics.setUserName(nameOrEmail)
         }
 
         fun getNameOrEmail(c: Context): String? {
             return getPrefs(c).getString(nameOrEmailKey, "")
-        }
-
-        fun getPassword(c: Context): String? {
-            return getPrefs(c).getString(passwordKey, "")
         }
 
         private fun getJWT(c: Context): String {
@@ -244,7 +231,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             return serverURL
         }
 
-        fun getPrefs(c: Context): SharedPreferences {
+        private fun getPrefs(c: Context): SharedPreferences {
             return c.getSharedPreferences("USER_API", Context.MODE_PRIVATE)
         }
     }
