@@ -7,6 +7,7 @@ import android.net.nsd.NsdManager
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import nz.org.cacophony.sidekick.db.RoomDatabase
+import java.lang.Exception
 
 class MainViewModel : ViewModel() {
 
@@ -34,8 +35,9 @@ class MainViewModel : ViewModel() {
         deviceList.value = dl
         deviceListAdapter.value = DeviceListAdapter(dl)
         val nsdManager = activity.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery.value = DiscoveryManager(nsdManager, dl, activity, messenger.value!!)
-        db.value = RoomDatabase.getDatabase(activity)
+        val database = RoomDatabase.getDatabase(activity) ?: throw Exception("failed to get database")
+        discovery.value = DiscoveryManager(nsdManager, dl, activity, messenger.value!!, database)
+        db.value = database
 
         wifiHelper = WifiHelper(activity.applicationContext)
 

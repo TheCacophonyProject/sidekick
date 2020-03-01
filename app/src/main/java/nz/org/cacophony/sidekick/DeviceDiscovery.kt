@@ -37,7 +37,8 @@ class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
         private val activity: Activity,
-        private val messenger: Messenger) {
+        private val messenger: Messenger,
+        private val db: RoomDatabase) {
     private var listener: DeviceListener? = null
     private val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var multicastLock = wifi.createMulticastLock("multicastLock")
@@ -87,7 +88,7 @@ class DiscoveryManager(
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
         multicastLock.acquire()
-        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped, db) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
@@ -118,6 +119,7 @@ class DeviceListener(
         private val activity: Activity,
         private val messenger: Messenger,
         private var onStopped: (() -> Unit)? = null,
+        private val db: RoomDatabase,
         private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
 ) : NsdManager.DiscoveryListener {
     var connected: Boolean = false
@@ -216,7 +218,6 @@ class DeviceListener(
             return
         }
         Log.i(TAG, "deviceConnected ${serviceName}: ${hostAddress}:${port}")
-        val db = RoomDatabase.getDatabase(activity.applicationContext)
         val device = devices.getMap()[hostAddress]
         if (device == null) {
             val newDevice = Device(

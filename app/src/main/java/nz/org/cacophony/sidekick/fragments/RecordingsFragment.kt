@@ -81,7 +81,7 @@ class RecordingsFragment : Fragment() {
     private fun updateView() {
         Log.i(TAG, "update recordings fragment")
         thread {
-            val numRecordingsToUpload = recordingDao.recordingsToUpload.size
+            val numRecordingsToUpload = recordingDao.getRecordingsToUpload().size
             val numEventsToUpload = eventDao.getEventsToUpload().size
             Log.i(TAG, "$numEventsToUpload, $numRecordingsToUpload")
             activity!!.runOnUiThread {

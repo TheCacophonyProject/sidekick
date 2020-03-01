@@ -225,7 +225,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun uploadRecordings(maxFailCount: Int = 3): Int {
-        val recordingsToUpload = recordingDao.recordingsToUpload
+        val recordingsToUpload = recordingDao.getRecordingsToUpload()
         runOnUiThread {
             mainViewModel.recordingsBeingUploadedCount.value = recordingsToUpload.size
             mainViewModel.recordingUploadingProgress.value = 0
