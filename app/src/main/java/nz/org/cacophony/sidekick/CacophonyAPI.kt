@@ -145,6 +145,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     .build()
 
             val response = client.newCall(request).execute()
+            response.close()
             if (response.isSuccessful) {
                 Log.i(TAG, "successful upload of event")
             } else {

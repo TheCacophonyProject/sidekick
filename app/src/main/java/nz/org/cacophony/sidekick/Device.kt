@@ -7,7 +7,7 @@ import android.net.Uri
 import android.provider.Browser
 import android.util.Log
 import nz.org.cacophony.sidekick.db.*
-import okhttp3.*
+import okhttp3.HttpUrl
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

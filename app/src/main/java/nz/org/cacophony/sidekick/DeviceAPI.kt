@@ -53,6 +53,7 @@ class DeviceAPI(
                 .delete()
                 .build()
         val response = client.newCall(request).execute()
+        response.close()
         if (!response.isSuccessful) {
             throw Exception("failed to delete $name from device")
         }
@@ -83,6 +84,7 @@ class DeviceAPI(
                 .delete()
                 .build()
         val response = client.newCall(request).execute()
+        response.close()
         if (!response.isSuccessful) {
             throw Exception("failed to delete events from device")
         }
@@ -102,6 +104,7 @@ class DeviceAPI(
                 .post(body)
                 .build()
         val response = client.newCall(request).execute()
+        response.close()
         if (!response.isSuccessful) {
             throw Exception("failed to update location on device")
         }
@@ -117,9 +120,16 @@ class DeviceAPI(
 
     private fun getResponseBody(response: Response): ResponseBody {
         if (!response.isSuccessful) {
+            response.close()
             throw Exception("call failed. Error: ${response.message()}")  // TODO Add more useful info in exception
         }
-        return response.body() ?: throw Exception("failed to get body from response")
+        val body = response.body()
+        if (body == null) {
+            response.close()
+            throw Exception("failed to get body from response")
+        } else {
+            return body
+        }
     }
 
     private fun getUrl(path: String): HttpUrl {
