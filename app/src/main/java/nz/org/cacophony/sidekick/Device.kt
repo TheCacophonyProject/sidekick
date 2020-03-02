@@ -8,12 +8,9 @@ import android.provider.Browser
 import android.util.Log
 import nz.org.cacophony.sidekick.db.*
 import okhttp3.*
-import okio.Okio
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
 import java.io.File
-import java.io.InputStreamReader
 import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.SocketException
@@ -43,7 +40,6 @@ class Device(
     var sm = StateMachine()
     @Volatile
     var downloading = false
-    private val client: OkHttpClient = OkHttpClient()
     private val pr = PermissionHelper(activity.applicationContext)
     private var devicename: String = name
     private var groupname: String? = null
@@ -51,6 +47,7 @@ class Device(
     private val recordingDao: RecordingDao = db.recordingDao()
     private val eventDao: EventDao = db.eventDao()
     private var apiVersion: Int = 0
+    private val api: DeviceAPI = DeviceAPI(hostname, port)
 
     init {
         Log.i(TAG, "Created new device: $name")
@@ -76,34 +73,26 @@ class Device(
         if (sm.state != DeviceState.CONNECTED && sm.state != DeviceState.READY) {
             return
         }
-        getAPIVersion()
         //for now so devices without latest management will still work
         sm.gotDeviceInfo()
-        val deviceJSON: JSONObject
         try {
-            deviceJSON = JSONObject(apiRequest("GET", "/api/device-info").responseString)
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception when getting device info: $e")
-            return
-        }
-        devicename = deviceJSON.getString("devicename")
-        if (devicename.isEmpty()) {
-            devicename = name
-        }
-        groupname = deviceJSON.getString("groupname")
-        deviceID = deviceJSON.getInt("deviceID")
+            val deviceJSON = api.getDeviceInfo()
+            devicename = deviceJSON.getString("devicename")
+            if (devicename.isEmpty()) {
+                devicename = name
+            }
+            groupname = deviceJSON.getString("groupname")
+            deviceID = deviceJSON.getInt("deviceID")
 
+            val versionJSON = api.getDeviceVersion()
+            apiVersion = versionJSON.getInt("apiVersion")
+
+        } catch(e: Exception) {
+            Log.e(TAG, e.toString())
+            messenger.alert("failed to get device info from $name. ${e.message}")
+        }
         sm.gotDeviceInfo()
         updateStatusString()
-    }
-
-    private fun getAPIVersion() {
-        try {
-            val versionJSON = JSONObject(apiRequest("GET", "/api/version").responseString)
-            apiVersion = versionJSON.getInt("apiVersion")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get API version")
-        }
     }
 
     /**
@@ -135,32 +124,17 @@ class Device(
         updateNumberOfRecordingsToDownload()
     }
 
-    // Delete recording from device and Database. Recording file is deleted when uploaded to the server
+
     private fun deleteRecording(recording: Recording): Boolean {
+        var deleted = false
         try {
-            val request = Request.Builder()
-                    .url(URL("http", hostname, port, "/api/recording/${recording.name}"))
-                    .addHeader("Authorization", getAuthString())
-                    .delete()
-                    .build()
-
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                recordingDao.deleteRecording(recording.id)
-                return true
-            }
-            val code = response.code()
-            Log.i(TAG, "Delete recording '${recording.name}' on '$name' failed with code $code")
-            if (code == 403) {
-                messenger.toast("Not authorized to delete recordings from '$name'")
-            } else {
-                messenger.toast("Failed to delete '${recording.name}' from '$name'. Response code: '$code'")
-            }
-
+            api.deleteRecording(recording.name)
+            deleted = true
         } catch (e: Exception) {
-            Log.e(TAG, "Exception when deleting recording from device: $e")
+            Log.e(TAG, e.toString())
+            messenger.toast("Failed to delete '${recording.name}' from '$name'. Error: ${e.message}'")
         }
-        return false
+        return deleted
     }
 
     private fun deleteUploadedEvents() {
@@ -173,25 +147,7 @@ class Device(
         }
 
         try {
-            var url = HttpUrl.parse(URL("http", hostname, port, "/api/events").toString())
-            if (url == null) {
-                Log.e(TAG, "failed to make events url")
-                return
-            }
-            url = url.newBuilder()
-                    .addQueryParameter("keys", "[${eventsToDelete.joinToString(",")}]")
-                    .build() ?: throw Exception("failed to parse URL")
-
-            val request = Request.Builder()
-                    .url(url)
-                    .addHeader("Authorization", getAuthString())
-                    .delete()
-                    .build()
-
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                Log.e(TAG, "failed to delete events from $devicename. response: ${response.message()} url: $url")
-            }
+            api.deleteEvents(eventsToDelete.toTypedArray())
         } catch (e: Exception) {
             Log.e(TAG, "Error with deleting recordings $e")
         }
@@ -216,7 +172,7 @@ class Device(
     private fun checkRecordingsOnDevice(): Boolean {
         val recJSON: JSONArray
         try {
-            recJSON = JSONArray(apiRequest("GET", "/api/recordings").responseString)
+            recJSON = api.getRecordingList()
         } catch (e: Exception) {
             Log.e(TAG, "Exception when updating recording list: $e")
             return false
@@ -238,7 +194,7 @@ class Device(
         }
         val eventsJSON: JSONArray
         try {
-            eventsJSON = JSONArray(apiRequest("GET","/api/event-keys").responseString)
+            eventsJSON = api.getEventKeys()
         } catch(e: Exception) {
             Log.e(TAG, "Exception when updating event keys: $e")
             return false
@@ -344,34 +300,15 @@ class Device(
     }
 
     private fun downloadRecording(recordingName: String): Boolean {
+        var downloaded = false
         try {
-            val request = Request.Builder()
-                    .url(URL("http", hostname, port, "/api/recording/$recordingName"))
-                    .addHeader("Authorization", getAuthString())
-                    .get()
-                    .build()
-
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                val downloadedFile = File(getDeviceDir(), recordingName)
-                val sink = Okio.buffer(Okio.sink(downloadedFile))
-                sink.writeAll((response.body() as ResponseBody).source())
-                sink.close()
-                response.close()
-                return true
-            }
-            val code = response.code()
-            Log.i(TAG, "Failed downloading '$recordingName' from '$name'. Response code: $code")
-            if (code == 403) {
-                messenger.toast("Not authorized to download recordings from '$name'")
-            } else {
-                messenger.toast("Failed to download recording '$recordingName' from '$name'. Response code: '$code'")
-            }
+            api.downloadRecording(recordingName, File(getDeviceDir(), recordingName))
+            downloaded = true
         } catch (e: Exception) {
             messenger.toast("Error with downloading recording from '$name'")
             Log.e(TAG, "Exception when downloading recording: $e")
         }
-        return false
+        return downloaded
     }
 
     // Will compare deviceEvents with the events already in the DB and just return the missing ones
@@ -390,37 +327,11 @@ class Device(
         if (missingEventKeys.isEmpty()) {
             Log.i(TAG, "No events to get from device")
         }
-        val keys = "[${missingEventKeys.joinToString(",")}]"
-        Log.i(TAG, "Getting events: $keys")
+        Log.i(TAG, "Getting ${missingEventKeys.size} events from $name")
         try {
-            var url = HttpUrl.parse(URL("http", hostname, port, "/api/events").toString())
-            if (url == null) {
-                Log.e(TAG, "failed to make events url")
-                return
-            }
-            url = url.newBuilder()
-                    .addQueryParameter("keys", keys)
-                    .build() ?: throw Exception("failed to parse URL")
-            val request = Request.Builder()
-                    .url(url)
-                    .addHeader("Authorization", getAuthString())
-                    .get()
-                    .build()
-
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                if (response.body() == null) {
-                    Log.e(TAG, "response body is null")
-                    return
-                }
-                val responseJSON = JSONObject((response.body() as ResponseBody).string())
-                Log.i(TAG, responseJSON.toString())
-                for (eventKey in responseJSON.keys()) {
-                    addEvent(eventKey.toInt(), responseJSON.getJSONObject(eventKey))
-                }
-
-            } else {
-                Log.e(TAG, "Exception with getting recordings: ${response.code()}")
+            val responseJSON = api.downloadEvents(missingEventKeys)
+            for (eventKey in responseJSON.keys()) {
+                addEvent(eventKey.toInt(), responseJSON.getJSONObject(eventKey))
             }
         } catch (e : Exception) {
             Log.e(TAG, e.toString())
@@ -452,43 +363,6 @@ class Device(
 
     private fun makeDeviceDir(): Boolean {
         return getDeviceDir().isDirectory || getDeviceDir().mkdirs()
-    }
-
-    private fun getAuthString(): String {
-        //TODO Add better security...
-        return "Basic YWRtaW46ZmVhdGhlcnM="
-    }
-
-    private fun apiRequest(method: String, path: String): HttpResponse {
-        val url = URL("http", hostname, port, path)
-        val con = url.openConnection() as HttpURLConnection
-        con.requestMethod = method
-        con.setRequestProperty("Authorization", getAuthString())
-
-        var response = ""
-        Log.d(TAG, "New request to: $url")
-        try {
-            with(con) {
-                requestMethod = method
-                try {
-                    BufferedReader(InputStreamReader(inputStream)).use {
-                        val responseBuffer = StringBuffer()
-                        var inputLine = it.readLine()
-                        while (inputLine != null) {
-                            responseBuffer.append(inputLine)
-                            inputLine = it.readLine()
-                        }
-                        response = responseBuffer.toString()
-                    }
-                } catch (e: Exception) {
-                    Log.i(TAG, "Error with connecting to device")
-                }
-            }
-        } catch (e: Exception) {
-            Log.i(TAG, "Error with apiRequest")
-        }
-        Log.i(TAG, response)
-        return HttpResponse(con, response)
     }
 
     fun openManagementInterface() {
@@ -543,36 +417,16 @@ class Device(
     }
 
     fun updateLocation(location: Location): Boolean {
-        val client = OkHttpClient()
-        val body = FormBody.Builder()
-                .addEncoded("latitude", location.latitude.toString())
-                .addEncoded("longitude", location.longitude.toString())
-                .addEncoded("timestamp", location.time.toString())
-                .addEncoded("altitude", location.altitude.toString())
-                .addEncoded("accuracy", location.accuracy.toString())
-                .build()
-        val request = Request.Builder()
-                .url(URL("http", hostname, port, "/api/location"))
-                .addHeader("Authorization", getAuthString())
-                .post(body)
-                .build()
         var updated = false
         try {
-            val response = client.newCall(request).execute()
-            var responseBody = ""
-            if (response.body() != null) {
-                responseBody = (response.body() as ResponseBody).string()  //This also closes the body
-            }
-            Log.d(TAG, "Location update response: '$responseBody'")
-            updated = response.code() == 200
+            api.setLocation(location)
+            updated = true
         } catch (e: Exception) {
             Log.i(TAG, "failed to update location on device: $e")
         }
         return updated
     }
 }
-
-data class HttpResponse(val connection: HttpURLConnection, val responseString: String)
 
 class StateMachine {
 
