@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.BuildConfig
+import nz.org.cacophony.sidekick.CacophonyAPI
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
 
@@ -27,6 +28,8 @@ class SettingsFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_settings, container, false)
         val versionText = root.findViewById<TextView>(R.id.app_version_text)
         versionText.text = "v${BuildConfig.VERSION_NAME}"
+        val userText = root.findViewById<TextView>(R.id.user_text)
+        userText.text = CacophonyAPI.getNameOrEmail(context ?: throw Exception("No context for settings fragment"))
         storageLocation = root.findViewById(R.id.settings_storage_location)
         setViewModelObservers()
         return root
