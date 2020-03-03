@@ -82,6 +82,11 @@ class MainActivity : AppCompatActivity() {
         setUpNavigationView()
     }
 
+    override fun onResume() {
+        super.onResume()
+        CacophonyAPI.runUpdateGroupList(applicationContext)
+    }
+
     private fun setViewModelObserves() {
         // Update toolbar title
         mainViewModel.title.observe(this, Observer {
