@@ -241,7 +241,7 @@ class MainActivity : AppCompatActivity() {
         var failedUploadCount = 0
         for (rec in recordingsToUpload) {
             runOnUiThread {
-                mainViewModel.recordingUploadingProgress.value = mainViewModel.recordingUploadingProgress.value ?: 0 + 1
+                mainViewModel.recordingUploadingProgress.value = (mainViewModel.recordingUploadingProgress.value ?: 0) + 1
             }
             try {
                 CacophonyAPI.uploadRecording(applicationContext, rec)
@@ -259,9 +259,9 @@ class MainActivity : AppCompatActivity() {
             failedUploadCount == 0 ->
                 messenger.alert("Finished uploading recordings")
             failedUploadCount < maxFailCount ->
-                messenger.alert("Failed to upload some or all recordings")
+                messenger.alert("Failed to upload $failedUploadCount recordings")
             failedUploadCount >= maxFailCount ->
-                messenger.alert("Stopping uploading as too many failed")
+                messenger.alert("Stopping upload of recordings as too many failed")
         }
         return failedUploadCount
     }
@@ -287,6 +287,9 @@ class MainActivity : AppCompatActivity() {
             }
             try {
                 CacophonyAPI.uploadEvents(applicationContext, event.deviceID, timestamps, event.type, event.details)
+                runOnUiThread {
+                    mainViewModel.eventUploadingProgress.value = (mainViewModel.eventUploadingProgress.value ?: 0) + timestamps.size
+                }
                 for (e in events) {
                     eventDao.setAsUploaded(e.id)
                 }
@@ -301,11 +304,11 @@ class MainActivity : AppCompatActivity() {
         }
         when {
             failedUploadCount == 0 ->
-                messenger.alert("Finished uploading all event")
+                messenger.toast("Finished uploading all event")
             failedUploadCount < maxFailCount ->
                 messenger.alert("Failed to upload %d event groups")
             failedUploadCount >= maxFailCount ->
-                messenger.alert("Stopping uploading as too many failed")
+                messenger.alert("Stopping upload of events as too many failed")
         }
         return failedUploadCount
     }

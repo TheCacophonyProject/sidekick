@@ -27,7 +27,8 @@ class RecordingsFragment : Fragment() {
     private lateinit var recordingNumberText: TextView
     private lateinit var eventNumberText: TextView
     private lateinit var uploadButton: Button
-    private lateinit var uploadStatus: TextView
+    private lateinit var uploadRecordingStatus: TextView
+    private lateinit var uploadEventStatus: TextView
     private lateinit var recordingDao: RecordingDao
     private lateinit var eventDao: EventDao
 
@@ -43,7 +44,8 @@ class RecordingsFragment : Fragment() {
         recordingNumberText = root.findViewById(R.id.recording_count)
         eventNumberText = root.findViewById(R.id.event_count)
         uploadButton = root.findViewById(R.id.upload_recordings_button)
-        uploadStatus = root.findViewById(R.id.upload_recordings_status)
+        uploadRecordingStatus = root.findViewById(R.id.upload_recordings_status)
+        uploadEventStatus = root.findViewById(R.id.upload_event_status)
         updateView()
         return root
     }
@@ -64,10 +66,7 @@ class RecordingsFragment : Fragment() {
     }
 
     private fun setViewModelObserves() {
-        mainViewModel.db.observe(this, Observer {
-            Log.i(TAG, "observe DB")
-            updateView()
-        })
+        mainViewModel.db.observe(this, Observer { updateView() })
         mainViewModel.uploading.observe(this, Observer { updateView() })
         mainViewModel.recordingUploadingProgress.observe(this, Observer { updateView() })
         mainViewModel.eventUploadingProgress.observe(this, Observer { updateView() })
@@ -83,7 +82,6 @@ class RecordingsFragment : Fragment() {
         thread {
             val numRecordingsToUpload = recordingDao.getRecordingsToUpload().size
             val numEventsToUpload = eventDao.getEventsToUpload().size
-            Log.i(TAG, "$numEventsToUpload, $numRecordingsToUpload")
             activity!!.runOnUiThread {
                 if (numRecordingsToUpload == 0 && numEventsToUpload == 0) {
                     noRecordingsLayout.visibility = View.VISIBLE
@@ -96,16 +94,18 @@ class RecordingsFragment : Fragment() {
                 eventNumberText.text = "$numEventsToUpload"
 
                 if (mainViewModel.uploading.value == true) {
-                    uploadStatus.text =
-                            "Sending \n" +
-                                    "${mainViewModel.eventUploadingProgress.value} of ${mainViewModel.eventsBeingUploadedCount.value} events,\n" +
-                                    "${mainViewModel.recordingUploadingProgress.value} of ${mainViewModel.recordingsBeingUploadedCount.value} recordings\n"
-                    uploadStatus.visibility = View.VISIBLE
+                    uploadRecordingStatus.text = "Sending ${mainViewModel.recordingUploadingProgress.value} of ${mainViewModel.recordingsBeingUploadedCount.value} recordings"
+                    uploadRecordingStatus.visibility = View.VISIBLE
+
+                    uploadEventStatus.text = "Sending ${mainViewModel.eventUploadingProgress.value} of ${mainViewModel.eventsBeingUploadedCount.value} events"
+                    uploadEventStatus.visibility = View.VISIBLE
+
                     uploadButton.isClickable = false
                     uploadButton.alpha = .5f
                     uploadButton.text = "SENDING RECORDINGS"
                 } else {
-                    uploadStatus.visibility = View.GONE
+                    uploadRecordingStatus.visibility = View.GONE
+                    uploadEventStatus.visibility = View.GONE
                     uploadButton.text = "SEND TO CACOPHONY CLOUD"
                     uploadButton.isClickable = true
                     uploadButton.alpha = 1f
