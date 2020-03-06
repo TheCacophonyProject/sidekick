@@ -4,12 +4,16 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.crashlytics.android.Crashlytics
+import nz.org.cacophony.sidekick.db.Recording
 import okhttp3.*
+import okhttp3.internal.http2.Header
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.charset.Charset
 import kotlin.concurrent.thread
 
 
@@ -64,15 +68,6 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             saveUserData(c, "", "", "", "")
         }
 
-        private fun getCon(domain: String, path: String): HttpURLConnection {
-            val url = URL(domain + path)
-            if (url.protocol !in arrayOf("http", "https")) {
-                throw IllegalArgumentException("unsupported protocol");
-            }
-            return url.openConnection() as HttpURLConnection
-        }
-
-
         fun uploadRecording(c: Context, recording: Recording) {
             val data = JSONObject()
             data.put("type", "thermalRaw")
@@ -123,7 +118,39 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        fun updateGroupList(c: Context) {
+        fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String) {
+            val description = JSONObject()
+            description.put("type", type)
+            description.put("details", details)
+            val t = JSONArray(timestamps)
+            val data = JSONObject()
+            data.put("description", description)
+            data.put("dateTimes", t)
+
+            val urlStr = "${getServerURL(c)}/api/v1/events/device/${deviceID}"
+            val url = HttpUrl.parse(urlStr) ?: throw Exception("unable to parse url: '$urlStr'")
+
+            val requestBody = RequestBody.create(
+                    MediaType.parse("application/json; charset=utf-8"),
+                    data.toString().toByteArray(Charsets.UTF_8))
+
+            val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", getJWT(c))
+                    .post(requestBody)
+                    .build()
+
+            val response = client.newCall(request).execute()
+            response.close()
+            if (response.isSuccessful) {
+                Log.i(TAG, "successful upload of event")
+            } else {
+                throw Exception(response.message())
+            }
+        }
+
+        private fun updateGroupList(c: Context) {
             val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/groups")!!.newBuilder()
 
             httpBuilder.addQueryParameter("where", "{}")
@@ -150,7 +177,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                 200 -> {
                     val groupSet = mutableSetOf<String>()
                     val groups = responseBodyJSON.getJSONArray("groups")
-                    for (i in 0..(groups.length() - 1)) {
+                    for (i in 0 until groups.length()) {
                         groupSet.add(groups.getJSONObject(i).getString("groupname"))
                     }
                     Log.i(TAG, groupSet.toString())
@@ -177,25 +204,21 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())?.sorted()
         }
 
-        fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
+        private fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
             val prefs = getPrefs(c)
             prefs.edit().putString(nameOrEmailKey, nameOrEmail).apply()
             prefs.edit().putString(passwordKey, password).apply()
             prefs.edit().putString(jwtKey, jwt).apply()
             prefs.edit().putString(serverURLKey, serverURL).apply()
-            Crashlytics.setUserName(nameOrEmail);
+            Crashlytics.setUserName(nameOrEmail)
         }
 
         fun getNameOrEmail(c: Context): String? {
             return getPrefs(c).getString(nameOrEmailKey, "")
         }
 
-        fun getPassword(c: Context): String? {
-            return getPrefs(c).getString(passwordKey, "")
-        }
-
-        fun getJWT(c: Context): String? {
-            return getPrefs(c).getString(jwtKey, "")
+        private fun getJWT(c: Context): String {
+            return getPrefs(c).getString(jwtKey, "") ?: ""
         }
 
         fun getServerURL(c: Context): String {
@@ -206,7 +229,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             return serverURL
         }
 
-        fun getPrefs(c: Context): SharedPreferences {
+        private fun getPrefs(c: Context): SharedPreferences {
             return c.getSharedPreferences("USER_API", Context.MODE_PRIVATE)
         }
     }

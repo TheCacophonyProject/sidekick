@@ -44,9 +44,9 @@ class DeviceList {
     fun removeByName(serviceName: String) {
         for ((hostname, device) in devices) {
             if (device.name == serviceName) {
-                devices.remove(hostname);
+                devices.remove(hostname)
                 notifyChange()
-                break;
+                break
             }
         }
     }
@@ -78,7 +78,7 @@ class DeviceList {
         return this.onChanged
     }
 
-    fun notifyChange() {
+    private fun notifyChange() {
         onChanged?.invoke()
     }
 

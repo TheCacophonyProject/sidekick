@@ -25,6 +25,7 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.util.Log
 import net.posick.mDNS.Lookup
+import nz.org.cacophony.sidekick.db.RoomDatabase
 import org.xbill.DNS.DClass
 import org.xbill.DNS.Type
 import java.net.*
@@ -36,9 +37,10 @@ class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
         private val activity: Activity,
-        private val messenger: Messenger) {
+        private val messenger: Messenger,
+        private val db: RoomDatabase) {
     private var listener: DeviceListener? = null
-    val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    private val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var multicastLock = wifi.createMulticastLock("multicastLock")
     private var restarting: Boolean = false
 
@@ -48,7 +50,7 @@ class DiscoveryManager(
 
     @Synchronized
     fun start() {
-        var localList = listener
+        val localList = listener
         if (localList != null && localList.connected) {
             return
         }
@@ -58,18 +60,15 @@ class DiscoveryManager(
 
     @Synchronized
     fun restart(clear: Boolean = false) {
-        restarting = true;
-        var listenerFound = stopListener()
+        restarting = true
+        val listenerFound = stopListener()
 
         if (clear) {
             clearDevices()
         }
 
         if (listenerFound) {
-            var localListener = listener;
-            if (localListener != null) {
-                localListener.updateConnected();
-            }
+            listener?.updateConnected()
         } else {
             startListener()
         }
@@ -89,7 +88,7 @@ class DiscoveryManager(
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
         multicastLock.acquire()
-        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped, db) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
@@ -99,10 +98,10 @@ class DiscoveryManager(
             multicastLock.release()
             Log.d(TAG, "Stopping discovery")
             nsdManager.stopServiceDiscovery(listener)
-            if (restarting == false) {
+            if (!restarting) {
                 listener = null
             }
-            return true;
+            return true
         }
         return false
     }
@@ -120,27 +119,28 @@ class DeviceListener(
         private val activity: Activity,
         private val messenger: Messenger,
         private var onStopped: (() -> Unit)? = null,
+        private val db: RoomDatabase,
         private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
 ) : NsdManager.DiscoveryListener {
     var connected: Boolean = false
 
     init {
-        updateConnected();
+        updateConnected()
     }
 
     override fun onDiscoveryStarted(regType: String) {
         Log.d(TAG, "Discovery started")
-        connected = true;
+        connected = true
     }
 
     override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
         Log.e(TAG, "Discovery start failed with $errorCode")
-        connected = false;
+        connected = false
     }
 
     override fun onDiscoveryStopped(serviceType: String) {
         Log.i(TAG, "Discovery stopped")
-        connected = false;
+        connected = false
         activity.runOnUiThread {
             onStopped?.invoke()
         }
@@ -163,17 +163,17 @@ class DeviceListener(
 
     fun updateConnected() {
         thread(start = true) {
-            val lookup = Lookup(MANAGEMENT_SERVICE_TYPE, Type.ANY, DClass.IN);
+            val lookup = Lookup(MANAGEMENT_SERVICE_TYPE, Type.ANY, DClass.IN)
             val services = lookup.lookupServices()
             for (service in services) {
-                var addresses = service.getAddresses();
-                var deviceAddress: InetAddress? = null;
+                val addresses = service.addresses
+                var deviceAddress: InetAddress? = null
                 for (address in addresses) {
                     if (deviceAddress == null && address is Inet6Address) {
                         deviceAddress = address
                     } else if (address is Inet4Address) {
 
-                        deviceAddress = address;
+                        deviceAddress = address
                     }
                 }
 
@@ -186,7 +186,7 @@ class DeviceListener(
     }
 
 
-    fun checkConnectionStatus(hostname: String, timeout: Int = 3000, retries: Int = 3): Boolean {
+    private fun checkConnectionStatus(hostname: String, timeout: Int = 3000, retries: Int = 3): Boolean {
         var connected = false
         for (i in 1..retries) {
             try {
@@ -212,15 +212,13 @@ class DeviceListener(
         return connected
     }
 
-    public fun deviceConnected(serviceName: String, hostAddress: String, port: Int) {
+    fun deviceConnected(serviceName: String, hostAddress: String, port: Int) {
         if (!checkConnectionStatus(hostAddress, retries = 1)) {
-            devices.remove(hostAddress);
-            return;
+            devices.remove(hostAddress)
+            return
         }
         Log.i(TAG, "deviceConnected ${serviceName}: ${hostAddress}:${port}")
-        val db = RecordingRoomDatabase.getDatabase(activity.applicationContext)
-        val recDao = db.recordingDao()
-        val device = devices.getMap().get(hostAddress)
+        val device = devices.getMap()[hostAddress]
         if (device == null) {
             val newDevice = Device(
                     serviceName,
@@ -229,17 +227,17 @@ class DeviceListener(
                     activity,
                     devices.getOnChanged(),
                     messenger,
-                    recDao)
+                    db)
             //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
             devices.add(newDevice)
 
         } else {
             device.checkConnectionStatus()
             if (device.sm.state.connected) {
-                Log.d(TAG, "Updating ${hostAddress} host ${device.name} with name ${serviceName}")
-                device.name = serviceName;
+                Log.d(TAG, "Updating $hostAddress host ${device.name} with name $serviceName")
+                device.name = serviceName
                 device.getDeviceInfo()
-                device.updateRecordings()
+                device.checkDataOnDevice()
                 devices.deviceNameUpdated()
             } else {
                 devices.remove(hostAddress) // Device service was still found but could not connect to device
@@ -253,7 +251,7 @@ class DeviceListener(
         val resolveListener = object : NsdManager.ResolveListener {
             override fun onServiceResolved(svc: NsdServiceInfo?) {
                 if (svc != null) {
-                    deviceConnected(svc.serviceName, svc.host.hostAddress, svc.port);
+                    deviceConnected(svc.serviceName, svc.host.hostAddress, svc.port)
                 }
             }
 

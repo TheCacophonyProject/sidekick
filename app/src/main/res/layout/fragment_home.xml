@@ -115,7 +115,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="OPEN DEVICES"
+                            android:text="OPEN RECORDINGS"
                             android:layout_gravity="center_vertical"
                             android:textColor="#2d8067"
                             android:textSize="14sp"

@@ -45,7 +45,7 @@ class DevicesFragment : Fragment() {
         recyclerView.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         setHasOptionsMenu(true)
 
-        val validSSID = getResources().getString(R.string.valid_ssid)
+        val validSSID = resources.getString(R.string.valid_ssid)
         root.findViewById<TextView>(R.id.network_error_message_text).text =
                 "Not connected to a '$validSSID' network."
         root.findViewById<TextView>(R.id.network_warning_message_text).text =

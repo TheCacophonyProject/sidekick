@@ -6,6 +6,8 @@ import android.content.IntentFilter
 import android.net.nsd.NsdManager
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import nz.org.cacophony.sidekick.db.RoomDatabase
+import java.lang.Exception
 
 class MainViewModel : ViewModel() {
 
@@ -15,10 +17,12 @@ class MainViewModel : ViewModel() {
     val deviceList = MutableLiveData<DeviceList>()
     val deviceListAdapter = MutableLiveData<DeviceListAdapter>()
     val discovery = MutableLiveData<DiscoveryManager>()
-    val recordingDao = MutableLiveData<RecordingDao>()
-    val uploadingRecordings = MutableLiveData<Boolean>().apply { value = false }
+    val db = MutableLiveData<RoomDatabase>()
+    val uploading = MutableLiveData<Boolean>().apply { value = false }
     val recordingUploadingProgress = MutableLiveData<Int>().apply { value = 0 }
-    val recordingUploadingCount = MutableLiveData<Int>().apply { value = 0 }
+    val eventUploadingProgress = MutableLiveData<Int>().apply { value = 0 }
+    val recordingsBeingUploadedCount = MutableLiveData<Int>().apply { value = 0 }
+    val eventsBeingUploadedCount = MutableLiveData<Int>().apply { value = 0 }
     val locationStatusText = MutableLiveData<String>().apply { value = "" }
     val storageLocation = MutableLiveData<String>().apply { value = "" }
 
@@ -31,9 +35,9 @@ class MainViewModel : ViewModel() {
         deviceList.value = dl
         deviceListAdapter.value = DeviceListAdapter(dl)
         val nsdManager = activity.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discovery.value = DiscoveryManager(nsdManager, dl, activity, messenger.value!!)
-        val db = RecordingRoomDatabase.getDatabase(activity)
-        recordingDao.value = db.recordingDao()
+        val database = RoomDatabase.getDatabase(activity) ?: throw Exception("failed to get database")
+        discovery.value = DiscoveryManager(nsdManager, dl, activity, messenger.value!!, database)
+        db.value = database
 
         wifiHelper = WifiHelper(activity.applicationContext)
 
