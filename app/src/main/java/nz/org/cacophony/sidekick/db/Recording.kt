@@ -56,7 +56,7 @@ interface RecordingDao {
 
 
     @Query("SELECT name from Recording WHERE device_name = :deviceName AND group_name = :groupname")
-    fun getRecordingNamesFromDevice(deviceName: String, groupname: String?): List<String>
+    fun getRecordingNamesForDevice(deviceName: String, groupname: String?): List<String>
 
     @Query("SELECT * from Recording WHERE not uploaded")
     fun getRecordingsToUpload(): List<Recording>

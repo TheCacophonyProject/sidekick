@@ -92,7 +92,7 @@ class Device(
             messenger.alert("failed to get device info from $name. ${e.message}")
         }
         sm.gotDeviceInfo()
-        updateStatusString()
+        updateStatus()
     }
 
     /**
@@ -113,7 +113,7 @@ class Device(
         for (rec in uploadedRecordings) {
             Log.i(TAG, "Uploaded recording: $rec")
             if (rec.name in deviceRecordings) {
-                allDeleted = allDeleted && deleteRecording(rec)
+                allDeleted = allDeleted && deleteRecordingOnCamera(rec)
             } else {
                 recordingDao.deleteRecording(rec.id)
             }
@@ -125,7 +125,7 @@ class Device(
     }
 
 
-    private fun deleteRecording(recording: Recording): Boolean {
+    private fun deleteRecordingOnCamera(recording: Recording): Boolean {
         var deleted = false
         try {
             api.deleteRecording(recording.name)
@@ -163,7 +163,7 @@ class Device(
         }
         checkEventsOnDevice()
         checkRecordingsOnDevice()
-        updateStatusString()
+        updateStatus()
     }
 
     /**
@@ -199,15 +199,15 @@ class Device(
             Log.e(TAG, "Exception when updating event keys: $e")
             return false
         }
-        deviceEvents = emptyArray()
+        deviceEvents = IntArray(eventsJSON.length()).toTypedArray()
         for (i in 0 until eventsJSON.length()) {
-            deviceEvents = deviceEvents.plus(eventsJSON.get(i) as Int)
+            deviceEvents[i] = eventsJSON.get(i) as Int
         }
         Log.i(TAG, "Event keys: ${deviceEvents.size}")
         return true
     }
 
-    private fun updateStatusString() {
+    private fun updateStatus() {
         updateNumberOfRecordingsToDownload()
         updateNumberOfEventsToDownload()
 
@@ -239,7 +239,7 @@ class Device(
 
     private fun updateNumberOfRecordingsToDownload() {
         // Count the number of recordings that are on the device and not in the database
-        val downloadedRecordings = recordingDao.getRecordingNamesFromDevice(devicename, groupname)
+        val downloadedRecordings = recordingDao.getRecordingNamesForDevice(devicename, groupname)
         var count = 0
         for (rec in deviceRecordings) {
             if (rec !in downloadedRecordings) {
@@ -269,7 +269,7 @@ class Device(
         checkRecordingsOnDevice()
         Log.i(TAG, "Download recordings from '$name'")
 
-        val downloadedRecordings = recordingDao.getRecordingNamesFromDevice(devicename, groupname)
+        val downloadedRecordings = recordingDao.getRecordingNamesForDevice(devicename, groupname)
         Log.i(TAG, "recordings $deviceRecordings")
 
         var allDownloaded = true
@@ -285,7 +285,7 @@ class Device(
                     allDownloaded = false
                     if (!checkConnectionStatus(showMessage = true)) break
                 }
-                updateStatusString()
+                updateStatus()
                 //TODO note in the db if the recording failed
             } else {
                 Log.i(TAG, "Already downloaded $recordingName")
@@ -296,7 +296,7 @@ class Device(
         }
         sm.downloadingRecordings(false)
         downloading = false
-        updateStatusString()
+        updateStatus()
     }
 
     private fun downloadRecording(recordingName: String): Boolean {
@@ -384,7 +384,7 @@ class Device(
     fun checkConnectionStatus(timeout: Int = 3000, showMessage: Boolean = false, retries: Int = 3): Boolean {
         var connected = false
         for (i in 1..retries) {
-            updateStatusString()
+            updateStatus()
             try {
                 val conn = URL("http://$hostname").openConnection() as HttpURLConnection
                 conn.connectTimeout = timeout
@@ -405,14 +405,14 @@ class Device(
                 sm.connectionFailed()
             }
             if (i != retries) {
-                updateStatusString()
+                updateStatus()
                 Thread.sleep(3000)
             }
         }
         if (showMessage && !connected) {
             messenger.alert("$name: ${sm.state.message}")
         }
-        updateStatusString()
+        updateStatus()
         return connected
     }
 

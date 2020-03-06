@@ -122,10 +122,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             val description = JSONObject()
             description.put("type", type)
             description.put("details", details)
-            val t = JSONArray()
-            for (time in timestamps) {
-                t.put(time)
-            }
+            val t = JSONArray(timestamps)
             val data = JSONObject()
             data.put("description", description)
             data.put("dateTimes", t)
