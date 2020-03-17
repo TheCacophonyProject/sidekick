@@ -17,7 +17,6 @@ import java.net.SocketException
 import java.net.URL
 import kotlin.concurrent.thread
 
-
 class Device(
         @Volatile var name: String,
         val hostname: String,
@@ -32,10 +31,6 @@ class Device(
     var deviceEvents = emptyArray<Int>()
     @Volatile
     var statusString = ""
-    @Volatile
-    var numRecToDownload = 0
-    @Volatile
-    var numEventsToDownload = 0
     @Volatile
     var sm = StateMachine()
     @Volatile
@@ -121,7 +116,6 @@ class Device(
         if (!allDeleted) {
             messenger.alert("Failed to delete some old recordings from device")
         }
-        updateNumberOfRecordingsToDownload()
     }
 
 
@@ -208,14 +202,11 @@ class Device(
     }
 
     private fun updateStatus() {
-        updateNumberOfRecordingsToDownload()
-        updateNumberOfEventsToDownload()
-
         val newStatus = when {
             !sm.state.connected -> sm.state.message
             !sm.hasRecordingList -> "Checking for recordings"
-            else -> "${deviceRecordings.size - numRecToDownload} of ${deviceRecordings.size} of recordings collected\n" +
-                    "${deviceEvents.size - numEventsToDownload} of ${deviceEvents.size} of events collected\n"
+            else -> "${deviceRecordings.size - recordingsToDownload().size} of ${deviceRecordings.size} of recordings collected\n" +
+                    "${deviceEvents.size - eventsToDownload().size} of ${deviceEvents.size} of events collected"
         }
 
         if (newStatus != statusString) {
@@ -224,33 +215,30 @@ class Device(
         }
     }
 
-    private fun updateNumberOfEventsToDownload() {
-        // Count the number of events that are on the device and not in the database
+    private fun eventsToDownload(): Array<Int> {
+        val toDownload = mutableListOf<Int>()
         val downloadedEventsIDs = eventDao.getDeviceEventIDsNotUploaded(deviceID)
-        var count = 0
         for (event in deviceEvents) {
             if (event !in downloadedEventsIDs) {
-                Log.i(TAG, "don't have event: $event")
-                count++
+                toDownload.add(event)
             }
         }
-        numEventsToDownload = count
+        return toDownload.toTypedArray()
     }
 
-    private fun updateNumberOfRecordingsToDownload() {
-        // Count the number of recordings that are on the device and not in the database
+    private fun recordingsToDownload(): Array<String> {
+        val toDownload = mutableListOf<String>()
         val downloadedRecordings = recordingDao.getRecordingNamesForDevice(devicename, groupname)
-        var count = 0
         for (rec in deviceRecordings) {
             if (rec !in downloadedRecordings) {
-                count++
+                toDownload.add(rec)
             }
         }
-        numRecToDownload = count
+        return toDownload.toTypedArray()
     }
 
     fun startDownloadRecordings() {
-        if (sm.state != DeviceState.READY) {
+        if (sm.state != DeviceState.READY || downloading) {
             return
         }
         if (!pr.check(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -261,21 +249,17 @@ class Device(
             messenger.alert("Failed to write to local storage. Canceling download.")
             return
         }
-        if (downloading) {
-            return
-        }
-        downloading = true
-        sm.downloadingRecordings(true)
-        checkRecordingsOnDevice()
-        Log.i(TAG, "Download recordings from '$name'")
+        try {
+            downloading = true
+            sm.downloadingRecordings(true)
+            checkRecordingsOnDevice()
+            Log.i(TAG, "Download recordings from '$name'")
 
-        val downloadedRecordings = recordingDao.getRecordingNamesForDevice(devicename, groupname)
-        Log.i(TAG, "recordings $deviceRecordings")
-
-        var allDownloaded = true
-        for (recordingName in deviceRecordings) {
-            Log.i(TAG, recordingName)
-            if (recordingName !in downloadedRecordings) {
+            var allDownloaded = true
+            val toDownload = recordingsToDownload()
+            Log.i(TAG, "Downloading ${toDownload.size} recordings from $devicename")
+            for (recordingName in toDownload) {
+                Util.checkAvailableStorage(activity.applicationContext)
                 Log.i(TAG, "Downloading recording $recordingName")
                 if (downloadRecording(recordingName)) {
                     val outFile = File(getDeviceDir(), recordingName)
@@ -287,16 +271,15 @@ class Device(
                 }
                 updateStatus()
                 //TODO note in the db if the recording failed
-            } else {
-                Log.i(TAG, "Already downloaded $recordingName")
             }
+            if (!allDownloaded) {
+                messenger.alert("Failed to download some recordings")
+            }
+        } finally {
+            sm.downloadingRecordings(false)
+            downloading = false
+            updateStatus()
         }
-        if (!allDownloaded) {
-            messenger.alert("Failed to download some recordings")
-        }
-        sm.downloadingRecordings(false)
-        downloading = false
-        updateStatus()
     }
 
     private fun downloadRecording(recordingName: String): Boolean {
@@ -326,6 +309,7 @@ class Device(
         val missingEventKeys = getMissingEventKeys()
         if (missingEventKeys.isEmpty()) {
             Log.i(TAG, "No events to get from device")
+            return
         }
         Log.i(TAG, "Getting ${missingEventKeys.size} events from $name")
         try {
@@ -336,7 +320,6 @@ class Device(
         } catch (e : Exception) {
             Log.e(TAG, e.toString())
         }
-        Log.i(TAG, eventDao.getDeviceEvents(deviceID).joinToString("\n"))
     }
 
     private fun addEvent(eventKey: Int, eventResponse: JSONObject) {

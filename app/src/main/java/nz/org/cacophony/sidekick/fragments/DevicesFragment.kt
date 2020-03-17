@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -28,6 +29,7 @@ class DevicesFragment : Fragment() {
     private lateinit var deviceLayout: LinearLayout
     private lateinit var locationLayout: LinearLayout
     private lateinit var locationStatus: TextView
+    private lateinit var downloadButton: Button
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -57,6 +59,7 @@ class DevicesFragment : Fragment() {
         locationLayout = root.findViewById(R.id.location_layout)
         locationStatus = root.findViewById(R.id.location_status)
         locationLayout.visibility = View.VISIBLE
+        downloadButton = root.findViewById(R.id.download_recordings_button)
         notifyDeviceListChanged()
         return root
     }
@@ -81,16 +84,29 @@ class DevicesFragment : Fragment() {
     }
 
     private fun setViewModelObservers() {
-        mainViewModel.locationStatusText.observe(this, Observer { updateLocationView(it!!) })
+        mainViewModel.locationStatusText.observe(this, Observer { updateLocationView(it) })
+        mainViewModel.downloading.observe(this, Observer { updateDownloading(it) })
     }
 
     private fun updateLocationView(status: String) {
-        locationStatus.text = status
+        locationStatus.text = status ?: ""
         locationLayout.visibility = View.VISIBLE
         if (status == "") {
             locationLayout.visibility = View.GONE
         } else {
             locationLayout.visibility = View.VISIBLE
+        }
+    }
+
+    private fun updateDownloading(downloading: Boolean) {
+        if (downloading) {
+            downloadButton.isClickable = false
+            downloadButton.alpha = .5f
+            downloadButton.text = "GETTING RECORDINGS"
+        } else {
+            downloadButton.isClickable = true
+            downloadButton.alpha = 1f
+            downloadButton.text = "GET RECORDINGS"
         }
     }
 
