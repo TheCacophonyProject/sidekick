@@ -9,11 +9,9 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.os.PowerManager
-import android.os.StatFs
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
-import android.widget.Button
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -188,21 +186,21 @@ class MainActivity : AppCompatActivity() {
         if (!validStorageLocation()) {
             return
         }
-        val downloadButton = findViewById<Button>(R.id.download_recordings_button)
-        downloadButton.isClickable = false
-        downloadButton.alpha = .5f
-        downloadButton.text = "GETTING RECORDINGS"
-        for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
-            thread {
-                device.downloadEvents()
-                device.startDownloadRecordings()
-                if (!mainViewModel.deviceList.value!!.downloading()) {
-                    runOnUiThread {
-                        downloadButton.isClickable = true
-                        downloadButton.alpha = 1f
-                        downloadButton.text = "GET RECORDINGS"
-                    }
+        mainViewModel.downloading.value = true
+        thread {
+            for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
+                try {
+                    device.downloadEvents()
+                    device.startDownloadRecordings()
+                } catch(e: LowStorageSpaceException) {
+                    messenger.alert(e.message ?: "Low storage space on phone. Stopping download.")
+                    break
+                } catch (e: Exception) {
+                    messenger.alert(e.message ?: "Error with downloading recordings on ${device.name}")
                 }
+            }
+            runOnUiThread {
+                mainViewModel.downloading.value = false
             }
         }
     }
@@ -448,9 +446,8 @@ class MainActivity : AppCompatActivity() {
         val dirs = Array(extDirs.size){""}
         for (i in extDirs.indices) {
             val file = extDirs[i]
-            val stat = StatFs(file.path)
-            val gbAvailable = stat.blockSizeLong * stat.availableBlocksLong / GIGABYTE.toFloat()
-            val gbCount = stat.blockSizeLong * stat.blockCountLong / GIGABYTE.toFloat()
+            val gbAvailable = Util.fsAvailableMB(file.path) / 1024.toFloat()
+            val gbCount = Util.fsSizeMB(file.path) / 1024.toFloat()
             Log.i(TAG, "File $file has $gbAvailable GB available from $gbCount GB")
             dirs[i] = "${file.path.split("Android")[0]}\n%.2f GB of %.2f GB free\n".format(gbAvailable, gbCount)
         }

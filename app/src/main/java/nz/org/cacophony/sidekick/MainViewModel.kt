@@ -19,6 +19,7 @@ class MainViewModel : ViewModel() {
     val discovery = MutableLiveData<DiscoveryManager>()
     val db = MutableLiveData<RoomDatabase>()
     val uploading = MutableLiveData<Boolean>().apply { value = false }
+    val downloading = MutableLiveData<Boolean>().apply { value = false }
     val recordingUploadingProgress = MutableLiveData<Int>().apply { value = 0 }
     val eventUploadingProgress = MutableLiveData<Int>().apply { value = 0 }
     val recordingsBeingUploadedCount = MutableLiveData<Int>().apply { value = 0 }
