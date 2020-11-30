@@ -28,6 +28,7 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.android.material.navigation.NavigationView
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import nz.org.cacophony.sidekick.db.EventDao
 import nz.org.cacophony.sidekick.db.RecordingDao
 import nz.org.cacophony.sidekick.fragments.*
@@ -481,5 +482,10 @@ class MainActivity : AppCompatActivity() {
         if (versionClickCountdown <= 0) {
             loadFragment(DevFragment())
         }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun sendTestCrash(v: View) {
+        throw RuntimeException("Test Crash")
     }
 }
