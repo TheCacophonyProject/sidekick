@@ -12,6 +12,7 @@ import android.os.PowerManager
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -29,10 +30,7 @@ import com.google.android.gms.tasks.Task
 import com.google.android.material.navigation.NavigationView
 import nz.org.cacophony.sidekick.db.EventDao
 import nz.org.cacophony.sidekick.db.RecordingDao
-import nz.org.cacophony.sidekick.fragments.DevicesFragment
-import nz.org.cacophony.sidekick.fragments.HomeFragment
-import nz.org.cacophony.sidekick.fragments.RecordingsFragment
-import nz.org.cacophony.sidekick.fragments.SettingsFragment
+import nz.org.cacophony.sidekick.fragments.*
 import java.io.File
 import kotlin.concurrent.thread
 
@@ -56,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private val locationSettingsUpdateCode = 5
     @Volatile
     var locationCount = 0
+    private var versionClickCountdown = 10 // Number of times the image needs to be pressed for the dev fragment will be shown
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -474,5 +473,13 @@ class MainActivity : AppCompatActivity() {
             return false
         }
         return true
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun versionClick(v: View) {
+        versionClickCountdown--
+        if (versionClickCountdown <= 0) {
+            loadFragment(DevFragment())
+        }
     }
 }
