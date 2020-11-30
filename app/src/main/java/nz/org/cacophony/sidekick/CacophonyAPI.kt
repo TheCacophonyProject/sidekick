@@ -3,7 +3,7 @@ package nz.org.cacophony.sidekick
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.crashlytics.android.Crashlytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import nz.org.cacophony.sidekick.db.Recording
 import okhttp3.*
 import okhttp3.internal.http2.Header
@@ -210,7 +210,8 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             prefs.edit().putString(passwordKey, password).apply()
             prefs.edit().putString(jwtKey, jwt).apply()
             prefs.edit().putString(serverURLKey, serverURL).apply()
-            Crashlytics.setUserName(nameOrEmail)
+            val crashlytics = FirebaseCrashlytics.getInstance()
+            crashlytics.setUserId(nameOrEmail)
         }
 
         fun getNameOrEmail(c: Context): String? {

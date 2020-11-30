@@ -8,7 +8,7 @@ import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.crashlytics.android.Crashlytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
 
@@ -24,7 +24,7 @@ class LoginScreen : AppCompatActivity() {
         val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
         apiUrlEditText.setText(CacophonyAPI.getServerURL(applicationContext))
         val username = CacophonyAPI.getNameOrEmail(applicationContext)
-        Crashlytics.setUserName(username)
+        FirebaseCrashlytics.getInstance().setUserId(username ?: "")
         if (username != "") {
             gotoMainActivity()
         }
