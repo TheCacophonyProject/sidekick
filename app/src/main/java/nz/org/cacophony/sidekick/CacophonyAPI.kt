@@ -121,7 +121,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String) {
             val description = JSONObject()
             description.put("type", type)
-            description.put("details", details)
+            description.put("details", JSONObject(details))
             val t = JSONArray(timestamps)
             val data = JSONObject()
             data.put("description", description)
