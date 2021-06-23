@@ -6,16 +6,13 @@ import android.util.Log
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import nz.org.cacophony.sidekick.db.Recording
 import okhttp3.*
-import okhttp3.internal.http2.Header
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.nio.charset.Charset
 import kotlin.concurrent.thread
-
+import java.math.BigInteger
+import java.security.MessageDigest
 
 class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
@@ -71,8 +68,11 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         fun uploadRecording(c: Context, recording: Recording) {
             val data = JSONObject()
             data.put("type", "thermalRaw")
-            data.put("duration", 321) //TODO remove this when server can get the duration from the file
             val recordingFile = File(recording.recordingPath)
+            val md = MessageDigest.getInstance("SHA-1").digest(recordingFile.readBytes())
+            val no = BigInteger(1, md)
+            val fileHash = no.toString(16).padStart(32, '0')
+            data.put("fileHash", fileHash)
 
             val formBody = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
