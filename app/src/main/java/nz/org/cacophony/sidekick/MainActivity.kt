@@ -491,4 +491,16 @@ class MainActivity : AppCompatActivity() {
     fun refresh(view: View) {
         mainViewModel.discovery.value!!.restart(true)
     }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun deleteAllRecordings(view: View) {
+        thread {
+            val recordings = recordingDao.getAllRecordings()
+            for (rec in recordings) {
+                Log.i(TAG, rec.recordingPath)
+                File(rec.recordingPath).delete()
+                recordingDao.deleteRecording(rec.id)
+            }
+        }
+    }
 }
