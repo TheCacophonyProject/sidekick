@@ -1,13 +1,10 @@
 package nz.org.cacophony.sidekick
 
 import android.app.Activity
-import android.content.Intent
 import android.location.Location
-import android.net.Uri
-import android.provider.Browser
 import android.util.Log
 import nz.org.cacophony.sidekick.db.*
-import okhttp3.HttpUrl
+import nz.org.cacophony.sidekick.fragments.DeviceWebViewFragment
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -352,14 +349,17 @@ class Device(
         thread(start = true) {
             Log.i(TAG, "open interface")
             if (checkConnectionStatus(timeout = 1000, showMessage = true, retries = 1)) {
-                val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
-                val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
-                httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
-                val uri = Uri.parse(httpBuilder.build().toString())
-                Log.d(TAG, "opening browser to: $uri")
-                val urlIntent = Intent(Intent.ACTION_VIEW, uri)
-                urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-$name")  // Single browse tab per device
-                activity.startActivity(urlIntent)
+                DeviceWebViewFragment.newInstance("http://$hostname:$port")
+                /*
+                    val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
+                    val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
+                    httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
+                    val uri = Uri.parse(httpBuilder.build().toString())
+                    Log.d(TAG, "opening browser to: $uri")
+                    val urlIntent = Intent(Intent.ACTION_VIEW, uri)
+                    urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-$name")  // Single browse tab per device
+                    activity.startActivity(urlIntent)
+                */
             }
         }
     }
