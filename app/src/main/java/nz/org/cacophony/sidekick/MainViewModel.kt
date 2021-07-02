@@ -26,6 +26,7 @@ class MainViewModel : ViewModel() {
     val eventsBeingUploadedCount = MutableLiveData<Int>().apply { value = 0 }
     val locationStatusText = MutableLiveData<String>().apply { value = "" }
     val storageLocation = MutableLiveData<String>().apply { value = "" }
+    val scanning = MutableLiveData<Boolean>().apply { value = false }
 
     lateinit var wifiHelper: WifiHelper
     val networkIntentFilter = IntentFilter()
@@ -37,7 +38,7 @@ class MainViewModel : ViewModel() {
         deviceListAdapter.value = DeviceListAdapter(dl)
         val nsdManager = activity.getSystemService(Context.NSD_SERVICE) as NsdManager
         val database = RoomDatabase.getDatabase(activity) ?: throw Exception("failed to get database")
-        discovery.value = DiscoveryManager(nsdManager, dl, activity, messenger.value!!, database)
+        discovery.value = DiscoveryManager(nsdManager, dl, activity, messenger.value!!, database, this)
         db.value = database
 
         wifiHelper = WifiHelper(activity.applicationContext)

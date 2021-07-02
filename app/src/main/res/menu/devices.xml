@@ -7,15 +7,4 @@
         android:title="Update devices location"
         android:onClick="setLocationButton"
         app:showAsAction="never" />
-    <!--
-    <item
-        android:id="@+id/devices_troubleshooter"
-        android:orderInCategory="100"
-        android:title="Troubleshooter"
-        app:showAsAction="never" /> -->
-    <item
-        android:id="@+id/devices_refresh"
-        android:orderInCategory="100"
-        android:title="Refresh"
-        app:showAsAction="never" />
 </menu>

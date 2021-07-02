@@ -26,6 +26,7 @@ class DevicesFragment : Fragment() {
     private lateinit var networkWarningLayout: LinearLayout
     private lateinit var networkErrorLayout: LinearLayout
     private lateinit var scanningLayout: LinearLayout
+    private lateinit var notScanningLayout: LinearLayout
     private lateinit var deviceLayout: LinearLayout
     private lateinit var locationLayout: LinearLayout
     private lateinit var locationStatus: TextView
@@ -55,6 +56,7 @@ class DevicesFragment : Fragment() {
         networkErrorLayout = root.findViewById(R.id.network_error_message_layout)
         networkWarningLayout = root.findViewById(R.id.network_warning_message_layout)
         scanningLayout = root.findViewById(R.id.device_scanning_layout)
+        notScanningLayout = root.findViewById(R.id.device_not_scanning_layout)
         deviceLayout = root.findViewById(R.id.device_layout)
         locationLayout = root.findViewById(R.id.location_layout)
         locationStatus = root.findViewById(R.id.location_status)
@@ -86,6 +88,7 @@ class DevicesFragment : Fragment() {
     private fun setViewModelObservers() {
         mainViewModel.locationStatusText.observe(this, Observer { updateLocationView(it) })
         mainViewModel.downloading.observe(this, Observer { updateDownloading(it) })
+        mainViewModel.scanning.observe(this, Observer { updateScanning(it) })
     }
 
     private fun updateLocationView(status: String) {
@@ -137,28 +140,16 @@ class DevicesFragment : Fragment() {
         super.onCreateOptionsMenu(menu, inflater)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.update_devices_location -> {
-                Log.i(TAG, "updating devices location")
-            }
-            /*
-            R.id.devices_troubleshooter -> {
-                Log.i(TAG, "devices troubleshooter")
-            }
-            */
-            R.id.devices_refresh -> {
-                thread {
-                    mainViewModel.discovery.value!!.stop()
-                    mainViewModel.discovery.value!!.clearDevices()
-                    // Wait a second or the device can load quick enough so it doesn't
-                    // look like anything changed in the UI
-                    Thread.sleep(1000)
-                    mainViewModel.discovery.value!!.start()
-                }
+    private fun updateScanning(scanning: Boolean) {
+        activity!!.runOnUiThread {
+            if (scanning) {
+                notScanningLayout.visibility = View.GONE
+                scanningLayout.visibility = View.VISIBLE
+            } else {
+                scanningLayout.visibility = View.GONE
+                notScanningLayout.visibility = View.VISIBLE
             }
         }
-        return super.onOptionsItemSelected(item)
     }
 
     private fun notifyDeviceListChanged() {
@@ -166,13 +157,6 @@ class DevicesFragment : Fragment() {
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
         activity!!.runOnUiThread {
-            if (mainViewModel.deviceList.value!!.size() == 0) {
-                deviceLayout.visibility = View.GONE
-                scanningLayout.visibility = View.VISIBLE
-            } else {
-                scanningLayout.visibility = View.GONE
-                deviceLayout.visibility = View.VISIBLE
-            }
             mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
         }
     }

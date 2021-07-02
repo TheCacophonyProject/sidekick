@@ -29,20 +29,24 @@ import nz.org.cacophony.sidekick.db.RoomDatabase
 import org.xbill.DNS.DClass
 import org.xbill.DNS.Type
 import java.net.*
+import java.util.*
 import kotlin.concurrent.thread
 
 const val MANAGEMENT_SERVICE_TYPE = "_cacophonator-management._tcp"
+const val SCANNING_DURATION = 20000
 
 class DiscoveryManager(
         private val nsdManager: NsdManager,
         private val devices: DeviceList,
         private val activity: Activity,
         private val messenger: Messenger,
-        private val db: RoomDatabase) {
+        private val db: RoomDatabase,
+        private val mainViewModel: MainViewModel) {
     private var listener: DeviceListener? = null
     private val wifi = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var multicastLock = wifi.createMulticastLock("multicastLock")
     private var restarting: Boolean = false
+    private var stopScanAt: Calendar? = null
 
     init {
         multicastLock.setReferenceCounted(false)
@@ -87,6 +91,18 @@ class DiscoveryManager(
 
     private fun startListener() {
         Log.d(TAG, "Starting discovery")
+        val cal: Calendar = Calendar.getInstance()
+        cal.add(Calendar.MILLISECOND, SCANNING_DURATION)
+        stopScanAt = cal
+        thread {
+            Thread.sleep(SCANNING_DURATION.toLong() + 100)
+            val now = Calendar.getInstance()
+            if (stopScanAt != null && stopScanAt!! <= now) {
+                stopScanAt = null
+                stop()
+            }
+        }
+        mainViewModel.scanning.postValue(true)
         multicastLock.acquire()
         listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped, db) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
@@ -94,6 +110,7 @@ class DiscoveryManager(
 
 
     private fun stopListener(): Boolean {
+        mainViewModel.scanning.postValue(false)
         if (listener != null) {
             multicastLock.release()
             Log.d(TAG, "Stopping discovery")

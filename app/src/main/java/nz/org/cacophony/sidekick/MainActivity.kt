@@ -12,7 +12,6 @@ import android.os.PowerManager
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
-import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -28,7 +27,6 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.android.material.navigation.NavigationView
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import nz.org.cacophony.sidekick.db.EventDao
 import nz.org.cacophony.sidekick.db.RecordingDao
 import nz.org.cacophony.sidekick.fragments.*
@@ -487,5 +485,10 @@ class MainActivity : AppCompatActivity() {
     @Suppress("UNUSED_PARAMETER")
     fun sendTestCrash(v: View) {
         throw RuntimeException("Test Crash")
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun refresh(view: View) {
+        mainViewModel.discovery.value!!.restart(true)
     }
 }
