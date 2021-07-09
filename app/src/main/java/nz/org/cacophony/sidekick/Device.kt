@@ -1,10 +1,12 @@
 package nz.org.cacophony.sidekick
 
 import android.app.Activity
+import android.content.Intent
 import android.location.Location
+import android.net.Uri
 import android.util.Log
 import nz.org.cacophony.sidekick.db.*
-import nz.org.cacophony.sidekick.fragments.DeviceWebViewFragment
+import okhttp3.HttpUrl
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -349,7 +351,18 @@ class Device(
         thread(start = true) {
             Log.i(TAG, "open interface")
             if (checkConnectionStatus(timeout = 1000, showMessage = true, retries = 1)) {
-                DeviceWebViewFragment.newInstance("http://$hostname:$port")
+                val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
+                val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
+                httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
+                val uri = Uri.parse(httpBuilder.build().toString())
+                val i = Intent(activity, DeviceWebViewActivity::class.java)
+                i.putExtra("uri", uri.toString())
+                activity.startActivity(i)
+
+                //val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
+                //httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
+                //activity.startActivity(i)
+                //DeviceWebViewFragment.newInstance("http://$hostname:$port")
                 /*
                     val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
                     val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)

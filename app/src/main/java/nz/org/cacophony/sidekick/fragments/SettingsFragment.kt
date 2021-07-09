@@ -1,6 +1,7 @@
 package nz.org.cacophony.sidekick.fragments
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,10 +9,8 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import nz.org.cacophony.sidekick.BuildConfig
-import nz.org.cacophony.sidekick.CacophonyAPI
-import nz.org.cacophony.sidekick.MainViewModel
-import nz.org.cacophony.sidekick.R
+import nz.org.cacophony.sidekick.*
+import nz.org.cacophony.sidekick.db.Recording
 import nz.org.cacophony.sidekick.db.RecordingDao
 import kotlin.concurrent.thread
 
@@ -55,12 +54,14 @@ class SettingsFragment : Fragment() {
 
     private fun setViewModelObservers() {
         mainViewModel.storageLocation.observe(this, Observer { updateStorageLocation(it!!) })
-        mainViewModel.db.observe(this, Observer { updateRecordings() })
+        mainViewModel.db.value!!.recordingDao().getRecordingLiveData().observe(this, Observer { data -> updateRecordings(data) })
     }
 
-    private fun updateRecordings() {
+    private fun updateRecordings(r: List<Recording>) {
+        Log.i(TAG, "update recordings")
         thread {
-            recordingCount.text = "${recordingDao.getAllRecordings().size}"
+            Log.i(TAG, r.size.toString())
+            recordingCount.text = "${r.size}"
         }
     }
 

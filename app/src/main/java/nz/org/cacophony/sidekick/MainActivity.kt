@@ -234,7 +234,8 @@ class MainActivity : AppCompatActivity() {
         if (recordingsToUpload.isEmpty()) {
             return 0
         }
-        var failedUploadCount = 0
+        var invalidPermissionFailCount = 0
+        var otherFailCount = 0
         for (rec in recordingsToUpload) {
             runOnUiThread {
                 mainViewModel.recordingUploadingProgress.value = (mainViewModel.recordingUploadingProgress.value ?: 0) + 1
@@ -243,23 +244,26 @@ class MainActivity : AppCompatActivity() {
                 CacophonyAPI.uploadRecording(applicationContext, rec)
                 recordingDao.setAsUploaded(rec.id)
                 File(rec.recordingPath).delete()
+            } catch (e: ForbiddenUploadException) {
+                invalidPermissionFailCount++
+                messenger.toast(e.message!!)
             } catch (e: Exception) {
-                failedUploadCount++
+                otherFailCount++
                 messenger.toast(e.message ?: "Unknown error with uploading recordings")
-                if (failedUploadCount >= maxFailCount) {
-                    break
+                if (otherFailCount >= maxFailCount) {
+                    messenger.alert("Stopping upload of recordings as too many failed")
+                    return otherFailCount
                 }
             }
         }
-        when {
-            failedUploadCount == 0 ->
+        val totalFailed = otherFailCount + invalidPermissionFailCount
+        when (totalFailed) {
+            0 ->
                 messenger.alert("Finished uploading recordings")
-            failedUploadCount < maxFailCount ->
-                messenger.alert("Failed to upload $failedUploadCount recordings")
-            failedUploadCount >= maxFailCount ->
-                messenger.alert("Stopping upload of recordings as too many failed")
+            else -> messenger.alert("Failed to upload $totalFailed recordings, " +
+                    "$invalidPermissionFailCount being because of invalid permission")
         }
-        return failedUploadCount
+        return totalFailed
     }
 
     private fun uploadEvents(maxFailCount: Int = 3): Int {

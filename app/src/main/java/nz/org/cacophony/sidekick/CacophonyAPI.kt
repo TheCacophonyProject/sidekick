@@ -14,6 +14,8 @@ import kotlin.concurrent.thread
 import java.math.BigInteger
 import java.security.MessageDigest
 
+class ForbiddenUploadException: Exception("Invalid permission to upload recording for device")
+
 class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
     companion object {
@@ -110,6 +112,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
             when (response.code()) {
                 422 -> throw Exception(responseBodyJSON.getString("message"))
+                403 -> throw ForbiddenUploadException()
                 200 -> return
                 else -> {
                     Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
