@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import nz.org.cacophony.sidekick.db.RoomDatabase
 import java.net.UnknownHostException
 import kotlin.concurrent.thread
 
@@ -66,7 +68,25 @@ class LoginScreen : AppCompatActivity() {
     fun imageClick(v: View) {
         imageClickCountdown--
         if (imageClickCountdown <= 0) {
-            findViewById<LinearLayout>(R.id.api_linear_layout).visibility = View.VISIBLE
+            runOnUiThread {
+                val dialogBuilder = AlertDialog.Builder(this)
+                dialogBuilder
+                    .setMessage("Do you wish to change the API? This will delete all recordings and events currently on your phone.")
+                    .setCancelable(false)
+                    .setNegativeButton("Cancel") { _, _ -> }
+                    .setPositiveButton("OK") { _, _ -> showAPIAndDeleteData() }
+                val alert = dialogBuilder.create()
+                alert.setTitle("Message")
+                alert.show()
+            }
+        }
+    }
+
+    private fun showAPIAndDeleteData() {
+        findViewById<LinearLayout>(R.id.api_linear_layout).visibility = View.VISIBLE
+        thread {
+            val database = RoomDatabase.getDatabase(this) ?: throw java.lang.Exception("failed to get database")
+            database.clearData()
         }
     }
 
