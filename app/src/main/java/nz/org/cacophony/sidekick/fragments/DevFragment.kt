@@ -5,7 +5,6 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R

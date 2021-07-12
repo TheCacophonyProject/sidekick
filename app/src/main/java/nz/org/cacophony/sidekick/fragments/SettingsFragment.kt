@@ -30,7 +30,7 @@ class SettingsFragment : Fragment() {
         container?.removeAllViews()
         val root = inflater.inflate(R.layout.fragment_settings, container, false)
         val versionText = root.findViewById<TextView>(R.id.app_version_text)
-        versionText.text = "v${BuildConfig.VERSION_NAME}"
+        versionText.text =  BuildConfig.VERSION_NAME
         val userText = root.findViewById<TextView>(R.id.user_text)
         userText.text = CacophonyAPI.getNameOrEmail(context ?: throw Exception("No context for settings fragment"))
         storageLocation = root.findViewById(R.id.settings_storage_location)

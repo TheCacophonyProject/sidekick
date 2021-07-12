@@ -17,7 +17,7 @@ class Messenger(private val activity: Activity) {
             dialogBuilder
                     .setMessage(message)
                     .setCancelable(false)
-                    .setPositiveButton("OK", { _, _ -> })
+                    .setPositiveButton("OK") { _, _ -> }
             val alert = dialogBuilder.create()
             alert.setTitle("Message")
             alert.show()

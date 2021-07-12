@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick.fragments
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -16,7 +17,6 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
 import nz.org.cacophony.sidekick.TAG
-import kotlin.concurrent.thread
 
 class DevicesFragment : Fragment() {
     private val title = "Devices"
@@ -32,6 +32,7 @@ class DevicesFragment : Fragment() {
     private lateinit var locationStatus: TextView
     private lateinit var downloadButton: Button
 
+    @SuppressLint("SetTextI18n")
     override fun onCreateView(
             inflater: LayoutInflater,
             container: ViewGroup?,
@@ -92,7 +93,7 @@ class DevicesFragment : Fragment() {
     }
 
     private fun updateLocationView(status: String) {
-        locationStatus.text = status ?: ""
+        locationStatus.text = status
         locationLayout.visibility = View.VISIBLE
         if (status == "") {
             locationLayout.visibility = View.GONE
@@ -101,6 +102,7 @@ class DevicesFragment : Fragment() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateDownloading(downloading: Boolean) {
         if (downloading) {
             downloadButton.isClickable = false

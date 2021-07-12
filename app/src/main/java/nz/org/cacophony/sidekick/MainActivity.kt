@@ -2,7 +2,6 @@ package nz.org.cacophony.sidekick
 
 import android.Manifest
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentSender
 import android.location.Location
@@ -35,7 +34,6 @@ import kotlin.concurrent.thread
 
 const val TAG = "cacophony-manager"
 const val LOCATION_MAX_ATTEMPTS = 5
-const val GIGABYTE = 1073741824
 
 class MainActivity : AppCompatActivity() {
 
@@ -137,27 +135,23 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_home, R.id.nav_devices, R.id.nav_recordings), drawerLayout)
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        navView.setNavigationItemSelectedListener(object : NavigationView.OnNavigationItemSelectedListener {
-
-            override fun onNavigationItemSelected(menuItem: MenuItem): Boolean {
-
-                when (menuItem.itemId) {
-                    R.id.nav_home -> {
-                        loadFragment(HomeFragment())
-                    }
-                    R.id.nav_devices -> {
-                        loadFragment(DevicesFragment())
-                    }
-                    R.id.nav_settings -> {
-                        loadFragment(SettingsFragment())
-                    }
-                    R.id.nav_recordings -> {
-                        loadFragment(RecordingsFragment())
-                    }
+        navView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_home -> {
+                    loadFragment(HomeFragment())
                 }
-                return true
+                R.id.nav_devices -> {
+                    loadFragment(DevicesFragment())
+                }
+                R.id.nav_settings -> {
+                    loadFragment(SettingsFragment())
+                }
+                R.id.nav_recordings -> {
+                    loadFragment(RecordingsFragment())
+                }
             }
-        })
+            true
+        }
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -315,14 +309,12 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun setLocationButton(item: MenuItem) {
-        setDevicesLocation(true)
+        setDevicesLocation()
     }
 
-    private fun setDevicesLocation(requestUpdate: Boolean) {
+    private fun setDevicesLocation() {
         if (!permissionHelper.check(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            if (requestUpdate) {
-                permissionHelper.request(this, Manifest.permission.ACCESS_FINE_LOCATION, permissionHelper.locationUpdate)
-            }
+            permissionHelper.request(this, Manifest.permission.ACCESS_FINE_LOCATION, permissionHelper.locationUpdate)
             return
         }
         mainViewModel.locationStatusText.value = "Getting location"
@@ -456,14 +448,12 @@ class MainActivity : AppCompatActivity() {
 
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Choose storage location")
-        builder.setItems(dirs, object:DialogInterface.OnClickListener {
-            override fun onClick(dialog:DialogInterface, which:Int) {
-                val newStoragePath = extDirs[which].path
-                Log.i(TAG, "Setting new storage path to $newStoragePath")
-                mainViewModel.storageLocation.value = newStoragePath
-                Preferences(applicationContext).setString(STORAGE_LOCATION, newStoragePath)
-            }
-        })
+        builder.setItems(dirs) { _, which ->
+            val newStoragePath = extDirs[which].path
+            Log.i(TAG, "Setting new storage path to $newStoragePath")
+            mainViewModel.storageLocation.value = newStoragePath
+            Preferences(applicationContext).setString(STORAGE_LOCATION, newStoragePath)
+        }
         builder.show()
     }
 

@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick.fragments
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -77,6 +78,7 @@ class RecordingsFragment : Fragment() {
         super.onResume()
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateView() {
         Log.i(TAG, "update recordings fragment")
         thread {

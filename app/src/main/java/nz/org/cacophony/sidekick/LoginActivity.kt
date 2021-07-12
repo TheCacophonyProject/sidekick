@@ -16,29 +16,22 @@ class LoginScreen : AppCompatActivity() {
 
     @Volatile
     var imageClickCountdown = 10 // Number of times the image needs to be pressed for the API url option to show
-    private val API_URLS = arrayOf("https://api.cacophony.org.nz", "https://api-test.cacophony.org.nz")
+    private val apiURLs = arrayOf("https://api.cacophony.org.nz", "https://api-test.cacophony.org.nz")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login_screen)
-        val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
-        apiUrlEditText.setText(CacophonyAPI.getServerURL(applicationContext))
         val username = CacophonyAPI.getNameOrEmail(applicationContext)
         FirebaseCrashlytics.getInstance().setUserId(username ?: "")
         if (username != "") {
             gotoMainActivity()
         }
 
-        val img = findViewById<AutoCompleteTextView>(R.id.api_url_input)
-        img.setOnClickListener(object : View.OnClickListener {
-            override fun onClick(v: View) {
-                findViewById<AutoCompleteTextView>(R.id.api_url_input).showDropDown()
-            }
-        })
-
-        val apiAutoComplete = findViewById<AutoCompleteTextView>(R.id.api_url_input)
-        apiAutoComplete.threshold = 0
-        apiAutoComplete.setAdapter(ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, API_URLS))
+        val apiUrlEditText = findViewById<AutoCompleteTextView>(R.id.api_url_input)
+        apiUrlEditText.setText(CacophonyAPI.getServerURL(applicationContext))
+        apiUrlEditText.setOnClickListener { findViewById<AutoCompleteTextView>(R.id.api_url_input).showDropDown() }
+        apiUrlEditText.threshold = 0
+        apiUrlEditText.setAdapter(ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, apiURLs))
     }
 
     @Suppress("UNUSED_PARAMETER")

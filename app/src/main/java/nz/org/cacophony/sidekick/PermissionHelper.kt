@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -43,19 +42,6 @@ class PermissionHelper(private val c: Context) {
 
     fun request(activity: Activity, name: String, requestCode: Int) {
         ActivityCompat.requestPermissions(activity, arrayListOf(name).toTypedArray(), requestCode)
-    }
-
-    fun onResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray, messenger: Messenger) {
-        for (p in permissionList) {
-            val index = permissions.indexOf(p.permissionName)
-            if (index >= 0 && grantResults[index] == PackageManager.PERMISSION_GRANTED) {
-                Log.i(TAG, p.successMessage)
-                messenger.alert(p.successMessage)
-            } else if (index >= 0) {
-                Log.i(TAG, p.failMessage)
-                messenger.toast(p.failMessage)
-            }
-        }
     }
 }
 
