@@ -104,7 +104,7 @@ class DiscoveryManager(
         }
         mainViewModel.scanning.postValue(true)
         multicastLock.acquire()
-        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped, db) { svc, lis -> nsdManager.resolveService(svc, lis) }
+        listener = DeviceListener(devices, activity, messenger, ::notifyDiscoveryStopped, db, mainViewModel) { svc, lis -> nsdManager.resolveService(svc, lis) }
         nsdManager.discoverServices(MANAGEMENT_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
     }
 
@@ -137,6 +137,7 @@ class DeviceListener(
         private val messenger: Messenger,
         private var onStopped: (() -> Unit)? = null,
         private val db: RoomDatabase,
+        private val mainViewModel: MainViewModel,
         private val resolveService: (svc: NsdServiceInfo, lis: NsdManager.ResolveListener) -> Unit
 ) : NsdManager.DiscoveryListener {
     var connected: Boolean = false
@@ -244,7 +245,8 @@ class DeviceListener(
                     activity,
                     devices.getOnChanged(),
                     messenger,
-                    db)
+                    db,
+                    mainViewModel)
             //TODO look into why a service could be found for a device when is wasn't connected (device was unplugged but service was still found..)
             devices.add(newDevice)
 

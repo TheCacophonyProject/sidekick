@@ -27,11 +27,15 @@ class MainViewModel : ViewModel() {
     val locationStatusText = MutableLiveData<String>().apply { value = "" }
     val storageLocation = MutableLiveData<String>().apply { value = "" }
     val scanning = MutableLiveData<Boolean>().apply { value = false }
+    val groups = MutableLiveData<List<String>>().apply { value = emptyList() }
+    val serverURL = MutableLiveData<String>().apply { value = "" }
 
     lateinit var wifiHelper: WifiHelper
     val networkIntentFilter = IntentFilter()
 
     fun init(activity: Activity) {
+        serverURL.value = CacophonyAPI.getServerURL(activity.applicationContext)
+        groups.value = CacophonyAPI.getGroupList(activity.applicationContext)
         messenger.value = Messenger(activity)
         val dl = DeviceList()
         deviceList.value = dl

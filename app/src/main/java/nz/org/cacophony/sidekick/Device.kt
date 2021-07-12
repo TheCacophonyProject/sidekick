@@ -23,7 +23,8 @@ class Device(
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
         private val messenger: Messenger,
-        db: RoomDatabase) {
+        db: RoomDatabase,
+        private val mainViewModel: MainViewModel) {
     @Volatile
     var deviceRecordings = emptyArray<String>()
     @Volatile
@@ -38,6 +39,7 @@ class Device(
     private var devicename: String = name
     private var groupname: String? = null
     private var deviceID: Int = 0
+    private var serverURL: String = ""
     private val recordingDao: RecordingDao = db.recordingDao()
     private val eventDao: EventDao = db.eventDao()
     private var apiVersion: Int = 0
@@ -77,6 +79,7 @@ class Device(
             }
             groupname = deviceJSON.getString("groupname")
             deviceID = deviceJSON.getInt("deviceID")
+            serverURL = deviceJSON.getString("serverURL")
 
             val versionJSON = api.getDeviceVersion()
             apiVersion = versionJSON.getInt("apiVersion")
@@ -200,7 +203,24 @@ class Device(
         return true
     }
 
+    private fun userCanAccess(): Boolean {
+        if (mainViewModel.serverURL.value != serverURL) {
+            statusString = "device not registered to same API as user\nUser: ${mainViewModel.serverURL.value}\nDevice: $serverURL"
+            onChange?.invoke()
+            return false
+        }
+        if (mainViewModel.groups.value!!.indexOf(groupname) == -1) {
+            statusString = "devices group '$groupname' is not one of users group."
+            onChange?.invoke()
+            return false
+        }
+        return true
+    }
+
     private fun updateStatus() {
+        if (!userCanAccess()) {
+            return
+        }
         val newStatus = when {
             !sm.state.connected -> sm.state.message
             !sm.hasRecordingList -> "Checking for recordings"
@@ -237,6 +257,9 @@ class Device(
     }
 
     fun startDownloadRecordings() {
+        if (!userCanAccess()) {
+            return
+        }
         if (sm.state != DeviceState.READY || downloading) {
             return
         }
@@ -305,6 +328,9 @@ class Device(
     }
 
     fun downloadEvents() {
+        if (!userCanAccess()) {
+            return
+        }
         val missingEventKeys = getMissingEventKeys()
         if (missingEventKeys.isEmpty()) {
             Log.i(TAG, "No events to get from device")
