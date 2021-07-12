@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick.db
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 
 @Entity(tableName = "event")
@@ -48,6 +49,12 @@ interface EventDao {
 
     @Query("UPDATE event SET uploaded = 1 WHERE id = :id")
     fun setAsUploaded(id: Int)
+
+    @Query("SELECT * from event")
+    fun getEventLiveData(): LiveData<List<Event>>
+
+    @Query("SELECT * from event")
+    fun getAllEvents(): List<Event>
 
     @Insert
     fun insertAll(vararg events: Event)

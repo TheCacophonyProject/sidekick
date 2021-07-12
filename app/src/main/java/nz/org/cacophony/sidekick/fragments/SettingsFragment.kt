@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import nz.org.cacophony.sidekick.*
+import nz.org.cacophony.sidekick.db.Event
 import nz.org.cacophony.sidekick.db.Recording
 import nz.org.cacophony.sidekick.db.RecordingDao
 import kotlin.concurrent.thread
@@ -20,6 +21,7 @@ class SettingsFragment : Fragment() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var storageLocation: TextView
     private lateinit var recordingCount: TextView
+    private lateinit var eventCount: TextView
     private lateinit var recordingDao: RecordingDao
 
     override fun onCreateView(
@@ -35,6 +37,7 @@ class SettingsFragment : Fragment() {
         userText.text = CacophonyAPI.getNameOrEmail(context ?: throw Exception("No context for settings fragment"))
         storageLocation = root.findViewById(R.id.settings_storage_location)
         recordingCount = root.findViewById(R.id.settings_recording_count)
+        eventCount = root.findViewById(R.id.settings_event_count)
         setViewModelObservers()
         return root
     }
@@ -55,14 +58,17 @@ class SettingsFragment : Fragment() {
     private fun setViewModelObservers() {
         mainViewModel.storageLocation.observe(this, Observer { updateStorageLocation(it!!) })
         mainViewModel.db.value!!.recordingDao().getRecordingLiveData().observe(this, Observer { data -> updateRecordings(data) })
+        mainViewModel.db.value!!.eventDao().getEventLiveData().observe(this, Observer { data -> updateEvents(data) })
     }
 
     private fun updateRecordings(r: List<Recording>) {
         Log.i(TAG, "update recordings")
-        thread {
-            Log.i(TAG, r.size.toString())
-            recordingCount.text = "${r.size}"
-        }
+        recordingCount.text = "${r.size}"
+    }
+
+    private fun updateEvents(r: List<Event>) {
+        Log.i(TAG, "update events")
+        eventCount.text = "${r.size}"
     }
 
     private fun updateStorageLocation(path: String) {

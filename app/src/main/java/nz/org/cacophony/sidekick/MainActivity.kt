@@ -487,13 +487,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun deleteAllRecordings(view: View) {
+    fun deleteRecordingsAndEvents(view: View) {
         thread {
             val recordings = recordingDao.getAllRecordings()
             for (rec in recordings) {
                 Log.i(TAG, rec.recordingPath)
                 File(rec.recordingPath).delete()
                 recordingDao.deleteRecording(rec.id)
+            }
+            val events = eventDao.getAllEvents()
+            for (e in events) {
+                eventDao.delete(e)
             }
         }
     }

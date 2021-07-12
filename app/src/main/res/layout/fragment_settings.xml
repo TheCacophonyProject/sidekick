@@ -119,6 +119,21 @@
 
                     <TextView
                         android:id="@+id/settings_recording_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginEnd="10dp"
+                        android:text="" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginEnd="10dp"
+                        android:text="Events:" />
+
+                    <TextView
+                        android:id="@+id/settings_event_count"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
@@ -130,8 +145,8 @@
                         android:id="@+id/delete_recordings_button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:onClick="deleteAllRecordings"
-                        android:text="delete recordings" />
+                        android:onClick="deleteRecordingsAndEvents"
+                        android:text="delete" />
                 </LinearLayout>
 
                 <View
