@@ -412,13 +412,19 @@ class MainActivity : AppCompatActivity() {
         mainViewModel.locationStatusText.value = "Updating location for nearby devices"
         thread(start = true) {
             val failedDevices = mutableListOf<String>()
+            val successDevices = mutableListOf<String>()
             for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
-                if (!device.updateLocation(location)) {
+                if (device.updateLocation(location)) {
+                    successDevices.add(device.name)
+                } else {
                     failedDevices.add(device.name)
                 }
             }
-            if (failedDevices.size == 0) {
-                messenger.alert("Finished updating location for devices with an accuracy of ${location.accuracy}m")
+            if (failedDevices.size == 0 && successDevices.size == 0) {
+                messenger.alert("No devices found.")
+            }
+            else if (failedDevices.size == 0) {
+                messenger.alert("Finished updating location on: ${successDevices.joinToString(", ")}.\nWith an accuracy of ${location.accuracy}m")
             } else {
                 val message = "Failed to update location on: ${failedDevices.joinToString(", ")}"
                 Log.e(TAG, message)
