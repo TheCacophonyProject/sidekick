@@ -168,7 +168,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        private fun updateGroupList(c: Context) {
+        fun updateGroupList(c: Context) {
             val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/groups")!!.newBuilder()
 
             httpBuilder.addQueryParameter("where", "{}")
@@ -204,16 +204,6 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                 else -> {
                     Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
                     throw Exception("Unknown error with connecting to server.")
-                }
-            }
-        }
-
-        fun runUpdateGroupList(c: Context) {
-            thread(start = true) {
-                try {
-                    updateGroupList(c)
-                } catch (e: Exception) {
-                    Log.e(TAG, e.toString())
                 }
             }
         }

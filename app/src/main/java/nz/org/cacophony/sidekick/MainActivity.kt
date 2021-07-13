@@ -78,7 +78,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        CacophonyAPI.runUpdateGroupList(applicationContext)
+        thread {
+            try {
+                CacophonyAPI.updateGroupList(this)
+                mainViewModel.groups.postValue(CacophonyAPI.getGroupList(this))
+            } catch(e: Exception) {
+                Log.e(TAG, e.toString())
+            }
+        }
     }
 
     private fun setViewModelObserves() {

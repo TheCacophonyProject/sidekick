@@ -18,6 +18,8 @@
 
 package nz.org.cacophony.sidekick
 
+import kotlin.concurrent.thread
+
 class DeviceList {
     private val devices = sortedMapOf<String, Device>()
     private var onChanged: (() -> Unit)? = null
@@ -78,7 +80,12 @@ class DeviceList {
         return this.onChanged
     }
 
-    private fun notifyChange() {
+    fun notifyChange() {
+        for ((_, device) in devices) {
+            thread{
+                device.updateStatus()
+            }
+        }
         onChanged?.invoke()
     }
 

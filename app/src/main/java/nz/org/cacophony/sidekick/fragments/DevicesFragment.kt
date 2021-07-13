@@ -63,6 +63,7 @@ class DevicesFragment : Fragment() {
         locationStatus = root.findViewById(R.id.location_status)
         locationLayout.visibility = View.VISIBLE
         downloadButton = root.findViewById(R.id.download_recordings_button)
+        mainViewModel.groups.observe(this, Observer { mainViewModel.deviceList.value?.notifyChange() })
         notifyDeviceListChanged()
         return root
     }
@@ -158,7 +159,7 @@ class DevicesFragment : Fragment() {
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
-        activity!!.runOnUiThread {
+        activity?.runOnUiThread {
             mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
         }
     }

@@ -217,7 +217,7 @@ class Device(
         return true
     }
 
-    private fun updateStatus() {
+    fun updateStatus() {
         if (!userCanAccess()) {
             return
         }
