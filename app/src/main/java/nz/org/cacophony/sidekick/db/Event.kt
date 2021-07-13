@@ -26,8 +26,8 @@ interface EventDao {
     @Query("SELECT * FROM event WHERE device_id = (:deviceID)")
     fun getAllForDevice(deviceID: Int): List<Event>
 
-    @Query("SELECT * FROM event WHERE NOT uploaded LIMIT 1")
-    fun getOneNotUploaded(): Event?
+    @Query("SELECT * FROM event WHERE NOT uploaded AND id NOT IN (:excludeIDs) LIMIT 1")
+    fun getOneNotUploaded(excludeIDs: List<Int>): Event?
 
     @Query("SELECT * FROM event WHERE device_id = (:deviceID) AND type = (:type) AND details = (:details) AND NOT uploaded")
     fun getSimilarToUpload(deviceID: Int, type: String, details: String): List<Event>

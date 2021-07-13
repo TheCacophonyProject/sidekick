@@ -144,12 +144,27 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     .post(requestBody)
                     .build()
 
+
             val response = client.newCall(request).execute()
-            response.close()
-            if (response.isSuccessful) {
-                Log.i(TAG, "successful upload of event")
-            } else {
-                throw Exception(response.message())
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e: JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+            }
+            when (response.code()) {
+                422 -> throw Exception(responseBodyJSON.getString("message"))
+                403 -> throw ForbiddenUploadException()
+                200 -> return
+                else -> {
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
+                    throw Exception("Unknown error with connecting to server.")
+                }
             }
         }
 

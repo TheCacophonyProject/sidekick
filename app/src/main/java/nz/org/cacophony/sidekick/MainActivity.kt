@@ -270,41 +270,52 @@ class MainActivity : AppCompatActivity() {
             messenger.toast("No events to upload")
             return 0
         }
-        var failedUploadCount = 0
-        while (eventDao.getOneNotUploaded() != null) {
+        var otherFailCount = 0
+        var invalidPermissionFailCount = 0
+        var excludeIDs = emptyList<Int>()
+        while (eventDao.getOneNotUploaded(excludeIDs) != null) {
             Log.i(TAG, "uploading some recordings")
-            val event = eventDao.getOneNotUploaded() ?: break   //If null break from loop
+            val event = eventDao.getOneNotUploaded(excludeIDs) ?: break   //If null break from loop
             val events = eventDao.getSimilarToUpload(event.deviceID, event.type, event.details)
             var timestamps = emptyArray<String>()
             for (e in events) {
+                excludeIDs = excludeIDs.plus(e.id)
                 timestamps = timestamps.plus(e.timestamp)
             }
             try {
-                CacophonyAPI.uploadEvents(applicationContext, event.deviceID, timestamps, event.type, event.details)
+                CacophonyAPI.uploadEvents(
+                    applicationContext,
+                    event.deviceID,
+                    timestamps,
+                    event.type,
+                    event.details
+                )
                 runOnUiThread {
-                    mainViewModel.eventUploadingProgress.value = (mainViewModel.eventUploadingProgress.value ?: 0) + timestamps.size
+                    mainViewModel.eventUploadingProgress.value =
+                        (mainViewModel.eventUploadingProgress.value ?: 0) + timestamps.size
                 }
                 for (e in events) {
                     eventDao.setAsUploaded(e.id)
                 }
+            } catch(e: ForbiddenUploadException) {
+                invalidPermissionFailCount++
             } catch(e : Exception) {
-                failedUploadCount++
+                otherFailCount++
                 messenger.toast(e.message ?: "Unknown error with uploading recordings")
                 Log.e(TAG, e.toString())
-                if (failedUploadCount >= maxFailCount) {
+                if (otherFailCount >= maxFailCount) {
                     break
                 }
             }
         }
-        when {
-            failedUploadCount == 0 ->
-                messenger.toast("Finished uploading all event")
-            failedUploadCount < maxFailCount ->
-                messenger.alert("Failed to upload %d event groups")
-            failedUploadCount >= maxFailCount ->
-                messenger.alert("Stopping upload of events as too many failed")
+        val totalFailed = otherFailCount + invalidPermissionFailCount
+        when (totalFailed) {
+            0 ->
+                messenger.alert("Finished uploading events")
+            else -> messenger.alert("Failed to upload $totalFailed events, " +
+                    "$invalidPermissionFailCount being because of invalid permission")
         }
-        return failedUploadCount
+        return totalFailed
     }
 
     @Suppress("UNUSED_PARAMETER")
