@@ -10,7 +10,6 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
-import kotlin.concurrent.thread
 import java.math.BigInteger
 import java.security.MessageDigest
 
@@ -73,7 +72,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             val recordingFile = File(recording.recordingPath)
             val md = MessageDigest.getInstance("SHA-1").digest(recordingFile.readBytes())
             val no = BigInteger(1, md)
-            val fileHash = no.toString(16).padStart(32, '0')
+            val fileHash = no.toString(16).padStart(40, '0')
             data.put("fileHash", fileHash)
 
             val formBody = MultipartBody.Builder()

@@ -35,6 +35,9 @@ interface EventDao {
     @Query("SELECT * FROM event WHERE device_id = (:deviceID) AND event_id = (:eventID) LIMIT 1")
     fun getDeviceEvent(deviceID: Int, eventID: Int): Event?
 
+    @Query("SELECT event_id FROM event WHERE device_id = (:deviceID)")
+    fun getDeviceEventIDs(deviceID: Int): List<Int>
+
     @Query("SELECT event_id FROM event WHERE device_id = :deviceID AND NOT uploaded")
     fun getDeviceEventIDsNotUploaded(deviceID: Int): List<Int>
 

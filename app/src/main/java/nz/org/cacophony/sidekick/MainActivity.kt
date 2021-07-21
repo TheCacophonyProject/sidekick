@@ -281,7 +281,7 @@ class MainActivity : AppCompatActivity() {
         var invalidPermissionFailCount = 0
         var excludeIDs = emptyList<Int>()
         while (eventDao.getOneNotUploaded(excludeIDs) != null) {
-            Log.i(TAG, "uploading some recordings")
+            Log.i(TAG, "uploading some events")
             val event = eventDao.getOneNotUploaded(excludeIDs) ?: break   //If null break from loop
             val events = eventDao.getSimilarToUpload(event.deviceID, event.type, event.details)
             var timestamps = emptyArray<String>()
@@ -308,8 +308,8 @@ class MainActivity : AppCompatActivity() {
                 invalidPermissionFailCount++
             } catch(e : Exception) {
                 otherFailCount++
-                messenger.toast(e.message ?: "Unknown error with uploading recordings")
-                Log.e(TAG, e.toString())
+                messenger.toast(e.message ?: "Unknown error with uploading events")
+                Log.e(TAG, "Error with uploading events $e")
                 if (otherFailCount >= maxFailCount) {
                     break
                 }

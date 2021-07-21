@@ -236,10 +236,10 @@ class Device(
 
     private fun eventsToDownload(): Array<Int> {
         val toDownload = mutableListOf<Int>()
-        val downloadedEventsIDs = eventDao.getDeviceEventIDsNotUploaded(deviceID)
-        for (event in deviceEvents) {
-            if (event !in downloadedEventsIDs) {
-                toDownload.add(event)
+        val downloadedEventsIDs = eventDao.getDeviceEventIDs(deviceID)
+        for (deviceEvent in deviceEvents) {
+            if (deviceEvent !in downloadedEventsIDs) {
+                toDownload.add(deviceEvent)
             }
         }
         return toDownload.toTypedArray()
@@ -343,6 +343,7 @@ class Device(
                 addEvent(eventKey.toInt(), responseJSON.getJSONObject(eventKey))
             }
         } catch (e : Exception) {
+            messenger.toast("failed to download all events")
             Log.e(TAG, e.toString())
         }
     }
@@ -356,7 +357,10 @@ class Device(
         val eventJSON = eventResponse.getJSONObject("event")
         val timestamp = eventJSON.getString("Timestamp")
         val type = eventJSON.getString("Type")
-        val details = eventJSON.getJSONObject("Details").toString()
+        var details = "{}"
+        if (!eventJSON.isNull("Details")) {
+            details = eventJSON.getJSONObject("Details").toString()
+        }
         //TODO check that the timestamp, type, details... are sensible values
         val event = Event(deviceID, eventKey, timestamp, type, details)
         Log.i(TAG, "Adding event: $event")
