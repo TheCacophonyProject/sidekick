@@ -4,8 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.util.Log
-import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -14,12 +12,8 @@ class PermissionHelper(private val c: Context) {
     val locationUpdate = 2
 
     private val permissionList = listOf(
-            Permission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    "External write permission granted.",
-                    "Will not be able to download recordings without write permission."),
-            Permission(Manifest.permission.ACCESS_FINE_LOCATION,
-                    "Location permission granted.",
-                    "Can not check wifi setting without location permission")
+            Permission(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            Permission(Manifest.permission.ACCESS_FINE_LOCATION)
     )
 
     fun checkAll(activity: Activity, requestPermissions: Boolean = true): Boolean {
@@ -47,4 +41,4 @@ class PermissionHelper(private val c: Context) {
     }
 }
 
-class Permission(val permissionName: String, val successMessage: String, val failMessage: String)
+class Permission(val permissionName: String)

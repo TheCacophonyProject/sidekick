@@ -11,8 +11,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
@@ -63,7 +62,7 @@ class DevicesFragment : Fragment() {
         locationStatus = root.findViewById(R.id.location_status)
         locationLayout.visibility = View.VISIBLE
         downloadButton = root.findViewById(R.id.download_recordings_button)
-        mainViewModel.groups.observe(this, Observer { mainViewModel.deviceList.value?.notifyChange() })
+        mainViewModel.groups.observe(viewLifecycleOwner, { mainViewModel.deviceList.value?.notifyChange() })
         notifyDeviceListChanged()
         return root
     }
@@ -73,7 +72,7 @@ class DevicesFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         mainViewModel = activity?.run {
-            ViewModelProviders.of(this)[MainViewModel::class.java]
+            ViewModelProvider(this).get(MainViewModel::class.java)
         } ?: throw Exception("Invalid Activity")
 
         mainViewModel.title.value = title
@@ -88,9 +87,9 @@ class DevicesFragment : Fragment() {
     }
 
     private fun setViewModelObservers() {
-        mainViewModel.locationStatusText.observe(this, Observer { updateLocationView(it) })
-        mainViewModel.downloading.observe(this, Observer { updateDownloading(it) })
-        mainViewModel.scanning.observe(this, Observer { updateScanning(it) })
+        mainViewModel.locationStatusText.observe(this, { updateLocationView(it) })
+        mainViewModel.downloading.observe(this, { updateDownloading(it) })
+        mainViewModel.scanning.observe(this, { updateScanning(it) })
     }
 
     private fun updateLocationView(status: String) {
@@ -144,7 +143,7 @@ class DevicesFragment : Fragment() {
     }
 
     private fun updateScanning(scanning: Boolean) {
-        activity!!.runOnUiThread {
+        requireActivity().runOnUiThread {
             if (scanning) {
                 notScanningLayout.visibility = View.GONE
                 scanningLayout.visibility = View.VISIBLE

@@ -7,13 +7,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import nz.org.cacophony.sidekick.*
 import nz.org.cacophony.sidekick.db.Event
 import nz.org.cacophony.sidekick.db.Recording
 import nz.org.cacophony.sidekick.db.RecordingDao
-import kotlin.concurrent.thread
 
 class SettingsFragment : Fragment() {
     private var title = "Settings"
@@ -46,7 +44,7 @@ class SettingsFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         mainViewModel = activity?.run {
-            ViewModelProviders.of(this)[MainViewModel::class.java]
+            ViewModelProvider(this).get(MainViewModel::class.java)
         } ?: throw Exception("Invalid Activity")
 
         val db = mainViewModel.db.value ?: throw Exception("failed to get DB from main view model")
@@ -56,9 +54,9 @@ class SettingsFragment : Fragment() {
     }
 
     private fun setViewModelObservers() {
-        mainViewModel.storageLocation.observe(this, Observer { updateStorageLocation(it!!) })
-        mainViewModel.db.value!!.recordingDao().getRecordingLiveData().observe(this, Observer { data -> updateRecordings(data) })
-        mainViewModel.db.value!!.eventDao().getEventLiveData().observe(this, Observer { data -> updateEvents(data) })
+        mainViewModel.storageLocation.observe(viewLifecycleOwner, { updateStorageLocation(it!!) })
+        mainViewModel.db.value!!.recordingDao().getRecordingLiveData().observe(viewLifecycleOwner, { data -> updateRecordings(data) })
+        mainViewModel.db.value!!.eventDao().getEventLiveData().observe(viewLifecycleOwner, { data -> updateEvents(data) })
     }
 
     private fun updateRecordings(r: List<Recording>) {

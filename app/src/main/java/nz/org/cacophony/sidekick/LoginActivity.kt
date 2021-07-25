@@ -33,7 +33,7 @@ class LoginScreen : AppCompatActivity() {
         apiUrlEditText.setText(CacophonyAPI.getServerURL(applicationContext))
         apiUrlEditText.setOnClickListener { findViewById<AutoCompleteTextView>(R.id.api_url_input).showDropDown() }
         apiUrlEditText.threshold = 0
-        apiUrlEditText.setAdapter(ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, apiURLs))
+        apiUrlEditText.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, apiURLs))
     }
 
     @Suppress("UNUSED_PARAMETER")

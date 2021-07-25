@@ -10,8 +10,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
 import nz.org.cacophony.sidekick.TAG
@@ -55,7 +54,7 @@ class RecordingsFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         mainViewModel = activity?.run {
-            ViewModelProviders.of(this)[MainViewModel::class.java]
+            ViewModelProvider(this).get(MainViewModel::class.java)
         } ?: throw Exception("Invalid Activity")
 
         val db = mainViewModel.db.value ?: throw Exception("failed to get DB from main view model")
@@ -67,10 +66,10 @@ class RecordingsFragment : Fragment() {
     }
 
     private fun setViewModelObserves() {
-        mainViewModel.db.observe(this, Observer { updateView() })
-        mainViewModel.uploading.observe(this, Observer { updateView() })
-        mainViewModel.recordingUploadingProgress.observe(this, Observer { updateView() })
-        mainViewModel.eventUploadingProgress.observe(this, Observer { updateView() })
+        mainViewModel.db.observe(this, { updateView() })
+        mainViewModel.uploading.observe(this, { updateView() })
+        mainViewModel.recordingUploadingProgress.observe(this, { updateView() })
+        mainViewModel.eventUploadingProgress.observe(this, { updateView() })
     }
 
     override fun onResume() {
@@ -84,7 +83,7 @@ class RecordingsFragment : Fragment() {
         thread {
             val numRecordingsToUpload = recordingDao.getRecordingsToUpload().size
             val numEventsToUpload = eventDao.getEventsToUpload().size
-            activity!!.runOnUiThread {
+            requireActivity().runOnUiThread {
                 if (numRecordingsToUpload == 0 && numEventsToUpload == 0) {
                     noRecordingsLayout.visibility = View.VISIBLE
                     recordingsLayout.visibility = View.GONE

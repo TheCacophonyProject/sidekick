@@ -1,12 +1,8 @@
 package nz.org.cacophony.sidekick
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.IntentSender
-import android.location.Location
 import android.os.Bundle
-import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import android.view.MenuItem
@@ -16,15 +12,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
-import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.location.*
-import com.google.android.gms.tasks.Task
 import com.google.android.material.navigation.NavigationView
 import nz.org.cacophony.sidekick.db.EventDao
 import nz.org.cacophony.sidekick.db.RecordingDao
@@ -60,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        mainViewModel = ViewModelProviders.of(this)[MainViewModel::class.java]
+        mainViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         mainViewModel.init(this)
         messenger = mainViewModel.messenger.value!!
         permissionHelper = PermissionHelper(applicationContext)
@@ -207,7 +199,7 @@ class MainActivity : AppCompatActivity() {
     fun upload(v: View) {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
-        mWakeLock.acquire(5 * 60 * 1000)
+        mWakeLock.acquire(300000) // 5 * 60 * 1000
         if (mainViewModel.uploading.value == true) {
             return
         }
