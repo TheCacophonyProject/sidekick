@@ -46,9 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var permissionHelper: PermissionHelper
     private lateinit var eventDao: EventDao
     private lateinit var recordingDao: RecordingDao
-    @Volatile
-    var bestLocation: Location? = null
-    private val locationSettingsUpdateCode = 5
+    private lateinit var locationHelper: LocationHelper
     @Volatile
     var locationCount = 0
     private var versionClickCountdown = 10 // Number of times the image needs to be pressed for the dev fragment will be shown
@@ -68,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         permissionHelper = PermissionHelper(applicationContext)
         permissionHelper.checkAll(this)
 
+        locationHelper = LocationHelper(permissionHelper, mainViewModel, this)
         eventDao = mainViewModel.db.value!!.eventDao()
         recordingDao = mainViewModel.db.value!!.recordingDao()
 
@@ -90,7 +89,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setViewModelObserves() {
         // Update toolbar title
-        mainViewModel.title.observe(this, Observer {
+        mainViewModel.title.observe(this, {
             toolbar.title = it
         })
     }
@@ -327,134 +326,30 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun setLocationButton(item: MenuItem) {
-        setDevicesLocation()
+        locationHelper.setDevicesLocation()
     }
 
-    private fun setDevicesLocation() {
-        if (!permissionHelper.check(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            permissionHelper.request(this, Manifest.permission.ACCESS_FINE_LOCATION, permissionHelper.locationUpdate)
-            return
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        var granted = true
+        for (i in grantResults) {
+            granted = granted && (i == 0)
         }
-        mainViewModel.locationStatusText.value = "Getting location"
-        createLocationRequest()
-    }
-
-    private fun createLocationRequest() {
-        val locationRequest = LocationRequest.create().apply {
-            interval = 3000
-            fastestInterval = 1000
-            maxWaitTime = 5000
-            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            numUpdates = LOCATION_MAX_ATTEMPTS
-        }
-
-        val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
-        val client: SettingsClient = LocationServices.getSettingsClient(this)
-        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
-
-        task.addOnSuccessListener {
-            Log.i(TAG, "Have required location settings")
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-            try {
-                bestLocation = null
-                locationCount = 0
-                fusedLocationClient.requestLocationUpdates(locationRequest, makeLocationCallback(fusedLocationClient), Looper.getMainLooper())
-            } catch (e: SecurityException) {
-                Log.e(TAG, e.toString())
-                messenger.alert("Failed to request location updates")
-                resetUpdateLocationButton()
-            }
-        }
-
-        task.addOnFailureListener { e ->
-            Log.i(TAG, "Don't have required location settings.")
-            if (e is ResolvableApiException) {
-                try {
-                    Log.i(TAG, "Requesting location settings to be updated")
-                    e.startResolutionForResult(this, locationSettingsUpdateCode)
-                } catch (sendEx: IntentSender.SendIntentException) {
-                    Log.e(TAG, e.toString())
-                    resetUpdateLocationButton()
-                }
-            } else {
-                Log.e(TAG, e.toString())
-                resetUpdateLocationButton()
-            }
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+        Log.i(TAG, "Permission requestCode: $requestCode, granted: $granted")
         when (requestCode) {
-            locationSettingsUpdateCode -> {
-                if (resultCode == -1) {
-                    createLocationRequest()
+            permissionHelper.locationUpdate -> {
+                if (granted) {
+                    locationHelper.createLocationRequest()
                 } else {
-                    messenger.alert("Don't have proper location settings to get location.")
-                    resetUpdateLocationButton()
+                    messenger.alert("App doesn't have proper permissions to get location.")
+                    mainViewModel.locationStatusText.postValue("")
                 }
             }
-        }
-    }
-
-    private fun makeLocationCallback(lc: FusedLocationProviderClient): LocationCallback {
-        return object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                locationCount++
-                val location = locationResult.lastLocation
-                Log.i(TAG, "lat ${location.latitude}, " +
-                        "long: ${location.longitude}, " +
-                        "alt: ${location.altitude}, " +
-                        "acc: ${location.accuracy}, " +
-                        "time: ${location.time}")
-
-                if (location.accuracy >= 100 || location.latitude == 0.0 && location.longitude == 0.0) {
-                    Log.d(TAG, "location not accurate enough or invalid")
-                } else if (bestLocation == null || location.accuracy < bestLocation!!.accuracy) {
-                    bestLocation = location
-                }
-
-                if (bestLocation != null && (bestLocation!!.accuracy < 20 || locationCount == LOCATION_MAX_ATTEMPTS)) {
-                    lc.removeLocationUpdates(this)
-                    updateDevicesLocation(bestLocation!!)
-                } else if (locationCount == LOCATION_MAX_ATTEMPTS) {
-                    lc.removeLocationUpdates(this)
-                    messenger.alert("Failed to find a location")
-                    resetUpdateLocationButton()
-                }
-            }
-        }
-    }
-
-    fun updateDevicesLocation(location: Location) {
-        mainViewModel.locationStatusText.value = "Updating location for nearby devices"
-        thread(start = true) {
-            val failedDevices = mutableListOf<String>()
-            val successDevices = mutableListOf<String>()
-            for ((_, device) in mainViewModel.deviceList.value!!.getMap()) {
-                if (device.updateLocation(location)) {
-                    successDevices.add(device.name)
-                } else {
-                    failedDevices.add(device.name)
-                }
-            }
-            if (failedDevices.size == 0 && successDevices.size == 0) {
-                messenger.alert("No devices found.")
-            }
-            else if (failedDevices.size == 0) {
-                messenger.alert("Finished updating location on: ${successDevices.joinToString(", ")}.\nWith an accuracy of ${location.accuracy}m")
-            } else {
-                val message = "Failed to update location on: ${failedDevices.joinToString(", ")}"
-                Log.e(TAG, message)
-                messenger.alert(message)
-            }
-            resetUpdateLocationButton()
-        }
-    }
-
-    fun resetUpdateLocationButton() {
-        runOnUiThread {
-            mainViewModel.locationStatusText.value = ""
         }
     }
 
