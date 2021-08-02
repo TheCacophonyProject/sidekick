@@ -3,6 +3,7 @@ package nz.org.cacophony.sidekick
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import nz.org.cacophony.sidekick.db.Recording
 import okhttp3.*
@@ -67,7 +68,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             saveUserData(c, "", "", "", "")
         }
 
-        fun uploadRecording(c: Context, recording: Recording) {
+        fun uploadRecording(c: Context, recording: Recording, ca: MutableLiveData<Call>) {
             val data = JSONObject()
             data.put("type", "thermalRaw")
             val recordingFile = File(recording.recordingPath)
@@ -97,7 +98,9 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     .post(formBody)
                     .build()
 
-            val response = client.newCall(request).execute()
+            val call = client.newCall(request)
+            ca.postValue(call)
+            val response = call.execute() // Canceled Exception is thrown if call was canceled
             var responseBody = ""
             var responseBodyJSON = JSONObject()
             if (response.body() != null) {
@@ -121,7 +124,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String) {
+        fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String, ca: MutableLiveData<Call>) {
             val description = JSONObject()
             description.put("type", type)
             description.put("details", JSONObject(details))
@@ -145,7 +148,9 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     .build()
 
 
-            val response = client.newCall(request).execute()
+            val call = client.newCall(request)
+            ca.postValue(call)
+            val response = call.execute() // Canceled Exception is thrown if call was canceled
             var responseBody = ""
             var responseBodyJSON = JSONObject()
             if (response.body() != null) {

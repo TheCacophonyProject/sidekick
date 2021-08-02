@@ -196,6 +196,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Suppress("UNUSED_PARAMETER")
+    fun cancelUpload(v: View) {
+        mainViewModel.call.value?.cancel()
+        mainViewModel.uploading.postValue(false)
+    }
+
+    @Suppress("UNUSED_PARAMETER")
     fun upload(v: View) {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sidekick:uploading_recordings")
@@ -217,61 +223,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun uploadRecordings(maxFailCount: Int = 3): Int {
+    private fun uploadRecordings() {
         val recordingsToUpload = recordingDao.getRecordingsToUpload()
-        runOnUiThread {
-            mainViewModel.recordingsBeingUploadedCount.value = recordingsToUpload.size
-            mainViewModel.recordingUploadingProgress.value = 0
-        }
+        mainViewModel.recordingsBeingUploadedCount.postValue(recordingsToUpload.size)
+        mainViewModel.recordingUploadSuccessCount.postValue(0)
         if (recordingsToUpload.isEmpty()) {
-            return 0
+            return
         }
-        var invalidPermissionFailCount = 0
-        var otherFailCount = 0
         for (rec in recordingsToUpload) {
-            runOnUiThread {
-                mainViewModel.recordingUploadingProgress.value = (mainViewModel.recordingUploadingProgress.value ?: 0) + 1
+            if (!mainViewModel.uploading.value!!) {
+                return
             }
             try {
-                CacophonyAPI.uploadRecording(applicationContext, rec)
+                CacophonyAPI.uploadRecording(applicationContext, rec, mainViewModel.call)
                 recordingDao.setAsUploaded(rec.id)
                 File(rec.recordingPath).delete()
-            } catch (e: ForbiddenUploadException) {
-                invalidPermissionFailCount++
-                messenger.toast(e.message!!)
+                mainViewModel.recordingUploadSuccessCount.postValue(
+                    (mainViewModel.recordingUploadSuccessCount.value ?: 0) + 1
+                )
             } catch (e: Exception) {
-                otherFailCount++
-                messenger.toast(e.message ?: "Unknown error with uploading recordings")
-                if (otherFailCount >= maxFailCount) {
-                    messenger.alert("Stopping upload of recordings as too many failed")
-                    return otherFailCount
-                }
+                Log.i(TAG, "upload exception ${e.message}")
+                mainViewModel.recordingUploadFailCount.postValue(
+                    (mainViewModel.recordingUploadFailCount.value ?: 0) + 1
+                )
+                messenger.toast(e.message ?: "Error with uploading a recording")
             }
         }
-        val totalFailed = otherFailCount + invalidPermissionFailCount
-        when (totalFailed) {
-            0 ->
-                messenger.alert("Finished uploading recordings")
-            else -> messenger.alert("Failed to upload $totalFailed recordings, " +
-                    "$invalidPermissionFailCount being because of invalid permission")
-        }
-        return totalFailed
     }
 
-    private fun uploadEvents(maxFailCount: Int = 3): Int {
+    private fun uploadEvents() {
         val eventsToUpload = eventDao.getEventsToUpload()
         runOnUiThread {
             mainViewModel.eventsBeingUploadedCount.value = eventsToUpload.size
-            mainViewModel.eventUploadingProgress.value = 0
+            mainViewModel.eventUploadSuccessCount.value = 0
         }
         if (eventsToUpload.isEmpty()) {
             messenger.toast("No events to upload")
-            return 0
+            return
         }
-        var otherFailCount = 0
-        var invalidPermissionFailCount = 0
         var excludeIDs = emptyList<Int>()
         while (eventDao.getOneNotUploaded(excludeIDs) != null) {
+            if (!mainViewModel.uploading.value!!) {
+                return
+            }
             Log.i(TAG, "uploading some events")
             val event = eventDao.getOneNotUploaded(excludeIDs) ?: break   //If null break from loop
             val events = eventDao.getSimilarToUpload(event.deviceID, event.type, event.details)
@@ -286,34 +280,24 @@ class MainActivity : AppCompatActivity() {
                     event.deviceID,
                     timestamps,
                     event.type,
-                    event.details
+                    event.details,
+                    mainViewModel.call
                 )
-                runOnUiThread {
-                    mainViewModel.eventUploadingProgress.value =
-                        (mainViewModel.eventUploadingProgress.value ?: 0) + timestamps.size
-                }
+                mainViewModel.eventUploadSuccessCount.postValue(
+                    (mainViewModel.eventUploadSuccessCount.value ?: 0) + timestamps.size
+                )
                 for (e in events) {
                     eventDao.setAsUploaded(e.id)
                 }
-            } catch(e: ForbiddenUploadException) {
-                invalidPermissionFailCount++
             } catch(e : Exception) {
-                otherFailCount++
-                messenger.toast(e.message ?: "Unknown error with uploading events")
+                mainViewModel.eventUploadFailCount.postValue(
+                    (mainViewModel.eventUploadFailCount.value ?: 0) + timestamps.size
+                )
+                //TODO store exception in map with count
+                messenger.toast(e.message ?: "Error with uploading events")
                 Log.e(TAG, "Error with uploading events $e")
-                if (otherFailCount >= maxFailCount) {
-                    break
-                }
             }
         }
-        val totalFailed = otherFailCount + invalidPermissionFailCount
-        when (totalFailed) {
-            0 ->
-                messenger.alert("Finished uploading events")
-            else -> messenger.alert("Failed to upload $totalFailed events, " +
-                    "$invalidPermissionFailCount being because of invalid permission")
-        }
-        return totalFailed
     }
 
     @Suppress("UNUSED_PARAMETER")
