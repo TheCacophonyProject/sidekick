@@ -71,7 +71,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         thread {
             try {
-                CacophonyAPI.updateGroupList(this)
+                CacophonyAPI.updateUserGroupsAndDevices(this)
                 mainViewModel.groups.postValue(CacophonyAPI.getGroupList(this))
             } catch(e: Exception) {
                 Log.e(TAG, e.toString())

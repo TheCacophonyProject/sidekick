@@ -209,7 +209,8 @@ class Device(
             onChange?.invoke()
             return false
         }
-        if (mainViewModel.groups.value!!.indexOf(groupname) == -1) {
+        if (mainViewModel.groups.value?.indexOf(groupname) == -1 &&
+                mainViewModel.usersDevicesList.value?.indexOf(devicename) == -1) {
             statusString = "devices group '$groupname' is not one of users group."
             onChange?.invoke()
             return false

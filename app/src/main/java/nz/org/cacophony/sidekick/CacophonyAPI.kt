@@ -25,6 +25,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         private var serverURLKey: String = "SERVER_URL"
         private var jwtKey: String = "JWT"
         private var groupListKey = "GROUPS"
+        private var devicesNamesListKey = "DEVICES_IDS"
         private val client: OkHttpClient = OkHttpClient()
 
         fun login(c: Context, nameOrEmail: String, password: String, serverURL: String) {
@@ -167,7 +168,52 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        fun updateGroupList(c: Context) {
+        fun updateUserGroupsAndDevices(c: Context) {
+            updateGroupList(c)
+            updateDeviceList(c)
+        }
+
+        private fun updateDeviceList(c: Context) {
+            val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/devices")!!.newBuilder()
+
+            httpBuilder.addQueryParameter("where", "{}")
+            val request = Request.Builder()
+                .url(httpBuilder.build())
+                .addHeader("Authorization", getJWT(c))
+                .build()
+
+            val response = client.newCall(request).execute()
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e: JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+            }
+
+            when (response.code()) {
+                422 -> throw Exception(responseBodyJSON.getString("message"))
+                200 -> {
+                    val deviceIDs = mutableSetOf<String>()
+                    val devices = responseBodyJSON.getJSONObject("devices").getJSONArray("rows")
+                    for (i in 0 until devices.length()) {
+                        deviceIDs.add(devices.getJSONObject(i).getString("devicename"))
+                    }
+                    Log.i(TAG, deviceIDs.toString())
+                    getPrefs(c).edit().putStringSet(devicesNamesListKey, deviceIDs).apply()
+                }
+                else -> {
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
+                    throw Exception("Unknown error with connecting to server.")
+                }
+            }
+        }
+
+        private fun updateGroupList(c: Context) {
             val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/groups")!!.newBuilder()
 
             httpBuilder.addQueryParameter("where", "{}")
@@ -209,6 +255,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
         fun getGroupList(c: Context): List<String>? {
             return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())?.sorted()
+        }
+
+        fun getDevicesList(c: Context): List<String>? {
+            return getPrefs(c).getStringSet(devicesNamesListKey, mutableSetOf<String>())?.sorted()
         }
 
         private fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
