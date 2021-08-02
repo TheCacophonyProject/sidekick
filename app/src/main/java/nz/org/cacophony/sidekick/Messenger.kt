@@ -11,7 +11,7 @@ class Messenger(private val activity: Activity) {
         }
     }
 
-    fun alert(message: String) {
+    fun alert(message: String, title: String = "Message") {
         activity.runOnUiThread {
             val dialogBuilder = AlertDialog.Builder(activity)
             dialogBuilder
@@ -19,7 +19,7 @@ class Messenger(private val activity: Activity) {
                     .setCancelable(false)
                     .setPositiveButton("OK") { _, _ -> }
             val alert = dialogBuilder.create()
-            alert.setTitle("Message")
+            alert.setTitle(title)
             alert.show()
         }
     }

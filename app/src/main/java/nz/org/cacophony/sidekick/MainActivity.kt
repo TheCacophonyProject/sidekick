@@ -211,8 +211,30 @@ class MainActivity : AppCompatActivity() {
         }
         mainViewModel.uploading.value = true
         thread {
-            uploadEvents()
-            uploadRecordings()
+            mainViewModel.eventUploadFailCount.postValue(0)
+            mainViewModel.eventUploadSuccessCount.postValue(0)
+            mainViewModel.recordingUploadFailCount.postValue(0)
+            mainViewModel.recordingUploadSuccessCount.postValue(0)
+            val eventsUploadReport = uploadEvents()
+            val recordingsUploadReport = uploadRecordings()
+
+            val eventsUploaded = eventsUploadReport["uploaded"]?: 0
+            eventsUploadReport.remove("uploaded")
+            eventsUploadReport.remove("Canceled")
+            val recordingsUploaded = recordingsUploadReport["uploaded"]?: 0
+            recordingsUploadReport.remove("uploaded")
+            recordingsUploadReport.remove("Canceled")
+            if (recordingsUploadReport.size > 0 || eventsUploadReport.size > 0) {
+                var message = "Events uploaded: $eventsUploaded\nEvent errors:\n"
+                for ((error, num) in eventsUploadReport) {
+                    message = "$message\t$num: $error\n"
+                }
+                message = "$message\nRecordings uploaded: $recordingsUploaded\nRecording errors:\n"
+                for ((error, num) in recordingsUploadReport) {
+                    message = "$message\t$num: $error\n"
+                }
+                messenger.alert(message, "Upload errors")
+            }
 
             if (mWakeLock.isHeld) {
                 mWakeLock.release()
@@ -223,16 +245,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun uploadRecordings() {
+    private fun uploadRecordings(): HashMap<String, Int> {
+        val uploadReport = HashMap<String, Int>()
         val recordingsToUpload = recordingDao.getRecordingsToUpload()
         mainViewModel.recordingsBeingUploadedCount.postValue(recordingsToUpload.size)
         mainViewModel.recordingUploadSuccessCount.postValue(0)
         if (recordingsToUpload.isEmpty()) {
-            return
+            return uploadReport
         }
         for (rec in recordingsToUpload) {
             if (!mainViewModel.uploading.value!!) {
-                return
+                return uploadReport
             }
             try {
                 CacophonyAPI.uploadRecording(applicationContext, rec, mainViewModel.call)
@@ -241,30 +264,34 @@ class MainActivity : AppCompatActivity() {
                 mainViewModel.recordingUploadSuccessCount.postValue(
                     (mainViewModel.recordingUploadSuccessCount.value ?: 0) + 1
                 )
+                uploadReport["uploaded"] = (uploadReport["uploaded"]?: 0) + 1
             } catch (e: Exception) {
+                uploadReport[e.message?: "unknown error"] = (uploadReport[e.message?: "unknown error"]?: 0) + 1
                 Log.i(TAG, "upload exception ${e.message}")
                 mainViewModel.recordingUploadFailCount.postValue(
                     (mainViewModel.recordingUploadFailCount.value ?: 0) + 1
                 )
-                messenger.toast(e.message ?: "Error with uploading a recording")
             }
         }
+        return uploadReport
     }
 
-    private fun uploadEvents() {
+    private fun uploadEvents(): HashMap<String, Int> {
+        val uploadReport = HashMap<String, Int>()
         val eventsToUpload = eventDao.getEventsToUpload()
         runOnUiThread {
             mainViewModel.eventsBeingUploadedCount.value = eventsToUpload.size
             mainViewModel.eventUploadSuccessCount.value = 0
+            mainViewModel.eventUploadFailCount.value = 0
         }
         if (eventsToUpload.isEmpty()) {
             messenger.toast("No events to upload")
-            return
+            return uploadReport
         }
         var excludeIDs = emptyList<Int>()
         while (eventDao.getOneNotUploaded(excludeIDs) != null) {
             if (!mainViewModel.uploading.value!!) {
-                return
+                return uploadReport
             }
             Log.i(TAG, "uploading some events")
             val event = eventDao.getOneNotUploaded(excludeIDs) ?: break   //If null break from loop
@@ -289,15 +316,16 @@ class MainActivity : AppCompatActivity() {
                 for (e in events) {
                     eventDao.setAsUploaded(e.id)
                 }
+                uploadReport["uploaded"] = (uploadReport["uploaded"]?: 0) + timestamps.size
             } catch(e : Exception) {
                 mainViewModel.eventUploadFailCount.postValue(
                     (mainViewModel.eventUploadFailCount.value ?: 0) + timestamps.size
                 )
-                //TODO store exception in map with count
-                messenger.toast(e.message ?: "Error with uploading events")
+                uploadReport[e.message?: "unknown error"] = (uploadReport[e.message?: "unknown error"]?: 0) + timestamps.size
                 Log.e(TAG, "Error with uploading events $e")
             }
         }
+        return uploadReport
     }
 
     @Suppress("UNUSED_PARAMETER")
