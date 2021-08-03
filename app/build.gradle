@@ -15,7 +15,7 @@ if (performSigning) {
 
 
 ext.versionMajor = 2
-ext.versionMinor = 1
+ext.versionMinor = 2
 ext.versionPatch = 1
 ext.versionClassifier = null
 ext.isSnapshot = false
