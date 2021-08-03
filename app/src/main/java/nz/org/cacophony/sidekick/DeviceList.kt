@@ -18,6 +18,8 @@
 
 package nz.org.cacophony.sidekick
 
+import kotlin.concurrent.thread
+
 class DeviceList {
     private val devices = sortedMapOf<String, Device>()
     private var onChanged: (() -> Unit)? = null
@@ -78,28 +80,18 @@ class DeviceList {
         return this.onChanged
     }
 
-    private fun notifyChange() {
+    fun notifyChange() {
+        for ((_, device) in devices) {
+            thread{
+                device.updateStatus()
+            }
+        }
         onChanged?.invoke()
-    }
-
-    @Synchronized
-    fun has(name: String): Boolean {
-        return devices.containsKey(name)
     }
 
     @Synchronized
     fun getMap(): Map<String, Device> {
         return devices
-    }
-
-    // Return true if any devices are downloading recordings
-    fun downloading(): Boolean {
-        for ((_, device) in getMap()) {
-            if (device.downloading) {
-                return true
-            }
-        }
-        return false
     }
 }
 

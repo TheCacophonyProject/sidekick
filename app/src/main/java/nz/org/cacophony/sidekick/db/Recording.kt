@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick.db
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 
 /**
@@ -60,6 +61,12 @@ interface RecordingDao {
 
     @Query("SELECT * from Recording WHERE not uploaded")
     fun getRecordingsToUpload(): List<Recording>
+
+    @Query("SELECT * from Recording")
+    fun getRecordingLiveData(): LiveData<List<Recording>>
+
+    @Query("SELECT * from Recording")
+    fun getAllRecordings(): List<Recording>
 
     @Query("UPDATE Recording SET uploaded = 1 WHERE id = :id")
     fun setAsUploaded(id: Int?)

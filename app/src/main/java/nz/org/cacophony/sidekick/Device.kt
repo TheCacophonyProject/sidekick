@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
-import android.provider.Browser
 import android.util.Log
 import nz.org.cacophony.sidekick.db.*
 import okhttp3.HttpUrl
@@ -24,7 +23,8 @@ class Device(
         private val activity: Activity,
         private val onChange: (() -> Unit)?,
         private val messenger: Messenger,
-        db: RoomDatabase) {
+        db: RoomDatabase,
+        private val mainViewModel: MainViewModel) {
     @Volatile
     var deviceRecordings = emptyArray<String>()
     @Volatile
@@ -39,6 +39,7 @@ class Device(
     private var devicename: String = name
     private var groupname: String? = null
     private var deviceID: Int = 0
+    private var serverURL: String = ""
     private val recordingDao: RecordingDao = db.recordingDao()
     private val eventDao: EventDao = db.eventDao()
     private var apiVersion: Int = 0
@@ -78,6 +79,7 @@ class Device(
             }
             groupname = deviceJSON.getString("groupname")
             deviceID = deviceJSON.getInt("deviceID")
+            serverURL = deviceJSON.getString("serverURL")
 
             val versionJSON = api.getDeviceVersion()
             apiVersion = versionJSON.getInt("apiVersion")
@@ -201,7 +203,25 @@ class Device(
         return true
     }
 
-    private fun updateStatus() {
+    private fun userCanAccess(): Boolean {
+        if (mainViewModel.serverURL.value != serverURL) {
+            statusString = "device not registered to same API as user\nUser: ${mainViewModel.serverURL.value}\nDevice: $serverURL"
+            onChange?.invoke()
+            return false
+        }
+        if (mainViewModel.groups.value?.indexOf(groupname) == -1 &&
+                mainViewModel.usersDevicesList.value?.indexOf(devicename) == -1) {
+            statusString = "devices group '$groupname' is not one of users group."
+            onChange?.invoke()
+            return false
+        }
+        return true
+    }
+
+    fun updateStatus() {
+        if (!userCanAccess()) {
+            return
+        }
         val newStatus = when {
             !sm.state.connected -> sm.state.message
             !sm.hasRecordingList -> "Checking for recordings"
@@ -217,10 +237,10 @@ class Device(
 
     private fun eventsToDownload(): Array<Int> {
         val toDownload = mutableListOf<Int>()
-        val downloadedEventsIDs = eventDao.getDeviceEventIDsNotUploaded(deviceID)
-        for (event in deviceEvents) {
-            if (event !in downloadedEventsIDs) {
-                toDownload.add(event)
+        val downloadedEventsIDs = eventDao.getDeviceEventIDs(deviceID)
+        for (deviceEvent in deviceEvents) {
+            if (deviceEvent !in downloadedEventsIDs) {
+                toDownload.add(deviceEvent)
             }
         }
         return toDownload.toTypedArray()
@@ -238,6 +258,9 @@ class Device(
     }
 
     fun startDownloadRecordings() {
+        if (!userCanAccess()) {
+            return
+        }
         if (sm.state != DeviceState.READY || downloading) {
             return
         }
@@ -306,6 +329,9 @@ class Device(
     }
 
     fun downloadEvents() {
+        if (!userCanAccess()) {
+            return
+        }
         val missingEventKeys = getMissingEventKeys()
         if (missingEventKeys.isEmpty()) {
             Log.i(TAG, "No events to get from device")
@@ -318,6 +344,7 @@ class Device(
                 addEvent(eventKey.toInt(), responseJSON.getJSONObject(eventKey))
             }
         } catch (e : Exception) {
+            messenger.toast("failed to download all events")
             Log.e(TAG, e.toString())
         }
     }
@@ -331,7 +358,10 @@ class Device(
         val eventJSON = eventResponse.getJSONObject("event")
         val timestamp = eventJSON.getString("Timestamp")
         val type = eventJSON.getString("Type")
-        val details = eventJSON.getJSONObject("Details").toString()
+        var details = "{}"
+        if (!eventJSON.isNull("Details")) {
+            details = eventJSON.getJSONObject("Details").toString()
+        }
         //TODO check that the timestamp, type, details... are sensible values
         val event = Event(deviceID, eventKey, timestamp, type, details)
         Log.i(TAG, "Adding event: $event")
@@ -356,10 +386,24 @@ class Device(
                 val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
                 httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
                 val uri = Uri.parse(httpBuilder.build().toString())
-                Log.d(TAG, "opening browser to: $uri")
-                val urlIntent = Intent(Intent.ACTION_VIEW, uri)
-                urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-$name")  // Single browse tab per device
-                activity.startActivity(urlIntent)
+                val i = Intent(activity, DeviceWebViewActivity::class.java)
+                i.putExtra("uri", uri.toString())
+                activity.startActivity(i)
+
+                //val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
+                //httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
+                //activity.startActivity(i)
+                //DeviceWebViewFragment.newInstance("http://$hostname:$port")
+                /*
+                    val httpBuilder = HttpUrl.parse(URL("http", hostname, port, "/").toString())!!.newBuilder()
+                    val groupList = CacophonyAPI.getGroupList(activity.application.applicationContext)
+                    httpBuilder.addQueryParameter("groups", groupList?.joinToString("--"))
+                    val uri = Uri.parse(httpBuilder.build().toString())
+                    Log.d(TAG, "opening browser to: $uri")
+                    val urlIntent = Intent(Intent.ACTION_VIEW, uri)
+                    urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-$name")  // Single browse tab per device
+                    activity.startActivity(urlIntent)
+                */
             }
         }
     }

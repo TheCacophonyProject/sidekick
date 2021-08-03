@@ -3,19 +3,18 @@ package nz.org.cacophony.sidekick
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import nz.org.cacophony.sidekick.db.Recording
 import okhttp3.*
-import okhttp3.internal.http2.Header
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.nio.charset.Charset
-import kotlin.concurrent.thread
+import java.math.BigInteger
+import java.security.MessageDigest
 
+class ForbiddenUploadException: Exception("Invalid permission to upload recording for device")
 
 class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
@@ -27,6 +26,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         private var serverURLKey: String = "SERVER_URL"
         private var jwtKey: String = "JWT"
         private var groupListKey = "GROUPS"
+        private var devicesNamesListKey = "DEVICES_IDS"
         private val client: OkHttpClient = OkHttpClient()
 
         fun login(c: Context, nameOrEmail: String, password: String, serverURL: String) {
@@ -68,11 +68,14 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             saveUserData(c, "", "", "", "")
         }
 
-        fun uploadRecording(c: Context, recording: Recording) {
+        fun uploadRecording(c: Context, recording: Recording, ca: MutableLiveData<Call>) {
             val data = JSONObject()
             data.put("type", "thermalRaw")
-            data.put("duration", 321) //TODO remove this when server can get the duration from the file
             val recordingFile = File(recording.recordingPath)
+            val md = MessageDigest.getInstance("SHA-1").digest(recordingFile.readBytes())
+            val no = BigInteger(1, md)
+            val fileHash = no.toString(16).padStart(40, '0')
+            data.put("fileHash", fileHash)
 
             val formBody = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
@@ -95,7 +98,9 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     .post(formBody)
                     .build()
 
-            val response = client.newCall(request).execute()
+            val call = client.newCall(request)
+            ca.postValue(call)
+            val response = call.execute() // Canceled Exception is thrown if call was canceled
             var responseBody = ""
             var responseBodyJSON = JSONObject()
             if (response.body() != null) {
@@ -110,6 +115,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
             when (response.code()) {
                 422 -> throw Exception(responseBodyJSON.getString("message"))
+                403 -> throw ForbiddenUploadException()
                 200 -> return
                 else -> {
                     Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
@@ -118,10 +124,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String) {
+        fun uploadEvents(c: Context, deviceID: Int, timestamps: Array<String>, type: String, details: String, ca: MutableLiveData<Call>) {
             val description = JSONObject()
             description.put("type", type)
-            description.put("details", details)
+            description.put("details", JSONObject(details))
             val t = JSONArray(timestamps)
             val data = JSONObject()
             data.put("description", description)
@@ -141,12 +147,74 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     .post(requestBody)
                     .build()
 
+
+            val call = client.newCall(request)
+            ca.postValue(call)
+            val response = call.execute() // Canceled Exception is thrown if call was canceled
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e: JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+            }
+            when (response.code()) {
+                422 -> throw Exception(responseBodyJSON.getString("message"))
+                403 -> throw ForbiddenUploadException()
+                200 -> return
+                else -> {
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
+                    throw Exception("Unknown error with connecting to server.")
+                }
+            }
+        }
+
+        fun updateUserGroupsAndDevices(c: Context) {
+            updateGroupList(c)
+            updateDeviceList(c)
+        }
+
+        private fun updateDeviceList(c: Context) {
+            val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/devices")!!.newBuilder()
+
+            httpBuilder.addQueryParameter("where", "{}")
+            val request = Request.Builder()
+                .url(httpBuilder.build())
+                .addHeader("Authorization", getJWT(c))
+                .build()
+
             val response = client.newCall(request).execute()
-            response.close()
-            if (response.isSuccessful) {
-                Log.i(TAG, "successful upload of event")
-            } else {
-                throw Exception(response.message())
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e: JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+            }
+
+            when (response.code()) {
+                422 -> throw Exception(responseBodyJSON.getString("message"))
+                200 -> {
+                    val deviceIDs = mutableSetOf<String>()
+                    val devices = responseBodyJSON.getJSONObject("devices").getJSONArray("rows")
+                    for (i in 0 until devices.length()) {
+                        deviceIDs.add(devices.getJSONObject(i).getString("devicename"))
+                    }
+                    Log.i(TAG, deviceIDs.toString())
+                    getPrefs(c).edit().putStringSet(devicesNamesListKey, deviceIDs).apply()
+                }
+                else -> {
+                    Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
+                    throw Exception("Unknown error with connecting to server.")
+                }
             }
         }
 
@@ -190,18 +258,12 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
         }
 
-        fun runUpdateGroupList(c: Context) {
-            thread(start = true) {
-                try {
-                    updateGroupList(c)
-                } catch (e: Exception) {
-                    Log.e(TAG, e.toString())
-                }
-            }
-        }
-
         fun getGroupList(c: Context): List<String>? {
             return getPrefs(c).getStringSet(groupListKey, mutableSetOf<String>())?.sorted()
+        }
+
+        fun getDevicesList(c: Context): List<String>? {
+            return getPrefs(c).getStringSet(devicesNamesListKey, mutableSetOf<String>())?.sorted()
         }
 
         private fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {

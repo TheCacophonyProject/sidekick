@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick.fragments
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -10,13 +11,11 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
 import nz.org.cacophony.sidekick.TAG
-import kotlin.concurrent.thread
 
 class DevicesFragment : Fragment() {
     private val title = "Devices"
@@ -26,11 +25,13 @@ class DevicesFragment : Fragment() {
     private lateinit var networkWarningLayout: LinearLayout
     private lateinit var networkErrorLayout: LinearLayout
     private lateinit var scanningLayout: LinearLayout
+    private lateinit var notScanningLayout: LinearLayout
     private lateinit var deviceLayout: LinearLayout
     private lateinit var locationLayout: LinearLayout
     private lateinit var locationStatus: TextView
     private lateinit var downloadButton: Button
 
+    @SuppressLint("SetTextI18n")
     override fun onCreateView(
             inflater: LayoutInflater,
             container: ViewGroup?,
@@ -55,11 +56,13 @@ class DevicesFragment : Fragment() {
         networkErrorLayout = root.findViewById(R.id.network_error_message_layout)
         networkWarningLayout = root.findViewById(R.id.network_warning_message_layout)
         scanningLayout = root.findViewById(R.id.device_scanning_layout)
+        notScanningLayout = root.findViewById(R.id.device_not_scanning_layout)
         deviceLayout = root.findViewById(R.id.device_layout)
         locationLayout = root.findViewById(R.id.location_layout)
         locationStatus = root.findViewById(R.id.location_status)
         locationLayout.visibility = View.VISIBLE
         downloadButton = root.findViewById(R.id.download_recordings_button)
+        mainViewModel.groups.observe(viewLifecycleOwner, { mainViewModel.deviceList.value?.notifyChange() })
         notifyDeviceListChanged()
         return root
     }
@@ -69,7 +72,7 @@ class DevicesFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         mainViewModel = activity?.run {
-            ViewModelProviders.of(this)[MainViewModel::class.java]
+            ViewModelProvider(this).get(MainViewModel::class.java)
         } ?: throw Exception("Invalid Activity")
 
         mainViewModel.title.value = title
@@ -84,12 +87,13 @@ class DevicesFragment : Fragment() {
     }
 
     private fun setViewModelObservers() {
-        mainViewModel.locationStatusText.observe(this, Observer { updateLocationView(it) })
-        mainViewModel.downloading.observe(this, Observer { updateDownloading(it) })
+        mainViewModel.locationStatusText.observe(this, { updateLocationView(it) })
+        mainViewModel.downloading.observe(this, { updateDownloading(it) })
+        mainViewModel.scanning.observe(this, { updateScanning(it) })
     }
 
     private fun updateLocationView(status: String) {
-        locationStatus.text = status ?: ""
+        locationStatus.text = status
         locationLayout.visibility = View.VISIBLE
         if (status == "") {
             locationLayout.visibility = View.GONE
@@ -98,6 +102,7 @@ class DevicesFragment : Fragment() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateDownloading(downloading: Boolean) {
         if (downloading) {
             downloadButton.isClickable = false
@@ -137,42 +142,23 @@ class DevicesFragment : Fragment() {
         super.onCreateOptionsMenu(menu, inflater)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.update_devices_location -> {
-                Log.i(TAG, "updating devices location")
-            }
-            /*
-            R.id.devices_troubleshooter -> {
-                Log.i(TAG, "devices troubleshooter")
-            }
-            */
-            R.id.devices_refresh -> {
-                thread {
-                    mainViewModel.discovery.value!!.stop()
-                    mainViewModel.discovery.value!!.clearDevices()
-                    // Wait a second or the device can load quick enough so it doesn't
-                    // look like anything changed in the UI
-                    Thread.sleep(1000)
-                    mainViewModel.discovery.value!!.start()
-                }
+    private fun updateScanning(scanning: Boolean) {
+        requireActivity().runOnUiThread {
+            if (scanning) {
+                notScanningLayout.visibility = View.GONE
+                scanningLayout.visibility = View.VISIBLE
+            } else {
+                scanningLayout.visibility = View.GONE
+                notScanningLayout.visibility = View.VISIBLE
             }
         }
-        return super.onOptionsItemSelected(item)
     }
 
     private fun notifyDeviceListChanged() {
         // notifyDataSetChanged has to be called on the UI thread.
         // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
         // given the small number of items and low update rate, it's probably fine for now.
-        activity!!.runOnUiThread {
-            if (mainViewModel.deviceList.value!!.size() == 0) {
-                deviceLayout.visibility = View.GONE
-                scanningLayout.visibility = View.VISIBLE
-            } else {
-                scanningLayout.visibility = View.GONE
-                deviceLayout.visibility = View.VISIBLE
-            }
+        activity?.runOnUiThread {
             mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
         }
     }
