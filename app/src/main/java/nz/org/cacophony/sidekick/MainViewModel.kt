@@ -34,6 +34,7 @@ class MainViewModel : ViewModel() {
     val usersDevicesList = MutableLiveData<List<String>>().apply { value = emptyList() }
     val serverURL = MutableLiveData<String>().apply { value = "" }
     val call = MutableLiveData<Call>()
+    val forceCollectionOfData = MutableLiveData<Boolean>()
 
     lateinit var wifiHelper: WifiHelper
     val networkIntentFilter = IntentFilter()
@@ -61,6 +62,7 @@ class MainViewModel : ViewModel() {
         if (storageLocation.value == null) {
             loadDefaultStoragePath(activity.applicationContext)
         }
+        forceCollectionOfData.value = Preferences(activity).getBoolean(FORCE_COLLECTION)
     }
 
     fun loadDefaultStoragePath(c: Context): Boolean {

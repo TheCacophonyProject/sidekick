@@ -39,8 +39,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var eventDao: EventDao
     private lateinit var recordingDao: RecordingDao
     private lateinit var locationHelper: LocationHelper
-    @Volatile
-    var locationCount = 0
     private var versionClickCountdown = 10 // Number of times the image needs to be pressed for the dev fragment will be shown
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,6 +71,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 CacophonyAPI.updateUserGroupsAndDevices(this)
                 mainViewModel.groups.postValue(CacophonyAPI.getGroupList(this))
+                mainViewModel.usersDevicesList.postValue(CacophonyAPI.getDevicesList(this))
             } catch(e: Exception) {
                 Log.e(TAG, e.toString())
             }
@@ -119,7 +118,7 @@ class MainActivity : AppCompatActivity() {
         finish()
     }
 
-    fun loadFragment(f: Fragment) {
+    private fun loadFragment(f: Fragment) {
         val ft = supportFragmentManager.beginTransaction()
         ft.replace(R.id.nav_host_fragment, f)
         ft.commit()
