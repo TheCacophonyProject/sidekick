@@ -410,8 +410,16 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun deleteRecordingsAndEvents(view: View) {
-        thread {
-            mainViewModel.db.value!!.clearData()
+        runOnUiThread {
+            val dialogBuilder = android.app.AlertDialog.Builder(this)
+            dialogBuilder
+                .setMessage("Do you wish to delete all events and recordings currently stored on your phone?")
+                .setCancelable(true)
+                .setNegativeButton("Cancel") { _, _ -> }
+                .setPositiveButton("OK") { _, _ -> thread {mainViewModel.db.value!!.clearData() }}
+            val alert = dialogBuilder.create()
+            alert.setTitle("Message")
+            alert.show()
         }
     }
 }
