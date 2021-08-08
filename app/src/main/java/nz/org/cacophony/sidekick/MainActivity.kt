@@ -111,11 +111,23 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun logout(v: View) {
-        CacophonyAPI.logout(applicationContext)
-        val intent = Intent(applicationContext, LoginScreen::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-        startActivity(intent)
-        finish()
+        runOnUiThread {
+            val dialogBuilder = android.app.AlertDialog.Builder(this)
+            dialogBuilder
+                .setMessage("Do you wish to log out? You will not be able to collect recordings if you are not logged in.")
+                .setCancelable(true)
+                .setNegativeButton("Cancel") { _, _ -> }
+                .setPositiveButton("OK") { _, _ ->
+                    CacophonyAPI.logout(applicationContext)
+                    val intent = Intent(applicationContext, LoginScreen::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    startActivity(intent)
+                    finish()}
+            val alert = dialogBuilder.create()
+            alert.setTitle("Message")
+            alert.show()
+        }
+
     }
 
     private fun loadFragment(f: Fragment) {
