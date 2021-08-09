@@ -60,6 +60,12 @@ class MainActivity : AppCompatActivity() {
         eventDao = mainViewModel.db.value!!.eventDao()
         recordingDao = mainViewModel.db.value!!.recordingDao()
 
+        mainViewModel.deviceList.value!!.setOnChanged {
+            runOnUiThread {
+                mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
+            }
+        }
+
         setViewModelObserves()
 
         setUpNavigationView()
