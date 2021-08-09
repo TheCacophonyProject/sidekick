@@ -42,7 +42,7 @@ class SettingsFragment : Fragment() {
         forceCollectionSwitch.isChecked = mainViewModel.forceCollectionOfData.value?: false
         forceCollectionSwitch.setOnCheckedChangeListener{_, checked ->
             mainViewModel.forceCollectionOfData.postValue(checked)
-            Preferences(context?: throw Exception("No context for settings fragment")).getString(STORAGE_LOCATION)
+            Preferences(context?: throw Exception("No context for settings fragment")).writeBoolean(FORCE_COLLECTION, checked)
         }
         setViewModelObservers()
         return root
