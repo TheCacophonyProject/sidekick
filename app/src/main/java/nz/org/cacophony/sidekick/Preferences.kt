@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 
 const val STORAGE_LOCATION = "storage-location"
 const val FORCE_COLLECTION = "force-collection"
+const val SERVER_URL_KEY = "server-url"
 
 class Preferences(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("SETTINGS", Context.MODE_PRIVATE)

@@ -44,6 +44,7 @@ class LoginScreen : AppCompatActivity() {
             val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
             try {
                 CacophonyAPI.login(applicationContext, nameOrEmailEditText.text.toString(), passwordEditText.text.toString(), apiUrlEditText.text.toString())
+                Preferences(applicationContext).setString(SERVER_URL_KEY, apiUrlEditText.text.toString())
                 gotoMainActivity()
                 nameOrEmailEditText.post {
                     nameOrEmailEditText.text.clear()

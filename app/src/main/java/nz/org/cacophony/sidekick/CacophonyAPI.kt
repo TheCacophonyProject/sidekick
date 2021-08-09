@@ -285,7 +285,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         }
 
         fun getServerURL(c: Context): String {
-            val serverURL = getPrefs(c).getString(serverURLKey, DEFAULT_API_SERVER)
+            val serverURL = Preferences(c).getString(SERVER_URL_KEY)
             if (serverURL == "" || serverURL == null) {
                 return DEFAULT_API_SERVER
             }
