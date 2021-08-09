@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import nz.org.cacophony.sidekick.*
@@ -21,6 +22,7 @@ class SettingsFragment : Fragment() {
     private lateinit var recordingCount: TextView
     private lateinit var eventCount: TextView
     private lateinit var recordingDao: RecordingDao
+    private lateinit var forceCollectionSwitch: SwitchCompat
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -36,6 +38,12 @@ class SettingsFragment : Fragment() {
         storageLocation = root.findViewById(R.id.settings_storage_location)
         recordingCount = root.findViewById(R.id.settings_recording_count)
         eventCount = root.findViewById(R.id.settings_event_count)
+        forceCollectionSwitch = root.findViewById(R.id.force_collection_switch)
+        forceCollectionSwitch.isChecked = mainViewModel.forceCollectionOfData.value?: false
+        forceCollectionSwitch.setOnCheckedChangeListener{_, checked ->
+            mainViewModel.forceCollectionOfData.postValue(checked)
+            Preferences(context?: throw Exception("No context for settings fragment")).writeBoolean(FORCE_COLLECTION, checked)
+        }
         setViewModelObservers()
         return root
     }

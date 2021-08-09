@@ -203,6 +203,14 @@ class Device(
         return true
     }
 
+    private fun forcedAccess(): Boolean {
+        return !userCanAccess() && (mainViewModel.forceCollectionOfData.value?: false)
+    }
+
+    private fun canAccess(): Boolean {
+        return userCanAccess() || (mainViewModel.forceCollectionOfData.value?: false)
+    }
+
     private fun userCanAccess(): Boolean {
         if (mainViewModel.serverURL.value != serverURL) {
             statusString = "device not registered to same API as user\nUser: ${mainViewModel.serverURL.value}\nDevice: $serverURL"
@@ -211,7 +219,7 @@ class Device(
         }
         if (mainViewModel.groups.value?.indexOf(groupname) == -1 &&
                 mainViewModel.usersDevicesList.value?.indexOf(devicename) == -1) {
-            statusString = "devices group '$groupname' is not one of users group."
+            statusString = "User does not have permissions to access this device or its group ($groupname)."
             onChange?.invoke()
             return false
         }
@@ -219,16 +227,18 @@ class Device(
     }
 
     fun updateStatus() {
-        if (!userCanAccess()) {
+        if (!canAccess()) {
             return
         }
-        val newStatus = when {
+        var newStatus = when {
             !sm.state.connected -> sm.state.message
             !sm.hasRecordingList -> "Checking for recordings"
             else -> "${deviceRecordings.size - recordingsToDownload().size} of ${deviceRecordings.size} of recordings collected\n" +
                     "${deviceEvents.size - eventsToDownload().size} of ${deviceEvents.size} of events collected"
         }
-
+        if (forcedAccess()) {
+            newStatus = "Access to device is being forced. Users might not be able to upload data from this device\n$newStatus"
+        }
         if (newStatus != statusString) {
             statusString = newStatus
             onChange?.invoke()
@@ -258,7 +268,7 @@ class Device(
     }
 
     fun startDownloadRecordings() {
-        if (!userCanAccess()) {
+        if (!canAccess()) {
             return
         }
         if (sm.state != DeviceState.READY || downloading) {
@@ -329,7 +339,7 @@ class Device(
     }
 
     fun downloadEvents() {
-        if (!userCanAccess()) {
+        if (!canAccess()) {
             return
         }
         val missingEventKeys = getMissingEventKeys()

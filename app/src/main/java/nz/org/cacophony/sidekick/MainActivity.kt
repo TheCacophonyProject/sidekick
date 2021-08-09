@@ -39,8 +39,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var eventDao: EventDao
     private lateinit var recordingDao: RecordingDao
     private lateinit var locationHelper: LocationHelper
-    @Volatile
-    var locationCount = 0
     private var versionClickCountdown = 10 // Number of times the image needs to be pressed for the dev fragment will be shown
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +60,12 @@ class MainActivity : AppCompatActivity() {
         eventDao = mainViewModel.db.value!!.eventDao()
         recordingDao = mainViewModel.db.value!!.recordingDao()
 
+        mainViewModel.deviceList.value!!.setOnChanged {
+            runOnUiThread {
+                mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
+            }
+        }
+
         setViewModelObserves()
 
         setUpNavigationView()
@@ -73,6 +77,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 CacophonyAPI.updateUserGroupsAndDevices(this)
                 mainViewModel.groups.postValue(CacophonyAPI.getGroupList(this))
+                mainViewModel.usersDevicesList.postValue(CacophonyAPI.getDevicesList(this))
             } catch(e: Exception) {
                 Log.e(TAG, e.toString())
             }
@@ -112,14 +117,26 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun logout(v: View) {
-        CacophonyAPI.logout(applicationContext)
-        val intent = Intent(applicationContext, LoginScreen::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-        startActivity(intent)
-        finish()
+        runOnUiThread {
+            val dialogBuilder = android.app.AlertDialog.Builder(this)
+            dialogBuilder
+                .setMessage("Do you wish to log out? You will not be able to collect recordings if you are not logged in.")
+                .setCancelable(true)
+                .setNegativeButton("Cancel") { _, _ -> }
+                .setPositiveButton("OK") { _, _ ->
+                    CacophonyAPI.logout(applicationContext)
+                    val intent = Intent(applicationContext, LoginScreen::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    startActivity(intent)
+                    finish()}
+            val alert = dialogBuilder.create()
+            alert.setTitle("Message")
+            alert.show()
+        }
+
     }
 
-    fun loadFragment(f: Fragment) {
+    private fun loadFragment(f: Fragment) {
         val ft = supportFragmentManager.beginTransaction()
         ft.replace(R.id.nav_host_fragment, f)
         ft.commit()
@@ -411,8 +428,16 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("UNUSED_PARAMETER")
     fun deleteRecordingsAndEvents(view: View) {
-        thread {
-            mainViewModel.db.value!!.clearData()
+        runOnUiThread {
+            val dialogBuilder = android.app.AlertDialog.Builder(this)
+            dialogBuilder
+                .setMessage("Do you wish to delete all events and recordings currently stored on your phone?")
+                .setCancelable(true)
+                .setNegativeButton("Cancel") { _, _ -> }
+                .setPositiveButton("OK") { _, _ -> thread {mainViewModel.db.value!!.clearData() }}
+            val alert = dialogBuilder.create()
+            alert.setTitle("Message")
+            alert.show()
         }
     }
 }

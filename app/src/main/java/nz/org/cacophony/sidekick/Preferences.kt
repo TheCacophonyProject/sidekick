@@ -4,9 +4,19 @@ import android.content.Context
 import android.content.SharedPreferences
 
 const val STORAGE_LOCATION = "storage-location"
+const val FORCE_COLLECTION = "force-collection"
+const val SERVER_URL_KEY = "server-url"
 
 class Preferences(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("SETTINGS", Context.MODE_PRIVATE)
+
+    fun writeBoolean(key: String, value: Boolean) {
+        prefs.edit().putBoolean(key, value).apply()
+    }
+
+    fun getBoolean(key: String): Boolean {
+        return prefs.getBoolean(key, false)
+    }
 
     fun getString(key: String): String? {
         return prefs.getString(key, null)

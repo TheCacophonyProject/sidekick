@@ -63,7 +63,6 @@ class DevicesFragment : Fragment() {
         locationLayout.visibility = View.VISIBLE
         downloadButton = root.findViewById(R.id.download_recordings_button)
         mainViewModel.groups.observe(viewLifecycleOwner, { mainViewModel.deviceList.value?.notifyChange() })
-        notifyDeviceListChanged()
         return root
     }
 
@@ -76,8 +75,6 @@ class DevicesFragment : Fragment() {
         } ?: throw Exception("Invalid Activity")
 
         mainViewModel.title.value = title
-
-        mainViewModel.deviceList.value!!.setOnChanged { notifyDeviceListChanged() }
         mainViewModel.discovery.value!!.start()
 
         val networkChangeReceiver = NetworkChangeReceiver(::networkUpdate)
@@ -151,15 +148,6 @@ class DevicesFragment : Fragment() {
                 scanningLayout.visibility = View.GONE
                 notScanningLayout.visibility = View.VISIBLE
             }
-        }
-    }
-
-    private fun notifyDeviceListChanged() {
-        // notifyDataSetChanged has to be called on the UI thread.
-        // notifyDataSetChanged is the most inefficient way of updating the RecyclerView but
-        // given the small number of items and low update rate, it's probably fine for now.
-        activity?.runOnUiThread {
-            mainViewModel.deviceListAdapter.value!!.notifyDataSetChanged()
         }
     }
 }
