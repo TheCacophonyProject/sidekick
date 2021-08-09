@@ -219,7 +219,7 @@ class Device(
         }
         if (mainViewModel.groups.value?.indexOf(groupname) == -1 &&
                 mainViewModel.usersDevicesList.value?.indexOf(devicename) == -1) {
-            statusString = "devices group '$groupname' is not one of users group."
+            statusString = "User does not have permissions to access this device or its group ($groupname)."
             onChange?.invoke()
             return false
         }
