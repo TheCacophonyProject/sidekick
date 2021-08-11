@@ -26,7 +26,6 @@ class DevicesFragment : Fragment() {
     private lateinit var networkErrorLayout: LinearLayout
     private lateinit var scanningLayout: LinearLayout
     private lateinit var notScanningLayout: LinearLayout
-    private lateinit var deviceLayout: LinearLayout
     private lateinit var locationLayout: LinearLayout
     private lateinit var locationStatus: TextView
     private lateinit var downloadButton: Button
@@ -40,7 +39,7 @@ class DevicesFragment : Fragment() {
         container?.removeAllViews()
         val root = inflater.inflate(R.layout.fragment_device, container, false)
         val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
-        recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list2).apply {
+        recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list).apply {
             setHasFixedSize(true)
             layoutManager = recyclerLayoutManager
             adapter = mainViewModel.deviceListAdapter.value
@@ -57,7 +56,6 @@ class DevicesFragment : Fragment() {
         networkWarningLayout = root.findViewById(R.id.network_warning_message_layout)
         scanningLayout = root.findViewById(R.id.device_scanning_layout)
         notScanningLayout = root.findViewById(R.id.device_not_scanning_layout)
-        deviceLayout = root.findViewById(R.id.device_layout)
         locationLayout = root.findViewById(R.id.location_layout)
         locationStatus = root.findViewById(R.id.location_status)
         locationLayout.visibility = View.VISIBLE
