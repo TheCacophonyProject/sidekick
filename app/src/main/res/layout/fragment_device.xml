@@ -74,6 +74,39 @@
                     android:textAlignment="center" />
             </LinearLayout>
 
+            <!-- Network warning messages -->
+            <LinearLayout
+                android:id="@+id/not_logged_in"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/warning"
+                android:visibility="visible"
+                app:layout_constraintTop_toTopOf="@+id/device_constraintLayout">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:text="User is not logged in"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:layout_width="130dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:onClick="openLoginActivity"
+                    android:text="Login"
+                    android:textAlignment="center" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/listDivider" />
+
             <!-- Location layout -->
             <LinearLayout
             android:id="@+id/location_layout"
@@ -91,8 +124,9 @@
                 android:layout_weight="1"
                 android:padding="8dp"
                 android:textSize="16sp" />
+            </LinearLayout>
         </LinearLayout>
-        </LinearLayout>
+
         <!-- Device Layout -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/device_list"

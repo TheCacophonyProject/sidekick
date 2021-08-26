@@ -11,6 +11,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import kotlinx.android.synthetic.main.activity_login_screen.*
+import nz.org.cacophony.sidekick.CacophonyAPI
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
 import nz.org.cacophony.sidekick.TAG
@@ -27,6 +29,7 @@ class RecordingsFragment : Fragment() {
     private lateinit var recordingNumberText: TextView
     private lateinit var eventNumberText: TextView
     private lateinit var uploadButton: Button
+    private lateinit var loginButton: Button
     private lateinit var cancelUploadButton: Button
     private lateinit var uploadRecordingStatus: TextView
     private lateinit var uploadEventStatus: TextView
@@ -45,6 +48,12 @@ class RecordingsFragment : Fragment() {
         recordingNumberText = root.findViewById(R.id.recording_count)
         eventNumberText = root.findViewById(R.id.event_count)
         uploadButton = root.findViewById(R.id.upload_recordings_button)
+        loginButton = root.findViewById(R.id.recordings_login_button)
+        if (CacophonyAPI.isLoggedIn(requireActivity().applicationContext)) {
+            uploadButton.visibility = View.VISIBLE
+        } else {
+            loginButton.visibility = View.VISIBLE
+        }
         uploadRecordingStatus = root.findViewById(R.id.upload_recordings_status)
         uploadEventStatus = root.findViewById(R.id.upload_event_status)
         cancelUploadButton = root.findViewById(R.id.cancel_upload_button)
