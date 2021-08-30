@@ -16,7 +16,7 @@ if (performSigning) {
 
 ext.versionMajor = 2
 ext.versionMinor = 2
-ext.versionPatch = 2
+ext.versionPatch = 3
 ext.versionClassifier = null
 ext.isSnapshot = false
 ext.minimumSdkVersion = 21
