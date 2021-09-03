@@ -94,10 +94,19 @@
 
                     <TextView
                         android:id="@+id/user_text"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
+                        android:layout_weight="1"
                         android:textStyle="bold" />
+
+
+                    <Button
+                        android:id="@+id/logout_login_button"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:onClick="openLoginActivity"
+                        android:text="Logout" />
 
 
                 </LinearLayout>
@@ -145,7 +154,7 @@
 
                     <Button
                         android:id="@+id/delete_recordings_button"
-                        android:layout_width="wrap_content"
+                        android:layout_width="100dp"
                         android:layout_height="wrap_content"
                         android:onClick="deleteRecordingsAndEvents"
                         android:text="delete" />
@@ -168,11 +177,10 @@
                         android:layout_weight="1"
                         android:text="Force collection of recordings and events from all devices:" />
 
-
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/force_collection_switch"
                         android:layout_gravity="center_vertical"
-                        android:layout_width="wrap_content"
+                        android:layout_width="100dp"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
 
@@ -183,13 +191,6 @@
 
             </LinearLayout>
         </ScrollView>
-
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:onClick="logout"
-            android:text="Logout" />
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

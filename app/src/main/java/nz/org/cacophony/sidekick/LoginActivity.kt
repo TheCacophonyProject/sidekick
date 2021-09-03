@@ -45,6 +45,7 @@ class LoginScreen : AppCompatActivity() {
             try {
                 CacophonyAPI.login(applicationContext, nameOrEmailEditText.text.toString(), passwordEditText.text.toString(), apiUrlEditText.text.toString())
                 Preferences(applicationContext).setString(SERVER_URL_KEY, apiUrlEditText.text.toString())
+                Preferences(applicationContext).writeBoolean(FORCE_COLLECTION, false)
                 gotoMainActivity()
                 nameOrEmailEditText.post {
                     nameOrEmailEditText.text.clear()
@@ -73,7 +74,7 @@ class LoginScreen : AppCompatActivity() {
                 val dialogBuilder = AlertDialog.Builder(this)
                 dialogBuilder
                     .setMessage("Do you wish to change the API? This will delete all recordings and events currently on your phone.")
-                    .setCancelable(false)
+                    .setCancelable(true)
                     .setNegativeButton("Cancel") { _, _ -> }
                     .setPositiveButton("OK") { _, _ -> showAPIAndDeleteData() }
                 val alert = dialogBuilder.create()
@@ -97,6 +98,22 @@ class LoginScreen : AppCompatActivity() {
         val urlIntent = Intent(Intent.ACTION_VIEW, url)
         urlIntent.putExtra(Browser.EXTRA_APPLICATION_ID, "$TAG-register")
         startActivity(urlIntent)
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun skipLogin(v: View) {
+        val dialogBuilder = AlertDialog.Builder(this)
+        dialogBuilder
+            .setMessage("Do you wish to skip logging in for now? You will be able to connect and collect recordings but not upload them.\nOnly do this if you can't currently login.")
+            .setCancelable(true)
+            .setNegativeButton("Cancel") { _, _ -> }
+            .setPositiveButton("OK") { _, _ ->
+                Preferences(applicationContext).writeBoolean(FORCE_COLLECTION, true)
+                gotoMainActivity()
+            }
+        val alert = dialogBuilder.create()
+        alert.setTitle("Message")
+        alert.show()
     }
 
     private fun gotoMainActivity() {

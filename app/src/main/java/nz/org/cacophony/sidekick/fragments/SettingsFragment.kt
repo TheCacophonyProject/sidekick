@@ -44,6 +44,11 @@ class SettingsFragment : Fragment() {
             mainViewModel.forceCollectionOfData.postValue(checked)
             Preferences(context?: throw Exception("No context for settings fragment")).writeBoolean(FORCE_COLLECTION, checked)
         }
+        if (!CacophonyAPI.isLoggedIn(requireActivity().applicationContext)) {
+            userText.text = "Not logged in"
+            val button = root.findViewById<TextView>(R.id.logout_login_button)
+            button.text = "Login"
+        }
         setViewModelObservers()
         return root
     }

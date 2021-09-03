@@ -4,73 +4,111 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FAFAFA"
-    android:id="@+id/device_constraintLayout"
-    xmlns:tools="http://schemas.android.com/tools">
+    android:layout_gravity="top"
+    app:layout_anchorGravity="top"
+    android:foregroundGravity="top"
+    android:id="@+id/device_constraintLayout">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical" >
-
-        <!-- Network error messages -->
+        <!-- Banner messages -->
         <LinearLayout
-            android:id="@+id/network_error_message_layout"
-            android:visibility="gone"
-            android:layout_width="match_parent"
-            android:background="@color/alert"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="@+id/device_constraintLayout">
-
-            <TextView
-                android:id="@+id/network_error_message_text"
-                android:padding="8dp"
-                android:layout_weight="1"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:layout_gravity="center"
-                android:onClick="enableValidAp"
-                android:layout_width="130dp"
-                android:textAlignment="center"
-                android:text="enable hotspot"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <!-- Network warning messages -->
-        <LinearLayout
-            android:id="@+id/network_warning_message_layout"
+            android:id="@+id/banner_messages"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/warning"
-            android:visibility="gone"
-            app:layout_constraintTop_toTopOf="@+id/device_constraintLayout">
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/network_warning_message_text"
-                android:layout_width="0dp"
+            <!-- Network error messages -->
+            <LinearLayout
+                android:id="@+id/network_error_message_layout"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:background="@color/alert"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_weight="1"
-                android:padding="8dp"
-                android:text=""
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                app:layout_constraintTop_toTopOf="@+id/device_constraintLayout">
 
-            <Button
-                android:layout_width="130dp"
+                <TextView
+                    android:id="@+id/network_error_message_text"
+                    android:padding="8dp"
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:layout_gravity="center"
+                    android:onClick="enableValidAp"
+                    android:layout_width="130dp"
+                    android:textAlignment="center"
+                    android:text="enable hotspot"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Network warning messages -->
+            <LinearLayout
+                android:id="@+id/network_warning_message_layout"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:onClick="openNetworkSettings"
-                android:text="Network settings"
-                android:textAlignment="center" />
-        </LinearLayout>
+                android:background="@color/warning"
+                android:visibility="gone"
+                app:layout_constraintTop_toTopOf="@+id/device_constraintLayout">
 
-        <!-- Location layout -->
-        <LinearLayout
+                <TextView
+                    android:id="@+id/network_warning_message_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:text=""
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:layout_width="130dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:onClick="openNetworkSettings"
+                    android:text="Network settings"
+                    android:textAlignment="center" />
+            </LinearLayout>
+
+            <!-- Network warning messages -->
+            <LinearLayout
+                android:id="@+id/not_logged_in"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/warning"
+                android:visibility="visible"
+                app:layout_constraintTop_toTopOf="@+id/device_constraintLayout">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:text="User is not logged in"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:layout_width="130dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:onClick="openLoginActivity"
+                    android:text="Login"
+                    android:textAlignment="center" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/listDivider" />
+
+            <!-- Location layout -->
+            <LinearLayout
             android:id="@+id/location_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -86,51 +124,32 @@
                 android:layout_weight="1"
                 android:padding="8dp"
                 android:textSize="16sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Device Layout -->
-        <LinearLayout
-            android:id="@+id/device_layout"
-            android:visibility="visible"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" >
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/device_list2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-
-                android:scrollbars="vertical"
-                android:background="#FFFFFF"
-                tools:layout_editor_absoluteY="47dp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:attr/listDivider" />
-
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <View
-
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:attr/listDivider" />
-
-        </LinearLayout>
-
-        <!-- Device scanning status -->
-        <LinearLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/device_list"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:visibility="visible"
-            android:orientation="vertical" >
+            app:layout_constrainedHeight="true"
+            app:layout_constraintTop_toBottomOf="@+id/banner_messages"
+            app:layout_constraintBottom_toTopOf="@+id/status_linear_layout"
+            android:scrollbars="vertical"
+            android:background="#FAFAFA" />
+
+        <LinearLayout
+            android:id="@+id/status_linear_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintTop_toBottomOf="@+id/device_list"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/listDivider" />
 
             <!-- Device scanning layout -->
             <LinearLayout
@@ -165,8 +184,6 @@
                     android:layout_marginTop="10dp"
                     android:onClick="refresh"
                     android:text="refresh" />
-
-
             </LinearLayout>
 
             <!-- Device not scanning layout -->
@@ -188,13 +205,6 @@
                     android:onClick="refresh"
                     android:text="Scan for devices" />
             </LinearLayout>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-
-            android:background="#FFFFFF" >
 
             <Button
                 android:id="@+id/download_recordings_button"
@@ -205,9 +215,9 @@
                 android:layout_marginRight="20dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="10dp"
+                app:layout_constraintBottom_toBottomOf="parent"
                 android:onClick="downloadAll"
                 android:text="GET RECORDINGS" />
         </LinearLayout>
-    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -4,6 +4,7 @@
     <string name="valid_ssid">bushnet</string>
     <string name="valid_ap_password">feathers</string>
     <string name="register_here"><u>Register here.</u></string>
+    <string name="skip_login"><u>Skip login for now</u></string>
     <string name="title_activity_main">MainActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>

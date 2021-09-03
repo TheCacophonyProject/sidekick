@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
+import nz.org.cacophony.sidekick.CacophonyAPI
 import nz.org.cacophony.sidekick.MainViewModel
 import nz.org.cacophony.sidekick.R
 import nz.org.cacophony.sidekick.TAG
@@ -24,9 +25,9 @@ class DevicesFragment : Fragment() {
     private lateinit var mainViewModel: MainViewModel
     private lateinit var networkWarningLayout: LinearLayout
     private lateinit var networkErrorLayout: LinearLayout
+    private lateinit var userLoginLayout: LinearLayout
     private lateinit var scanningLayout: LinearLayout
     private lateinit var notScanningLayout: LinearLayout
-    private lateinit var deviceLayout: LinearLayout
     private lateinit var locationLayout: LinearLayout
     private lateinit var locationStatus: TextView
     private lateinit var downloadButton: Button
@@ -40,7 +41,7 @@ class DevicesFragment : Fragment() {
         container?.removeAllViews()
         val root = inflater.inflate(R.layout.fragment_device, container, false)
         val recyclerLayoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
-        recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list2).apply {
+        recyclerView = root.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.device_list).apply {
             setHasFixedSize(true)
             layoutManager = recyclerLayoutManager
             adapter = mainViewModel.deviceListAdapter.value
@@ -55,14 +56,19 @@ class DevicesFragment : Fragment() {
                 "Check that you are connected to a '$validSSID' network"
         networkErrorLayout = root.findViewById(R.id.network_error_message_layout)
         networkWarningLayout = root.findViewById(R.id.network_warning_message_layout)
+        userLoginLayout = root.findViewById(R.id.not_logged_in)
         scanningLayout = root.findViewById(R.id.device_scanning_layout)
         notScanningLayout = root.findViewById(R.id.device_not_scanning_layout)
-        deviceLayout = root.findViewById(R.id.device_layout)
         locationLayout = root.findViewById(R.id.location_layout)
         locationStatus = root.findViewById(R.id.location_status)
         locationLayout.visibility = View.VISIBLE
         downloadButton = root.findViewById(R.id.download_recordings_button)
         mainViewModel.groups.observe(viewLifecycleOwner, { mainViewModel.deviceList.value?.notifyChange() })
+        if (CacophonyAPI.getNameOrEmail(requireActivity().applicationContext) == "") {
+            userLoginLayout.visibility = View.VISIBLE
+        } else {
+            userLoginLayout.visibility = View.GONE
+        }
         return root
     }
 

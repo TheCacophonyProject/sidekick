@@ -118,7 +118,6 @@
                 />
 
             <TextView
-                android:id="@+id/text_register"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -131,8 +130,25 @@
                 android:text="@string/register_here"
                 android:textColor="@color/hyperlink"
                 android:textStyle=""
-                android:layout_marginBottom="30dp"
+                android:layout_marginBottom="20dp"
                 android:onClick="openRegisterPage"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Can't sign in right now?"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/skip_login"
+                android:textColor="@color/hyperlink"
+                android:textStyle=""
+                android:layout_marginBottom="30dp"
+                android:onClick="skipLogin"
                 />
 
         </LinearLayout>

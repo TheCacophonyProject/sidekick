@@ -179,6 +179,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         }
 
         private fun updateDeviceList(c: Context) {
+            if (!isLoggedIn(c)) {
+                getPrefs(c).edit().putStringSet(devicesNamesListKey, setOf<String>()).apply()
+                return
+            }
             val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/devices")!!.newBuilder()
 
             httpBuilder.addQueryParameter("where", "{}")
@@ -219,6 +223,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         }
 
         private fun updateGroupList(c: Context) {
+            if (!isLoggedIn(c)) {
+                getPrefs(c).edit().putStringSet(groupListKey, setOf<String>()).apply()
+                return
+            }
             val httpBuilder = HttpUrl.parse("${getServerURL(c)}/api/v1/groups")!!.newBuilder()
 
             httpBuilder.addQueryParameter("where", "{}")
@@ -278,6 +286,10 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
         fun getNameOrEmail(c: Context): String? {
             return getPrefs(c).getString(nameOrEmailKey, "")
+        }
+
+        fun isLoggedIn(c: Context): Boolean {
+            return getNameOrEmail(c) != ""
         }
 
         private fun getJWT(c: Context): String {
