@@ -78,12 +78,14 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             val no = BigInteger(1, md)
             val fileHash = no.toString(16).padStart(40, '0')
             data.put("fileHash", fileHash)
-            val metaFile = File(recording.metaPath)
-            if (metaFile.exists()){
-                val bufferedReader: BufferedReader = metaFile.bufferedReader()
-                val metadata = bufferedReader.use { it.readText() }
-                data.put("metadata",  JSONObject(metadata))
-                Log.d(TAG, "Adding metadata to recording upload")
+            if (recording.metaPath!=null ) {
+                val metaFile = File(recording.metaPath)
+                if (metaFile.exists()) {
+                    val bufferedReader: BufferedReader = metaFile.bufferedReader()
+                    val metadata = bufferedReader.use { it.readText() }
+                    data.put("metadata", JSONObject(metadata))
+                    Log.d(TAG, "Adding metadata to recording upload")
+                }
             }
 
             val formBody = MultipartBody.Builder()
@@ -219,7 +221,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     val deviceIDs = mutableSetOf<String>()
                     val devices = responseBodyJSON.getJSONObject("devices").getJSONArray("rows")
                     for (i in 0 until devices.length()) {
-                        deviceIDs.add(devices.getJSONObject(i).getString("devicename"))
+                        deviceIDs.add(devices.getJSONObject(i).getString("deviceName"))
                     }
                     Log.i(TAG, deviceIDs.toString())
                     getPrefs(c).edit().putStringSet(devicesNamesListKey, deviceIDs).apply()
@@ -263,7 +265,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                     val groupSet = mutableSetOf<String>()
                     val groups = responseBodyJSON.getJSONArray("groups")
                     for (i in 0 until groups.length()) {
-                        groupSet.add(groups.getJSONObject(i).getString("groupname"))
+                        groupSet.add(groups.getJSONObject(i).getString("groupName"))
                     }
                     Log.i(TAG, groupSet.toString())
                     getPrefs(c).edit().putStringSet(groupListKey, groupSet).apply()
