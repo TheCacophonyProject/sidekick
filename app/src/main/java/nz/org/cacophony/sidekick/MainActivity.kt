@@ -22,6 +22,7 @@ import nz.org.cacophony.sidekick.db.EventDao
 import nz.org.cacophony.sidekick.db.RecordingDao
 import nz.org.cacophony.sidekick.fragments.*
 import java.io.File
+import kotlin.collections.HashMap
 import kotlin.concurrent.thread
 
 const val TAG = "cacophony-manager"
@@ -104,6 +105,11 @@ class MainActivity : AppCompatActivity() {
     @Suppress("UNUSED_PARAMETER")
     fun openDevicesFragment(v: View) {
         loadFragment(DevicesFragment())
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun openBLE(v: View) {
+        loadFragment(BluetoothFragment())
     }
 
     @Suppress("UNUSED_PARAMETER")

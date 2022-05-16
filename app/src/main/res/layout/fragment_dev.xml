@@ -5,12 +5,29 @@
     android:layout_height="match_parent"
     tools:context=".fragments.DevFragment">
 
-    <Button
-        android:id="@+id/button"
-        android:layout_margin="4dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="sendTestCrash"
-        android:text="Send test crash report" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_marginStart="4dp"
+        >
+
+        <Button
+            android:id="@+id/button"
+            android:layout_marginTop="60dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="sendTestCrash"
+            android:text="Send test crash report" />
+
+        <Button
+            android:id="@+id/openBluetoothFragment"
+            android:onClick="openBLE"
+            android:text="open ble"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+
+    </LinearLayout>
 
 </FrameLayout>
