@@ -10,8 +10,10 @@ import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.File
 import java.math.BigInteger
+import java.nio.file.Files
 import java.security.MessageDigest
 
 class ForbiddenUploadException: Exception("Invalid permission to upload recording for device")
@@ -55,7 +57,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
 
             when (response.code()) {
                 401 -> throw Exception("Invalid password")
-                422 -> throw Exception(responseBodyJSON.getString("message"))
+                422 -> throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
                 200 -> saveUserData(c, responseBodyJSON.getString("token"), password, nameOrEmail, serverURL)
                 else -> {
                     Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
@@ -76,6 +78,15 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             val no = BigInteger(1, md)
             val fileHash = no.toString(16).padStart(40, '0')
             data.put("fileHash", fileHash)
+            if (recording.metaPath!=null ) {
+                val metaFile = File(recording.metaPath)
+                if (metaFile.exists()) {
+                    val bufferedReader: BufferedReader = metaFile.bufferedReader()
+                    val metadata = bufferedReader.use { it.readText() }
+                    data.put("metadata", JSONObject(metadata))
+                    Log.d(TAG, "Adding metadata to recording upload")
+                }
+            }
 
             val formBody = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
@@ -114,7 +125,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
 
             when (response.code()) {
-                422 -> throw Exception(responseBodyJSON.getString("message"))
+                422 -> throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
                 403 -> throw ForbiddenUploadException()
                 200 -> return
                 else -> {
@@ -163,7 +174,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
                 }
             }
             when (response.code()) {
-                422 -> throw Exception(responseBodyJSON.getString("message"))
+                422 -> throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
                 403 -> throw ForbiddenUploadException()
                 200 -> return
                 else -> {
@@ -205,12 +216,12 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
 
             when (response.code()) {
-                422 -> throw Exception(responseBodyJSON.getString("message"))
+                422 -> throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
                 200 -> {
                     val deviceIDs = mutableSetOf<String>()
                     val devices = responseBodyJSON.getJSONObject("devices").getJSONArray("rows")
                     for (i in 0 until devices.length()) {
-                        deviceIDs.add(devices.getJSONObject(i).getString("devicename"))
+                        deviceIDs.add(devices.getJSONObject(i).getString("deviceName"))
                     }
                     Log.i(TAG, deviceIDs.toString())
                     getPrefs(c).edit().putStringSet(devicesNamesListKey, deviceIDs).apply()
@@ -249,12 +260,12 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             }
 
             when (response.code()) {
-                422 -> throw Exception(responseBodyJSON.getString("message"))
+                422 -> throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
                 200 -> {
                     val groupSet = mutableSetOf<String>()
                     val groups = responseBodyJSON.getJSONArray("groups")
                     for (i in 0 until groups.length()) {
-                        groupSet.add(groups.getJSONObject(i).getString("groupname"))
+                        groupSet.add(groups.getJSONObject(i).getString("groupName"))
                     }
                     Log.i(TAG, groupSet.toString())
                     getPrefs(c).edit().putStringSet(groupListKey, groupSet).apply()

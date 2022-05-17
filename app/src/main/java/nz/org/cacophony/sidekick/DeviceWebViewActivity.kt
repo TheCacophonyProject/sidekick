@@ -6,6 +6,12 @@ import android.os.Bundle
 import android.util.Log
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.JsResult
+
+import android.webkit.WebChromeClient
+
+
+
 
 class DeviceWebViewActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
@@ -23,6 +29,19 @@ class DeviceWebViewActivity : AppCompatActivity() {
             myWebView.webViewClient = WebViewClient()
             Log.i(TAG, "Opening web view to $uri")
             myWebView.loadUrl(uri)
+            myWebView.setWebChromeClient(object : WebChromeClient() {
+                //Other methods for your WebChromeClient here, if needed..
+                override fun onJsAlert(
+                    view: WebView,
+                    url: String,
+                    message: String,
+                    result: JsResult
+                ): Boolean {
+                    return super.onJsAlert(view, url, message, result)
+                }
+            })
         }
     }
+
+
 }

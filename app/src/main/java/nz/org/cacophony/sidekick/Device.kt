@@ -296,7 +296,14 @@ class Device(
                 Log.i(TAG, "Downloading recording $recordingName")
                 if (downloadRecording(recordingName)) {
                     val outFile = File(getDeviceDir(), recordingName)
-                    val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID)
+                    val baseName = recordingName.substring(0, recordingName.lastIndexOf("."));
+                    var metaFile: File = File(getDeviceDir(), baseName+".txt");
+                    var metaPath: String? = null;
+                    if(metaFile.exists()){
+                        metaPath = metaFile.toString()
+                    }
+
+                    val recording = Recording(devicename, outFile.toString(), recordingName, groupname, deviceID,metaPath)
                     recordingDao.insert(recording)
                 } else {
                     allDownloaded = false
@@ -318,8 +325,11 @@ class Device(
     private fun downloadRecording(recordingName: String): Boolean {
         var downloaded = false
         try {
-            api.downloadRecording(recordingName, File(getDeviceDir(), recordingName))
-            downloaded = true
+            downloaded = api.downloadRecording(recordingName, File(getDeviceDir(), recordingName))
+            if (downloaded) {
+                val baseName = recordingName.substring(0, recordingName.lastIndexOf("."));
+                api.downloadRecording(baseName + ".txt", File(getDeviceDir(), baseName + ".txt"))
+            }
         } catch (e: Exception) {
             messenger.toast("Error with downloading recording from '$name'")
             Log.e(TAG, "Exception when downloading recording: $e")

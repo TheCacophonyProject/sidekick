@@ -17,7 +17,8 @@ class Recording(
         @ColumnInfo(name = "recording_path") var recordingPath: String,
         @ColumnInfo(name = "name") var name: String,
         @ColumnInfo(name = "group_name") var groupName: String?,
-        @ColumnInfo(name = "device_id") var deviceID: Int) {
+        @ColumnInfo(name = "device_id") var deviceID: Int,
+        @ColumnInfo(name = "metadata_path") var metaPath: String?){
 
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id")
