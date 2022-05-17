@@ -1,9 +1,11 @@
 package nz.org.cacophony.sidekick
 
 import android.location.Location
+import android.util.Log
 import okhttp3.*
 import okio.Okio
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.net.URL
@@ -36,14 +38,19 @@ class DeviceAPI(
         return JSONArray(getResponseBody(response).string())
     }
 
-    fun downloadRecording(name: String, file: File) {
+    fun downloadRecording(name: String, file: File): Boolean {
         val url = getUrl("/api/recording/$name")
         val request = getAuthReq(url)
         val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            Log.d(TAG, "Couldn't download "+name)
+            return false;
+        }
         val sink = Okio.buffer(Okio.sink(file))
         sink.writeAll(getResponseBody(response).source())
         sink.close()
         response.close()
+        return true;
     }
 
     fun deleteRecording(name: String) {
@@ -120,7 +127,18 @@ class DeviceAPI(
 
     private fun getResponseBody(response: Response): ResponseBody {
         if (!response.isSuccessful) {
-            response.close()
+            var responseBody = ""
+            var responseBodyJSON = JSONObject()
+            if (response.body() != null) {
+                try {
+                    responseBody = (response.body() as ResponseBody).string()  //This also closes the body
+                    responseBodyJSON = JSONObject(responseBody)
+                } catch (e: JSONException) {
+                    Log.i(TAG, "failed to parse to JSON: $responseBody")
+                    throw Exception("Failed to parse response from server.")
+                }
+                throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
+            }
             throw Exception("call failed. Error: ${response.message()}")  // TODO Add more useful info in exception
         }
         val body = response.body()

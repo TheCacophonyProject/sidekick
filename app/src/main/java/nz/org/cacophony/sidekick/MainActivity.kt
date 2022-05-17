@@ -294,7 +294,7 @@ class MainActivity : AppCompatActivity() {
                 uploadReport["uploaded"] = (uploadReport["uploaded"]?: 0) + 1
             } catch (e: Exception) {
                 uploadReport[e.message?: "unknown error"] = (uploadReport[e.message?: "unknown error"]?: 0) + 1
-                Log.i(TAG, "upload exception ${e.message}")
+                Log.i(TAG, "upload exception ${e.message} stack: ${Log.getStackTraceString(e)}")
                 mainViewModel.recordingUploadFailCount.postValue(
                     (mainViewModel.recordingUploadFailCount.value ?: 0) + 1
                 )
