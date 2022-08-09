@@ -45,7 +45,7 @@
             android:paddingRight="10dp"
             android:paddingStart="10dp"
             android:hint="Email"
-            android:inputType="text"
+            android:inputType="textEmailAddress"
             />
 
         <EditText
