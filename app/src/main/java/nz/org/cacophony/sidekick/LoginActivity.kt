@@ -23,9 +23,9 @@ class LoginScreen : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login_screen)
-        val username = CacophonyAPI.getNameOrEmail(applicationContext)
-        FirebaseCrashlytics.getInstance().setUserId(username ?: "")
-        if (username != "") {
+        val email = CacophonyAPI.getEmail(applicationContext)
+        FirebaseCrashlytics.getInstance().setUserId(email ?: "")
+        if (email != "") {
             gotoMainActivity()
         }
 
@@ -39,16 +39,16 @@ class LoginScreen : AppCompatActivity() {
     @Suppress("UNUSED_PARAMETER")
     fun login(view: View) {
         thread(start = true) {
-            val nameOrEmailEditText = findViewById<EditText>(R.id.username_email_login)
+            val emailEditText = findViewById<EditText>(R.id.email_login)
             val passwordEditText = findViewById<EditText>(R.id.password_login)
             val apiUrlEditText = findViewById<EditText>(R.id.api_url_input)
             try {
-                CacophonyAPI.login(applicationContext, nameOrEmailEditText.text.toString(), passwordEditText.text.toString(), apiUrlEditText.text.toString())
+                CacophonyAPI.login(applicationContext, emailEditText.text.toString(), passwordEditText.text.toString(), apiUrlEditText.text.toString())
                 Preferences(applicationContext).setString(SERVER_URL_KEY, apiUrlEditText.text.toString())
                 Preferences(applicationContext).writeBoolean(FORCE_COLLECTION, false)
                 gotoMainActivity()
-                nameOrEmailEditText.post {
-                    nameOrEmailEditText.text.clear()
+                emailEditText.post {
+                    emailEditText.text.clear()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, e.toString())

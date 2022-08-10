@@ -33,7 +33,7 @@
         </LinearLayout>
 
         <EditText
-            android:id="@+id/username_email_login"
+            android:id="@+id/email_login"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:layout_marginLeft="30dp"
@@ -44,8 +44,8 @@
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
             android:paddingStart="10dp"
-            android:hint="Username or email"
-            android:inputType="text"
+            android:hint="Email"
+            android:inputType="textEmailAddress"
             />
 
         <EditText

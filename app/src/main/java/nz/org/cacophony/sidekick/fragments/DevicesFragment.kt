@@ -64,7 +64,7 @@ class DevicesFragment : Fragment() {
         locationLayout.visibility = View.VISIBLE
         downloadButton = root.findViewById(R.id.download_recordings_button)
         mainViewModel.groups.observe(viewLifecycleOwner, { mainViewModel.deviceList.value?.notifyChange() })
-        if (CacophonyAPI.getNameOrEmail(requireActivity().applicationContext) == "") {
+        if (CacophonyAPI.getEmail(requireActivity().applicationContext) == "") {
             userLoginLayout.visibility = View.VISIBLE
         } else {
             userLoginLayout.visibility = View.GONE

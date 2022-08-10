@@ -24,16 +24,16 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
         private const val DEFAULT_API_SERVER: String = "https://api.cacophony.org.nz"
 
         private var passwordKey: String = "PASSWORD"
-        private var nameOrEmailKey: String = "USERNAME"
+        private var emailKey: String = "EMAIL"
         private var serverURLKey: String = "SERVER_URL"
         private var jwtKey: String = "JWT"
         private var groupListKey = "GROUPS"
         private var devicesNamesListKey = "DEVICES_IDS"
         private val client: OkHttpClient = OkHttpClient()
 
-        fun login(c: Context, nameOrEmail: String, password: String, serverURL: String) {
+        fun login(c: Context, email: String, password: String, serverURL: String) {
             val body = FormBody.Builder()
-                    .addEncoded("nameOrEmail", nameOrEmail)
+                    .addEncoded("email", email)
                     .addEncoded("password", password)
                     .build()
 
@@ -58,7 +58,7 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             when (response.code()) {
                 401 -> throw Exception("Invalid password")
                 422 -> throw Exception(responseBodyJSON.getJSONArray("messages").join(", "))
-                200 -> saveUserData(c, responseBodyJSON.getString("token"), password, nameOrEmail, serverURL)
+                200 -> saveUserData(c, responseBodyJSON.getString("token"), password, email, serverURL)
                 else -> {
                     Log.i(TAG, "Code: ${response.code()}, body: $responseBody")
                     throw Exception("Unknown error with connecting to server.")
@@ -285,22 +285,22 @@ class CacophonyAPI(@Suppress("UNUSED_PARAMETER") context: Context) {
             return getPrefs(c).getStringSet(devicesNamesListKey, mutableSetOf<String>())?.sorted()
         }
 
-        private fun saveUserData(c: Context, jwt: String, password: String, nameOrEmail: String, serverURL: String) {
+        private fun saveUserData(c: Context, jwt: String, password: String, email: String, serverURL: String) {
             val prefs = getPrefs(c)
-            prefs.edit().putString(nameOrEmailKey, nameOrEmail).apply()
+            prefs.edit().putString(emailKey, email).apply()
             prefs.edit().putString(passwordKey, password).apply()
             prefs.edit().putString(jwtKey, jwt).apply()
             prefs.edit().putString(serverURLKey, serverURL).apply()
             val crashlytics = FirebaseCrashlytics.getInstance()
-            crashlytics.setUserId(nameOrEmail)
+            crashlytics.setUserId(email)
         }
 
-        fun getNameOrEmail(c: Context): String? {
-            return getPrefs(c).getString(nameOrEmailKey, "")
+        fun getEmail(c: Context): String? {
+            return getPrefs(c).getString(emailKey, "")
         }
 
         fun isLoggedIn(c: Context): Boolean {
-            return getNameOrEmail(c) != ""
+            return getEmail(c) != ""
         }
 
         private fun getJWT(c: Context): String {

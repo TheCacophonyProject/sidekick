@@ -34,7 +34,7 @@ class SettingsFragment : Fragment() {
         val versionText = root.findViewById<TextView>(R.id.app_version_text)
         versionText.text =  BuildConfig.VERSION_NAME
         val userText = root.findViewById<TextView>(R.id.user_text)
-        userText.text = CacophonyAPI.getNameOrEmail(context ?: throw Exception("No context for settings fragment"))
+        userText.text = CacophonyAPI.getEmail(context ?: throw Exception("No context for settings fragment"))
         storageLocation = root.findViewById(R.id.settings_storage_location)
         recordingCount = root.findViewById(R.id.settings_recording_count)
         eventCount = root.findViewById(R.id.settings_event_count)
