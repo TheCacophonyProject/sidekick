@@ -1,18 +1,19 @@
 import { Title } from "solid-start";
 import Counter from "~/components/Counter";
+import { Capacitor } from "@capacitor/core";
+import Dashboard from "~/plugins/Dashboard";
+import { createResource } from "solid-js";
+
 
 export default function Home() {
+  const [test] = createResource(Dashboard.getTest)
   return (
     <main>
-      <Title>Hello World</Title>
-      <h1>Hello world!</h1>
+      <Title>Hello {Capacitor.getPlatform()}</Title>
+      <h1>Hello {Capacitor.getPlatform()}!</h1>
       <Counter />
       <p>
-        Visit{" "}
-        <a href="https://start.solidjs.com" target="_blank">
-          start.solidjs.com
-        </a>{" "}
-        to learn how to build SolidStart apps.
+        {!test.loading && test().test}
       </p>
     </main>
   );
