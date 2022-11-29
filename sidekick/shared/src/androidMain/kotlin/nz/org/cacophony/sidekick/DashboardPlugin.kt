@@ -12,7 +12,7 @@ class DashboardPlugin: Plugin() {
     @PluginMethod
     fun getTest(call: PluginCall) {
         val test = JSObject();
-        test.put("test", "test");
+        test.put("test", Dashboard().test());
         // create delay of 3 seconds
 
         call.resolve(test);

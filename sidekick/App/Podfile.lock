@@ -1,0 +1,27 @@
+PODS:
+  - Capacitor (4.5.0):
+    - CapacitorCordova
+  - CapacitorCordova (4.5.0)
+  - shared (1.0)
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
+  - shared (from `../shared`)
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+  CapacitorCordova:
+    :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+  shared:
+    :path: "../shared"
+
+SPEC CHECKSUMS:
+  Capacitor: 94ea746d6b460711feb030f0f6585680fd4599ad
+  CapacitorCordova: 1ba7a0509217944974297afab40fec6093e93848
+  shared: db3ed1590fdbc9588e4f3bf2f62fdfc6b8476473
+
+PODFILE CHECKSUM: e40ecfc00f8392988a2e88485477e0097e8e08ec
+
+COCOAPODS: 1.11.3

@@ -3,7 +3,10 @@
   "scripts": {
     "dev": "solid-start dev",
     "build": "solid-start build",
-    "start": "solid-start start"
+    "start": "solid-start start",
+    "sync": "npx cap sync",
+    "ionic:build": "npm run build",
+    "ionic:serve": "npm run start"
   },
   "type": "module",
   "devDependencies": {

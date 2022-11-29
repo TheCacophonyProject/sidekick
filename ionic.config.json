@@ -1,0 +1,7 @@
+{
+  "name": "sidekick-app",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "custom"
+}
