@@ -23,29 +23,29 @@
   "src/entry-client.tsx": [],
   ".solid/index.html": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/server/components/HttpStatusCode.tsx": [
-    "/assets/_...404_.c874ef01.js"
+    "/assets/_...404_.54cc9132.js"
   ],
   "src/routes/[...404].tsx": [
-    "/assets/_...404_.c874ef01.js"
+    "/assets/_...404_.54cc9132.js"
   ],
   "src/components/Counter.css": [
-    "/assets/index.065c60d3.js",
+    "/assets/index.8bfcf28f.js",
     "/assets/index.fdb6b3cf.css"
   ],
   "src/components/Counter.tsx": [
-    "/assets/index.065c60d3.js",
+    "/assets/index.8bfcf28f.js",
     "/assets/index.fdb6b3cf.css"
   ],
   "node_modules/.pnpm/@capacitor+core@4.5.0/node_modules/@capacitor/core/dist/index.js": [
-    "/assets/index.065c60d3.js",
+    "/assets/index.8bfcf28f.js",
     "/assets/index.fdb6b3cf.css"
   ],
   "src/plugins/Dashboard.ts": [
-    "/assets/index.065c60d3.js",
+    "/assets/index.8bfcf28f.js",
     "/assets/index.fdb6b3cf.css"
   ],
   "src/routes/index.tsx": [
-    "/assets/index.065c60d3.js",
+    "/assets/index.8bfcf28f.js",
     "/assets/index.fdb6b3cf.css"
   ]
 }

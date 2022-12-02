@@ -4,6 +4,6 @@ export interface DashboardPlugin {
   getTest(): Promise<{test: "test"}>;
 }
 
-const Dashboard = registerPlugin<DashboardPlugin>("Dashboard");
+// const Dashboard = registerPlugin<DashboardPlugin>("Dashboard");
 
-export default Dashboard;
+// export default Dashboard;
