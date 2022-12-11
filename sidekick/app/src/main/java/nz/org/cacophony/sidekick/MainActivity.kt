@@ -5,7 +5,7 @@ import com.getcapacitor.BridgeActivity
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        registerPlugin(DashboardPlugin::class.java)
+        registerPlugin(UserPlugin::class.java)
         super.onCreate(savedInstanceState)
     }
 }

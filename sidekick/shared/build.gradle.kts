@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform")
     kotlin("native.cocoapods")
     id("com.android.library")
+    kotlin("plugin.serialization") version "1.7.20"
 }
 
 kotlin {
@@ -22,7 +23,24 @@ kotlin {
     }
     
     sourceSets {
-        val commonMain by getting
+        val commonMain by getting {
+            dependencies {
+                val arrowVersion = "1.1.3"
+                implementation("io.arrow-kt:arrow-core:$arrowVersion")
+                implementation("io.arrow-kt:arrow-optics:$arrowVersion")
+                implementation("io.arrow-kt:arrow-fx-coroutines:$arrowVersion")
+                implementation("io.arrow-kt:arrow-fx-stm:$arrowVersion")
+                // define a BOM and its version
+                val ktorVersion = "2.1.3"
+                implementation("io.ktor:ktor-client-core:$ktorVersion")
+                implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+
+            }
+        }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
@@ -64,6 +82,7 @@ android {
         targetSdk = 32
     }
 }
-dependencies {
-    implementation("androidx.core:core-ktx:1.8.0")
+repositories {
+    google()
+    mavenCentral()
 }

@@ -12,7 +12,7 @@ interface NavBarProps {
 
 function NavBar(props: NavBarProps) {
 	return (
-		<nav class="fixed bottom-0 flex flex-row justify-between py-4 w-screen px-4 bg-gray-50 border border-t-2 transition-colors">
+		<nav class="fixed bottom-0 flex flex-row justify-between py-4 w-screen px-4 bg-gray-50 border border-t-2">
 			<DashboardNav />
 			<DevicesNav />
 			<StorageNav />
