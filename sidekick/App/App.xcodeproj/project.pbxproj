@@ -14,10 +14,29 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
-		785898AE293572C000E59EB3 /* DashboardPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 785898AD293572C000E59EB3 /* DashboardPlugin.swift */; };
-		785898B8293574A200E59EB3 /* DashboardPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 785898B7293574A200E59EB3 /* DashboardPlugin.m */; };
+		785898AE293572C000E59EB3 /* UserPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 785898AD293572C000E59EB3 /* UserPlugin.swift */; };
+		785898B8293574A200E59EB3 /* UserPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 785898B7293574A200E59EB3 /* UserPlugin.m */; };
+		788E42CC2946CDA2005A5ED6 /* PluginCall.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788E42CB2946CDA2005A5ED6 /* PluginCall.swift */; };
+		788E42CE2947EF47005A5ED6 /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 788E42CD2947EF47005A5ED6 /* Pods_App.framework */; };
+		788E42CF2947EF47005A5ED6 /* Pods_App.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 788E42CD2947EF47005A5ED6 /* Pods_App.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		788E42D22947FC70005A5ED6 /* DevicePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788E42D12947FC6F005A5ED6 /* DevicePlugin.swift */; };
+		788E42D529496F3D005A5ED6 /* DevicePlgin.m in Sources */ = {isa = PBXBuildFile; fileRef = 788E42D429496F3D005A5ED6 /* DevicePlgin.m */; };
 		93B226E93E5509818CF4181F /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A6407E36B65641854C8B8376 /* Pods_App.framework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		788E42D02947EF47005A5ED6 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				788E42CF2947EF47005A5ED6 /* Pods_App.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -29,9 +48,13 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
-		785898AD293572C000E59EB3 /* DashboardPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPlugin.swift; sourceTree = "<group>"; };
+		785898AD293572C000E59EB3 /* UserPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPlugin.swift; sourceTree = "<group>"; };
 		785898B6293574A200E59EB3 /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
-		785898B7293574A200E59EB3 /* DashboardPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DashboardPlugin.m; sourceTree = "<group>"; };
+		785898B7293574A200E59EB3 /* UserPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = UserPlugin.m; sourceTree = "<group>"; };
+		788E42CB2946CDA2005A5ED6 /* PluginCall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginCall.swift; sourceTree = "<group>"; };
+		788E42CD2947EF47005A5ED6 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		788E42D12947FC6F005A5ED6 /* DevicePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePlugin.swift; sourceTree = "<group>"; };
+		788E42D429496F3D005A5ED6 /* DevicePlgin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DevicePlgin.m; sourceTree = "<group>"; };
 		83CC066EFD79E80C1E608668 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
 		A6407E36B65641854C8B8376 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4739D02A7016E59052DF7EA /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
@@ -42,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				788E42CE2947EF47005A5ED6 /* Pods_App.framework in Frameworks */,
 				93B226E93E5509818CF4181F /* Pods_App.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -86,6 +110,7 @@
 		646D095A19D1D68704F805EF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				788E42CD2947EF47005A5ED6 /* Pods_App.framework */,
 				A6407E36B65641854C8B8376 /* Pods_App.framework */,
 			);
 			name = Frameworks;
@@ -94,9 +119,12 @@
 		785898AC2935728A00E59EB3 /* Plugins */ = {
 			isa = PBXGroup;
 			children = (
-				785898AD293572C000E59EB3 /* DashboardPlugin.swift */,
-				785898B7293574A200E59EB3 /* DashboardPlugin.m */,
+				785898AD293572C000E59EB3 /* UserPlugin.swift */,
+				785898B7293574A200E59EB3 /* UserPlugin.m */,
 				785898B6293574A200E59EB3 /* App-Bridging-Header.h */,
+				788E42CB2946CDA2005A5ED6 /* PluginCall.swift */,
+				788E42D12947FC6F005A5ED6 /* DevicePlugin.swift */,
+				788E42D429496F3D005A5ED6 /* DevicePlgin.m */,
 			);
 			path = Plugins;
 			sourceTree = "<group>";
@@ -122,6 +150,7 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				EE02C0724D40306B0691D796 /* [CP] Embed Pods Frameworks */,
+				788E42D02947EF47005A5ED6 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -227,9 +256,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				785898B8293574A200E59EB3 /* DashboardPlugin.m in Sources */,
+				788E42D22947FC70005A5ED6 /* DevicePlugin.swift in Sources */,
+				785898B8293574A200E59EB3 /* UserPlugin.m in Sources */,
+				788E42D529496F3D005A5ED6 /* DevicePlgin.m in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
-				785898AE293572C000E59EB3 /* DashboardPlugin.swift in Sources */,
+				788E42CC2946CDA2005A5ED6 /* PluginCall.swift in Sources */,
+				785898AE293572C000E59EB3 /* UserPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,6 +408,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B8CV6AQMA8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -399,6 +432,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B8CV6AQMA8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

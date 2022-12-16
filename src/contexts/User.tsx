@@ -69,7 +69,6 @@ export function UserProvider(props: UserProviderProps) {
 
   createEffect(() => {
     if (!user.data.loading) {
-      console.log('user.data', user.data)
       if (user.data() && user.data().token && user.data().id && user.data().email) {
         setUser('isAuthorized', true)
       } else {
@@ -98,7 +97,7 @@ export function UserProvider(props: UserProviderProps) {
         mutateSkip(false)
         await refetch()
       },
-      async skip() {
+      skip() {
         Preferences.set({ key: 'skippedLogin', value: "true" })
         mutateSkip(true)
       }

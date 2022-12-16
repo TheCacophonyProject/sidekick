@@ -7,9 +7,15 @@ plugins {
 
 kotlin {
     android()
-    iosX64()
-    iosArm64()
+    iosX64 {
+        compilations["main"].cinterops.create("ios_nw")
+    }
+    iosArm64 {
+        compilations["main"].cinterops.create("ios_nw")
+    }
     iosSimulatorArm64()
+
+
 
     cocoapods {
         summary = "Some description for the Shared Module"
@@ -23,17 +29,16 @@ kotlin {
     }
     
     sourceSets {
+        val ktorVersion = "2.1.3"
+        val arrowVersion = "1.1.3"
         val commonMain by getting {
             dependencies {
-                val arrowVersion = "1.1.3"
                 implementation("io.arrow-kt:arrow-core:$arrowVersion")
                 implementation("io.arrow-kt:arrow-optics:$arrowVersion")
                 implementation("io.arrow-kt:arrow-fx-coroutines:$arrowVersion")
                 implementation("io.arrow-kt:arrow-fx-stm:$arrowVersion")
                 // define a BOM and its version
-                val ktorVersion = "2.1.3"
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-cio:$ktorVersion")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
@@ -50,6 +55,7 @@ kotlin {
             dependencies {
                 implementation(project(":capacitor-android"))
                 implementation(project(":capacitor-cordova-android-plugins"))
+                implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
             }
         }
         val androidTest by getting
@@ -61,6 +67,9 @@ kotlin {
             iosX64Main.dependsOn(this)
             iosArm64Main.dependsOn(this)
             iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation("io.ktor:ktor-client-darwin:$ktorVersion")
+            }
         }
         val iosX64Test by getting
         val iosArm64Test by getting
@@ -81,6 +90,9 @@ android {
         minSdk = 21
         targetSdk = 32
     }
+}
+dependencies {
+    implementation(project(mapOf("path" to ":capacitor-android")))
 }
 repositories {
     google()

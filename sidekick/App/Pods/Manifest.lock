@@ -1,27 +1,39 @@
 PODS:
   - Capacitor (4.5.0):
     - CapacitorCordova
+  - CapacitorBrowser (4.1.0):
+    - Capacitor
   - CapacitorCordova (4.5.0)
+  - CapacitorPreferences (4.0.2):
+    - Capacitor
   - shared (1.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
+  - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
+  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences`)"
   - shared (from `../shared`)
 
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+  CapacitorBrowser:
+    :path: "../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser"
   CapacitorCordova:
     :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+  CapacitorPreferences:
+    :path: "../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences"
   shared:
     :path: "../shared"
 
 SPEC CHECKSUMS:
   Capacitor: 94ea746d6b460711feb030f0f6585680fd4599ad
+  CapacitorBrowser: 05b68799d62b7b864974f59a5af3e4ddcce953f1
   CapacitorCordova: 1ba7a0509217944974297afab40fec6093e93848
+  CapacitorPreferences: 1d66dc32299f55ed632c5611f312878979275ea5
   shared: db3ed1590fdbc9588e4f3bf2f62fdfc6b8476473
 
-PODFILE CHECKSUM: e40ecfc00f8392988a2e88485477e0097e8e08ec
+PODFILE CHECKSUM: 0abd6bff1433844219ac74425e2ecfc40098d577
 
 COCOAPODS: 1.11.3

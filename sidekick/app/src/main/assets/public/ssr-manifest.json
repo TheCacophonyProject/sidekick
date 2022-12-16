@@ -11,9 +11,15 @@
   "node_modules/.pnpm/@solidjs+router@0.5.1_solid-js@1.6.2/node_modules/@solidjs/router/dist/routing.js": [],
   "node_modules/.pnpm/@solidjs+router@0.5.1_solid-js@1.6.2/node_modules/@solidjs/router/dist/components.jsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/root/FileRoutes.tsx": [],
+  "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/data/FormError.tsx": [],
+  "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/data/Form.tsx": [],
+  "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/server/responses.ts": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/server/ServerContext.tsx": [],
+  "node_modules/.pnpm/solid-js@1.6.2/node_modules/solid-js/store/dist/store.js": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/router.tsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/server/types.tsx": [],
+  "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/data/createRouteData.tsx": [],
+  "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/data/createRouteAction.tsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/error-boundary/ErrorBoundary.tsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/root/Scripts.tsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/root/Document.tsx": [],
@@ -24,31 +30,51 @@
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.2/node_modules/solid-icons/io/index.js": [],
   "src/components/NavButtons.tsx": [],
   "src/components/NavBar.tsx": [],
+  "node_modules/.pnpm/@capacitor+core@4.5.0/node_modules/@capacitor/core/dist/index.js": [],
+  "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/index.js": [],
+  "src/contexts/User.tsx": [],
   "src/root.css": [],
+  "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/index.js": [],
+  "src/login.tsx": [],
+  "src/components/Header.tsx": [],
   "src/root.tsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/entry-client/StartClient.tsx": [],
   "src/entry-client.tsx": [],
   ".solid/index.html": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/server/components/HttpStatusCode.tsx": [
-    "/assets/_...404_.c1343871.js"
+    "/assets/_...404_.a075915c.js"
   ],
   "src/routes/[...404].tsx": [
-    "/assets/_...404_.c1343871.js"
+    "/assets/_...404_.a075915c.js"
+  ],
+  "src/contexts/Device.tsx": [
+    "/assets/devices.3e16e8b7.js"
+  ],
+  "src/routes/devices.tsx": [
+    "/assets/devices.3e16e8b7.js"
   ],
   "src/components/Counter.css": [
-    "/assets/index.fcf4bedd.js",
+    "/assets/index.350ddea5.js",
     "/assets/index.fdb6b3cf.css"
   ],
   "src/components/Counter.tsx": [
-    "/assets/index.fcf4bedd.js",
-    "/assets/index.fdb6b3cf.css"
-  ],
-  "node_modules/.pnpm/@capacitor+core@4.5.0/node_modules/@capacitor/core/dist/index.js": [
-    "/assets/index.fcf4bedd.js",
+    "/assets/index.350ddea5.js",
     "/assets/index.fdb6b3cf.css"
   ],
   "src/routes/index.tsx": [
-    "/assets/index.fcf4bedd.js",
+    "/assets/index.350ddea5.js",
     "/assets/index.fdb6b3cf.css"
+  ],
+  "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.2/node_modules/solid-icons/im/index.js": [
+    "/assets/settings.2f8db791.js"
+  ],
+  "src/routes/settings.tsx": [
+    "/assets/settings.2f8db791.js"
+  ],
+  "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/web.js": [
+    "/assets/web.48abe353.js"
+  ],
+  "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/web.js": [
+    "/assets/web.e0d60413.js"
   ]
 }

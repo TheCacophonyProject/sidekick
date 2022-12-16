@@ -1,5 +1,5 @@
 // @refresh reload
-import { createEffect, Show, Suspense, useContext } from "solid-js";
+import { createEffect, createSignal, Show, Suspense, useContext } from "solid-js";
 import {
 	A,
 	Body,
@@ -11,15 +11,21 @@ import {
 	Routes,
 	Scripts,
 	Title,
+	useNavigate,
 } from "solid-start";
 import NavBar from "./components/NavBar";
 import { UserContext, UserProvider } from "./contexts/User";
 import "./root.css";
 import Login from "./login";
 import Header from "./components/Header";
+import { DeviceProvider } from "./contexts/Device";
 
 const AppRoutes = () => {
 	const [user] = useContext(UserContext)
+	const navigate = useNavigate()
+	createEffect(() => {
+		navigate('/devices', { replace: true })
+	})
 
 	return (
 		<Show when={user.isAuthorized || user.skippedLogin()} fallback={<Login />}>
@@ -40,15 +46,17 @@ export default function Root() {
 				<Meta charset="utf-8" />
 				<Meta
 					name="viewport"
-					content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+					content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
 				/>
 			</Head>
-			<Body class="h-[80vh]">
+			<Body class="h-[calc(100vh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] pb-safe pt-safe">
 				<Suspense>
 					<ErrorBoundary>
-						<UserProvider>
-							<AppRoutes />
-						</UserProvider>
+						<DeviceProvider>
+							<UserProvider>
+								<AppRoutes />
+							</UserProvider>
+						</DeviceProvider>
 					</ErrorBoundary>
 				</Suspense>
 				<Scripts />

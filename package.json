@@ -1,7 +1,7 @@
 {
   "name": "sidekick-app",
   "scripts": {
-    "start": "solid-start dev",
+    "start": "solid-start dev --host",
     "build": "solid-start build",
     "serve": "solid-start start",
     "sync": "npx cap sync",
@@ -30,8 +30,10 @@
     "@capacitor/core": "^4.5.0",
     "@capacitor/ios": "^4.5.0",
     "@capacitor/preferences": "^4.0.2",
+    "@motionone/solid": "^10.15.3",
     "@solidjs/meta": "^0.28.0",
     "@solidjs/router": "^0.5.0",
+    "motion": "^10.15.3",
     "solid-icons": "^1.0.4",
     "solid-js": "^1.6.0",
     "solid-start": "^0.2.0",
