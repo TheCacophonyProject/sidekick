@@ -44,7 +44,7 @@ public class DevicePlugin: CAPPlugin {
         serviceBrowser?.cancel()
         call.resolve(["result": "success", "id": id])
     }
-    @objc func getDeviceHost(_ call: CAPPluginCall) {
+    @objc func getDeviceConnection(_ call: CAPPluginCall) {
         guard let name = call.getString("name") else { return call.reject("Device name required")}
         
         let connection = NWConnection.init(to: NWEndpoint.service(name: name, type: type, domain: domain, interface: .none), using: .tcp)
@@ -55,6 +55,13 @@ public class DevicePlugin: CAPPlugin {
                 call.resolve(["host": host.debugDescription.replacingOccurrences(of: "%en0", with: ""), "port": port.debugDescription])
             }
         }
+
         connection.start(queue: .global())
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if (connection.state != .cancelled) {
+                connection.cancel()
+                call.reject("Closing connection to \(name)")
+            }
+        }
     }
 }

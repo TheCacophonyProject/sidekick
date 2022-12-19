@@ -8,9 +8,11 @@ import { Motion, Presence } from "@motionone/solid"
 import { animate } from "motion";
 
 function Devices() {
-  const [state, { startDiscovery, stopDiscovery, getDeviceHost, getDeviceInterfaceUrl }] = useContext(DeviceContext)
+  const [state, { startDiscovery, stopDiscovery, getDeviceInterfaceUrl }] = useContext(DeviceContext)
   const openDeviceInterface = (device: Device) => {
-    Browser.open({ url: device.url })
+    if (device.isConnected) {
+      Browser.open({ url: device.url })
+    }
   }
   const searchDevice = () => {
     startDiscovery()
@@ -18,9 +20,6 @@ function Devices() {
       stopDiscovery()
     }, 5000)
   }
-  createEffect(() => {
-    console.log(state.devices)
-  })
   return (
     <section class="h-full bg-gray-200 p-2 space-y-2 relative">
       <For each={state.devices}>
@@ -34,7 +33,7 @@ function Devices() {
         )}
       </For>
       <div class="flex flex-col items-center absolute bottom-20 inset-x-0">
-        <button class="rounded-full bg-white shadow-mda p-4 mb-2" onClick={searchDevice}>
+        <button disabled={state.isDiscovering} class="rounded-full bg-white shadow-mda p-4 mb-2" onClick={searchDevice}>
           <Presence exitBeforeEnter>
             <Show when={state.isDiscovering} fallback={<Motion.div initial={{ opacity: 1 }} exit={{ opacity: [1, 0] }} transition={{ duration: 0.1 }} class="border-2 border-blue-400 p-4 rounded-full" />
             }>

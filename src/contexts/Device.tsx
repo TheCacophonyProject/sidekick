@@ -1,24 +1,33 @@
 import { registerPlugin } from "@capacitor/core";
-import { Accessor, createContext, createEffect, createSignal, JSX } from "solid-js";
+import { createContext, createEffect, createSignal, JSX } from "solid-js";
 import { createStore, Store } from "solid-js/store";
 
+type DeviceName = string
 type DeviceType = "thermal" | "audio"
 type CallbackId = string
 
-export type Device = {
-  id: string;
-  endpoint: string
-  name: string;
+export type DeviceDetails = {
+  id: DeviceName;
+  name: DeviceName;
   type: DeviceType;
-  url: string;
+  endpoint: string;
 }
 
+export type ConnectedDevice = DeviceDetails & {
+  url: string;
+  isConnected: true;
+}
 
+export type DisconnectedDevice = DeviceDetails & {
+  isConnected: false;
+}
+
+export type Device = ConnectedDevice | DisconnectedDevice
 
 export interface DevicePlugin {
   discoverDevices(onFoundDevice: (device: { endpoint: string }) => void): Promise<CallbackId>;
   stopDiscoverDevices(options: { id: CallbackId }): Promise<void>;
-  getDeviceHost(options: { name: string }, onHostFound: (device: { host: string, port: string }) => void): Promise<void>;
+  getDeviceConnection(options: { name: DeviceName }, onHostFound: (device: { host: string, port: string }) => void): Promise<void>;
 }
 
 const DevicePlugin = registerPlugin<DevicePlugin>("Device");
@@ -28,7 +37,7 @@ type DeviceState = Store<{ devices: Device[], isDiscovering: boolean }>
 interface DeviceActions {
   startDiscovery(): Promise<void>;
   stopDiscovery(): Promise<void>;
-  getDeviceHost(device: Device): Promise<{ host: string, port: string }>;
+  getDeviceConnection(device: Device): Promise<{ host: string, port: string }>;
   getDeviceInterfaceUrl(host: string, port: string): string;
 }
 
@@ -53,10 +62,57 @@ export function DeviceProvider(props: DeviceProviderProps) {
   }
   )
 
+  const getDeviceConnection = (device: { name: string }): Promise<{ host: string, port: string }> => new Promise((resolve, reject) => {
+    try {
+      DevicePlugin.getDeviceConnection(device, (device) => {
+        resolve(device)
+      })
+    } catch (error) {
+      reject(error)
+    }
+  })
+
+  const endpointToDevice = async (endpoint: string): Promise<ConnectedDevice | Device> => {
+    const [name] = endpoint.split(".")
+    const device: DeviceDetails = {
+      id: name,
+      endpoint,
+      name,
+      type: "thermal",
+    }
+    try {
+      const url = await getDeviceConnection({ name })
+      return {
+        ...device,
+        url: getDeviceInterfaceUrl(url.host, url.port),
+        isConnected: true
+      }
+    } catch (error) {
+      return {
+        ...device,
+        isConnected: false
+      }
+    }
+  }
+
+  const getConnectedDevices = (devices: { endpoint: string }[]) =>
+    devices.reduce(async (connectedDevices, device) => {
+      const connectedDevice = await endpointToDevice(device.endpoint)
+      if (connectedDevice.isConnected) {
+        return [connectedDevice, ...await connectedDevices]
+      } else {
+        return [...await connectedDevices]
+      }
+    }, Promise.resolve([] as Device[]))
+
+  const getDeviceInterfaceUrl = (host: string, port: string): string => { return `http://${host}:${port}` }
+
   const startDiscovery = async () => {
-    const id = await DevicePlugin.discoverDevices(async (device) => {
-      const newDevice = await endpointToDevice(device.endpoint)
-      setState("devices", [...state.devices.filter((device) => device.endpoint !== newDevice.endpoint), newDevice])
+    if (state.isDiscovering) return
+    setState("isDiscovering", true)
+    setState("devices", await getConnectedDevices(state.devices))
+    const id = await DevicePlugin.discoverDevices(async (newDevice) => {
+      setState("devices", await getConnectedDevices([...state.devices.filter((currDevice) => currDevice.endpoint !== newDevice.endpoint), newDevice]))
     })
     setCallbackID(id)
   }
@@ -68,31 +124,8 @@ export function DeviceProvider(props: DeviceProviderProps) {
       setCallbackID()
     }
   }
-
-  const getDeviceHost = (device: { name: string }): Promise<{ host: string, port: string }> => new Promise((resolve, reject) => {
-    try {
-      DevicePlugin.getDeviceHost(device, (device) => {
-        resolve(device)
-      })
-    } catch (error) {
-      reject(error)
-    }
-  })
-
-  const getDeviceInterfaceUrl = (host: string, port: string): string => { return `http://${host}:${port}` }
-  const endpointToDevice = async (endpoint: string): Promise<Device> => {
-    const [device] = endpoint.split(".")
-    const url = await getDeviceHost({ name: device })
-    return {
-      id: device,
-      endpoint,
-      name: device,
-      type: "thermal",
-      url: getDeviceInterfaceUrl(url.host, url.port)
-    }
-  }
   return (
-    <DeviceContext.Provider value={[state, { startDiscovery, stopDiscovery, getDeviceHost, getDeviceInterfaceUrl }]}>
+    <DeviceContext.Provider value={[state, { startDiscovery, stopDiscovery, getDeviceConnection, getDeviceInterfaceUrl }]}>
       {props.children}
     </DeviceContext.Provider>
   )

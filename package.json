@@ -37,7 +37,8 @@
     "solid-icons": "^1.0.4",
     "solid-js": "^1.6.0",
     "solid-start": "^0.2.0",
-    "undici": "^5.11.0"
+    "undici": "^5.11.0",
+    "zod": "^3.20.2"
   },
   "engines": {
     "node": ">=16"
