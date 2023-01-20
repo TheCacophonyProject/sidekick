@@ -1,7 +1,8 @@
 import { registerPlugin } from "@capacitor/core";
-import { createContext, createEffect, createResource, createSignal, JSX, Resource } from "solid-js";
+import { createContext, createEffect, createResource, createSignal, JSX, onMount, Resource } from "solid-js";
 import { createStore, Store } from "solid-js/store";
 import { Preferences } from '@capacitor/preferences';
+import { logError } from "./Notification";
 export interface UserPlugin {
   authenticateUser(user: { email: string, password: string }): Promise<{ token: string, id: string, email: string }>;
 }
@@ -36,29 +37,21 @@ interface UserProviderProps {
 
 export function UserProvider(props: UserProviderProps) {
   const [storedUser, { mutate: mutateUser, refetch }] = createResource(async () => {
-    try {
-      const storedUser = await Preferences.get({ key: 'user' })
-      if (storedUser.value) {
-        const json = JSON.parse(storedUser.value)
-        if (json.token && json.id && json.email) {
-          return json as User
-        }
+    const storedUser = await Preferences.get({ key: 'user' })
+    if (storedUser.value) {
+      const json = JSON.parse(storedUser.value)
+      if (json.token && json.id && json.email) {
+        return json as User
       }
-    } catch (error) {
-      throw error
     }
   })
   const [skippedLogin, { mutate: mutateSkip }] = createResource(async () => {
-    try {
-      const skippedLogin = await Preferences.get({ key: 'skippedLogin' })
-      if (skippedLogin.value) {
-        const json = JSON.parse(skippedLogin.value)
-        if (json) {
-          return json as boolean
-        }
+    const skippedLogin = await Preferences.get({ key: 'skippedLogin' })
+    if (skippedLogin.value) {
+      const json = JSON.parse(skippedLogin.value)
+      if (json) {
+        return json as boolean
       }
-    } catch (error) {
-      throw error
     }
   })
   const [user, setUser] = createStore<UserState>({
@@ -88,7 +81,8 @@ export function UserProvider(props: UserProviderProps) {
           mutateUser({ token, id, email })
           mutateSkip(false)
         } catch (error) {
-          console.error(error)
+          logError(`Could not login.`, error)
+          throw error
         }
       },
       async logout() {

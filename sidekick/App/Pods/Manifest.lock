@@ -3,7 +3,13 @@ PODS:
     - CapacitorCordova
   - CapacitorBrowser (4.1.0):
     - Capacitor
+  - CapacitorClipboard (4.1.0):
+    - Capacitor
   - CapacitorCordova (4.5.0)
+  - CapacitorDialog (4.1.0):
+    - Capacitor
+  - CapacitorGeolocation (4.1.0):
+    - Capacitor
   - CapacitorPreferences (4.0.2):
     - Capacitor
   - shared (1.0)
@@ -11,7 +17,10 @@ PODS:
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser`)"
+  - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
+  - "CapacitorDialog (from `../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog`)"
+  - "CapacitorGeolocation (from `../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences`)"
   - shared (from `../shared`)
 
@@ -20,8 +29,14 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
   CapacitorBrowser:
     :path: "../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser"
+  CapacitorClipboard:
+    :path: "../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard"
   CapacitorCordova:
     :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+  CapacitorDialog:
+    :path: "../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog"
+  CapacitorGeolocation:
+    :path: "../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation"
   CapacitorPreferences:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences"
   shared:
@@ -30,10 +45,13 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Capacitor: 94ea746d6b460711feb030f0f6585680fd4599ad
   CapacitorBrowser: 05b68799d62b7b864974f59a5af3e4ddcce953f1
+  CapacitorClipboard: 4c092a2608520afb799429e63820256c3a59f1e5
   CapacitorCordova: 1ba7a0509217944974297afab40fec6093e93848
+  CapacitorDialog: c8a6558d29767e76a32a056bb5e0fc9104b985b0
+  CapacitorGeolocation: e792888b4eca5cf31ed984491b645d42666278cb
   CapacitorPreferences: 1d66dc32299f55ed632c5611f312878979275ea5
   shared: db3ed1590fdbc9588e4f3bf2f62fdfc6b8476473
 
-PODFILE CHECKSUM: 0abd6bff1433844219ac74425e2ecfc40098d577
+PODFILE CHECKSUM: a22478020bdbf995f9131e391207987f67196d7e
 
 COCOAPODS: 1.11.3

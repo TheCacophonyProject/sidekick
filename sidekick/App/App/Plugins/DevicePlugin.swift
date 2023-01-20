@@ -18,7 +18,11 @@ public class DevicePlugin: CAPPlugin {
             case singleUpdate
             case discover
         }
-    let device = DeviceInterface()
+    enum Result {
+        case success
+        case failed
+    }
+    @objc let device = DeviceInterface()
     private var callQueue: [String: CallType] = [:]
     func createBrowser() -> NWBrowser {
         return NWBrowser(for: .bonjour(type: type, domain: domain), using: .tcp)
@@ -28,6 +32,10 @@ public class DevicePlugin: CAPPlugin {
     @objc func discoverDevices(_ call: CAPPluginCall) {
         call.keepAlive = true
         callQueue[call.callbackId] = .discover
+        // check if we has network permissions iOS for 13+
+        requestPermissions(call)
+
+
         serviceBrowser = createBrowser()
 
         serviceBrowser?.browseResultsChangedHandler = {(res: Set<NWBrowser.Result>, old: Set<NWBrowser.Result.Change>) -> Void in
@@ -52,7 +60,7 @@ public class DevicePlugin: CAPPlugin {
             if state == .ready, let innerEnpoint = connection.currentPath?.remoteEndpoint, case .hostPort(let host, let port) = innerEnpoint {
                 print(host, port)
                 connection.cancel()
-                call.resolve(["host": host.debugDescription.replacingOccurrences(of: "%en0", with: ""), "port": port.debugDescription])
+                call.resolve(["result":"success", "data":["host": host.debugDescription.replacingOccurrences(of: "%en0", with: ""), "port": port.debugDescription]])
             }
         }
 
@@ -60,8 +68,28 @@ public class DevicePlugin: CAPPlugin {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             if (connection.state != .cancelled) {
                 connection.cancel()
-                call.reject("Closing connection to \(name)")
+                call.resolve(["result":"error", "error": "Could not connect to device"])
             }
         }
+    }
+    
+    @objc func getDeviceInfo(_ call: CAPPluginCall) {
+        device.getDeviceInfo(call: pluginCall(call: call))
+    }
+    
+    @objc func getDeviceConfig(_ call: CAPPluginCall) {
+        device.getDeviceConfig(call: pluginCall(call: call))
+    }
+    
+    @objc func setDeviceLocation(_ call: CAPPluginCall) {
+        device.setDeviceLocation(call: pluginCall(call: call))
+    }
+
+    @objc func getRecordings(_ call: CAPPluginCall) {
+        device.getRecordings(call: pluginCall(call: call))
+    }
+    
+    @objc func getTestText(_ call: CAPPluginCall) {
+        device.getTestText(call: pluginCall(call: call))
     }
 }

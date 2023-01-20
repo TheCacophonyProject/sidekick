@@ -32,49 +32,218 @@
   "src/components/NavBar.tsx": [],
   "node_modules/.pnpm/@capacitor+core@4.5.0/node_modules/@capacitor/core/dist/index.js": [],
   "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/index.js": [],
+  "src/contexts/Notification.tsx": [],
   "src/contexts/User.tsx": [],
   "src/root.css": [],
   "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/index.js": [],
+  "node_modules/.pnpm/zod@3.20.2/node_modules/zod/lib/index.mjs": [],
+  "src/components/CacaophonyLogo.tsx": [],
   "src/login.tsx": [],
   "src/components/Header.tsx": [],
+  "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation/dist/esm/index.js": [],
+  "src/contexts/Device.tsx": [],
+  "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.2/node_modules/solid-icons/fa/index.js": [],
+  "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.2/node_modules/solid-icons/vs/index.js": [],
+  "node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard/dist/esm/web.js": [],
+  "node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard/dist/esm/index.js": [],
+  "src/components/NotificationPopup.tsx": [],
   "src/root.tsx": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/entry-client/StartClient.tsx": [],
   "src/entry-client.tsx": [],
   ".solid/index.html": [],
   "node_modules/.pnpm/solid-start@0.2.5_i2cnpwj3ojjdnkycik5yjsstli/node_modules/solid-start/server/components/HttpStatusCode.tsx": [
-    "/assets/_...404_.a075915c.js"
+    "/assets/_...404_.688d4f72.js"
   ],
   "src/routes/[...404].tsx": [
-    "/assets/_...404_.a075915c.js"
+    "/assets/_...404_.688d4f72.js"
   ],
-  "src/contexts/Device.tsx": [
-    "/assets/devices.3e16e8b7.js"
+  "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.2/node_modules/solid-icons/ri/index.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/array.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/clamp.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/defaults.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-number.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-easing-list.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/wrap.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/easing.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/mix.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/noop.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/progress.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/offset.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/interpolate.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-cubic-bezier.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-easing-generator.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-function.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-string.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/time.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+easing@10.15.1/node_modules/@motionone/easing/dist/cubic-bezier.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+easing@10.15.1/node_modules/@motionone/easing/dist/steps.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+animation@10.15.1/node_modules/@motionone/animation/dist/utils/easing.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+animation@10.15.1/node_modules/@motionone/animation/dist/Animation.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+types@10.15.1/node_modules/@motionone/types/dist/MotionValue.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/data.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/transforms.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/css-var.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/feature-detection.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/easing.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/keyframes.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/get-style-name.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/style.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/stop-animation.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/get-unit.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/animate-style.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/options.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/utils/resolve-elements.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/tslib@2.4.1/node_modules/tslib/tslib.es6.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/gestures/in-view.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/utils/has-changed.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/utils/is-variant.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/utils/resolve-variant.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/utils/schedule.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/utils/events.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/gestures/in-view.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/gestures/hover.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/gestures/press.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/state/index.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+dom@10.15.3/node_modules/@motionone/dom/dist/animate/utils/style-object.es.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+solid@10.15.3_solid-js@1.6.2/node_modules/@motionone/solid/dist/source/context.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+solid@10.15.3_solid-js@1.6.2/node_modules/@motionone/solid/dist/source/primitives.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@solid-primitives+props@2.2.2_solid-js@1.6.2/node_modules/@solid-primitives/props/dist/source/combineProps.js": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+solid@10.15.3_solid-js@1.6.2/node_modules/@motionone/solid/dist/source/motion.jsx": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@motionone+solid@10.15.3_solid-js@1.6.2/node_modules/@motionone/solid/dist/source/presence.jsx": [
+    "/assets/devices.34dcb59e.js"
+  ],
+  "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog/dist/esm/index.js": [
+    "/assets/devices.34dcb59e.js"
   ],
   "src/routes/devices.tsx": [
-    "/assets/devices.3e16e8b7.js"
+    "/assets/devices.34dcb59e.js"
   ],
-  "src/components/Counter.css": [
-    "/assets/index.350ddea5.js",
-    "/assets/index.fdb6b3cf.css"
-  ],
-  "src/components/Counter.tsx": [
-    "/assets/index.350ddea5.js",
-    "/assets/index.fdb6b3cf.css"
+  "src/components/ActionContainer.tsx": [
+    "/assets/ActionContainer.06b389ab.js"
   ],
   "src/routes/index.tsx": [
-    "/assets/index.350ddea5.js",
-    "/assets/index.fdb6b3cf.css"
+    "/assets/index.2ce7443a.js"
   ],
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.2/node_modules/solid-icons/im/index.js": [
-    "/assets/settings.2f8db791.js"
+    "/assets/settings.b80b8d73.js"
   ],
   "src/routes/settings.tsx": [
-    "/assets/settings.2f8db791.js"
+    "/assets/settings.b80b8d73.js"
   ],
   "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/web.js": [
-    "/assets/web.48abe353.js"
+    "/assets/web.3f0fe4a1.js"
   ],
   "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/web.js": [
-    "/assets/web.e0d60413.js"
+    "/assets/web.621685d1.js"
+  ],
+  "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation/dist/esm/web.js": [
+    "/assets/web.7c3652fd.js"
+  ],
+  "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog/dist/esm/web.js": [
+    "/assets/web.3373dc60.js"
   ]
 }

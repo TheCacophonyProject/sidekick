@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'nz.org.cacophony.sidekick',
-  appName: 'sidekick-app',
+  appName: 'Sidekick',
   webDir: 'dist/public',
   bundledWebRuntime: false,
   android: {
@@ -12,9 +12,9 @@ const config: CapacitorConfig = {
   ios: {
     path: 'sidekick'
   },
-  server: {
-    url: "http://192.168.86.33:3000",
-  },
+  // server: {
+  //   url: "http://192.168.86.33:3000",
+  // },
 };
 
 export default config;

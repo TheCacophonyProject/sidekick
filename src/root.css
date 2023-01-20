@@ -15,4 +15,16 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+  .pt-bar {
+    padding-top: calc(env(safe-area-inset-top) + 2rem);
+  }
+  .pb-bar {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 2rem);
+  }
+  .mt-safe {
+    margin-top: env(safe-area-inset-top);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
 }

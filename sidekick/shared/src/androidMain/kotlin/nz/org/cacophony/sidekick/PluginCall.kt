@@ -1,10 +1,8 @@
 package nz.org.cacophony.sidekick
 
 import com.getcapacitor.JSObject
-import nz.org.cacophony.sidekick.`interface`.PluginCall
 
-data class PluginCall(val call: com.getcapacitor.PluginCall):
-    PluginCall {
+data class pluginCall(val call: com.getcapacitor.PluginCall): PluginCall {
     override fun setKeepAlive(keepAlive: Boolean) {
         call.setKeepAlive(keepAlive)
     }

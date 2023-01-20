@@ -12,6 +12,6 @@ import shared
 public class UserPlugin: CAPPlugin {
     let user = UserInterface()
     @objc func authenticateUser(_ call: CAPPluginCall) {
-        user.authenticateUser(call: PluginCall(call: call))
+        user.authenticateUser(call: pluginCall(call: call))
     }
 }

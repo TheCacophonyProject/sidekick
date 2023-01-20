@@ -1,10 +1,12 @@
-import { createEffect, createSignal } from "solid-js";
+import { JSXElement, createEffect, createSignal } from "solid-js";
 import { useLocation } from "solid-start";
+
+const [HeaderButton, setHeaderButton] = createSignal<JSXElement>(<></>)
 
 function Header() {
   const location = useLocation();
   const headerMap = new Map<string, string>([
-    ["/", "Dashboard"],
+    ["/", "Devices"],
     ["/devices", "Devices"],
     ["/storage", "Storage"],
     ["/settings", "Settings"]
@@ -14,16 +16,19 @@ function Header() {
   createEffect(() => {
     if (headerMap.has(location.pathname)) {
       setHeader(headerMap.get(location.pathname))
+      setHeaderButton(<></>)
     } else {
       setHeader("")
     }
   })
 
   return (
-    <div class="py-4 ml-6">
+    <div class="pb-4 px-6 fixed top-0 pt-bar flex items-center justify-between bg-white w-screen z-10">
       <h2 class="text-4xl text-gray-800 font-bold">{header()}</h2>
+      {HeaderButton()}
     </div>
   )
 }
 
 export default Header;
+export { setHeaderButton };

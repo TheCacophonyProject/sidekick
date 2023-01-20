@@ -19,13 +19,10 @@ import "./root.css";
 import Login from "./login";
 import Header from "./components/Header";
 import { DeviceProvider } from "./contexts/Device";
+import NotificationPopup from "./components/NotificationPopup";
 
 const AppRoutes = () => {
 	const [user] = useContext(UserContext)
-	const navigate = useNavigate()
-	createEffect(() => {
-		navigate('/devices', { replace: true })
-	})
 
 	return (
 		<Show when={user.isAuthorized || user.skippedLogin()} fallback={<Login />}>
@@ -39,6 +36,10 @@ const AppRoutes = () => {
 }
 
 export default function Root() {
+	const navigate = useNavigate()
+	createEffect(() => {
+		navigate('/devices', { replace: true })
+	})
 	return (
 		<Html lang="en">
 			<Head>
@@ -49,11 +50,13 @@ export default function Root() {
 					content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
 				/>
 			</Head>
-			<Body class="h-[calc(100vh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] pb-safe pt-safe">
+			{/* Center self */}
+			<Body class="h-[calc(100vh-env(safe-area-inset-bottom)-env(safe-area-inset-top))] mb-safe mt-safe">
 				<Suspense>
 					<ErrorBoundary>
 						<DeviceProvider>
 							<UserProvider>
+								<NotificationPopup />
 								<AppRoutes />
 							</UserProvider>
 						</DeviceProvider>

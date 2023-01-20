@@ -8,7 +8,7 @@
 import Capacitor
 import shared
 
-class PluginCall: shared.PluginCall {
+class pluginCall: shared.PluginCall {
     let call: CAPPluginCall
     init(call: CAPPluginCall) {
         self.call = call

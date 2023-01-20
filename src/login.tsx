@@ -3,7 +3,7 @@ import { A, createRouteAction, Navigate } from "solid-start";
 import { Browser } from '@capacitor/browser';
 import { UserContext } from "./contexts/User";
 import { z } from "zod"
-
+import CacaophonyLogo from "./components/CacaophonyLogo";
 type LoginInput = Partial<{
   type: string;
   placeholder: string;
@@ -66,9 +66,9 @@ function Login() {
   }
 
   return (
-    <Form class="flex flex-col mx-8 gap-y-6 text-lg">
-      <div class="h-40 flex items-center justify-center  rounded-full bg-slate-100 mt-8">
-        <h1 class="text-4xl font-bold">Sidekick Logo</h1>
+    <Form class="flex flex-col mx-8 gap-y-4 text-lg justify-center h-full">
+      <div class="mb-6 mt-24">
+        <CacaophonyLogo />
       </div>
       <LoginInput type="email" placeholder="example@gmail.com" name="email" label="Email" invalid={Boolean(emailError())} onInput={onInput} />
       <LoginInput type="password" name="password" label="Password" invalid={Boolean(passwordError())} onInput={onInput} />

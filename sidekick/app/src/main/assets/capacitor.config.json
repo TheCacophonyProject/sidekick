@@ -1,6 +1,6 @@
 {
 	"appId": "nz.org.cacophony.sidekick",
-	"appName": "sidekick-app",
+	"appName": "Sidekick",
 	"webDir": "dist/public",
 	"bundledWebRuntime": false,
 	"android": {
@@ -9,8 +9,5 @@
 	},
 	"ios": {
 		"path": "sidekick"
-	},
-	"server": {
-		"url": "http://192.168.1.68:3000"
 	}
 }
