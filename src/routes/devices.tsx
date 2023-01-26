@@ -12,7 +12,7 @@ import { Dialog } from '@capacitor/dialog';
 import { FaSolidSpinner } from "solid-icons/fa";
 
 function Devices() {
-  const [state, { startDiscovery, stopDiscovery, setDeviceToCurrLocation, getRecordings }] = useContext(DeviceContext)
+  const [state, { startDiscovery, stopDiscovery, setDeviceToCurrLocation }] = useContext(DeviceContext)
   const [deviceBeingSet, setDeviceBeingSet] = createSignal<{ [key: DeviceName]: boolean }>({})
   const [settingAll, setSettingAll] = createSignal(false)
 
@@ -64,15 +64,15 @@ function Devices() {
 
   const [gettingRecordings, setGettingRecordings] = createSignal(false)
 
-  const getRecordingsList = async () => {
-    setGettingRecordings(true)
-    state.devices.forEach(async (device) => {
-      if (!device.isConnected) return
-      const recordings = await getRecordings(device)
-      console.log(recordings)
-    })
-    setGettingRecordings(false)
-  }
+  // const getRecordingsList = async () => {
+  //   setGettingRecordings(true)
+  //   state.devices.forEach(async (device) => {
+  //     if (!device.isConnected) return
+  //     const recordings = await getRecordings(device)
+  //     console.log(recordings)
+  //   })
+  //   setGettingRecordings(false)
+  // }
 
   createEffect(() => {
     if (state.devices.length > 0) {
@@ -81,24 +81,27 @@ function Devices() {
   })
 
   return (
-    <section class="h-full bg-gray-200 px-2 pb-bar pt-bar space-y-2 relative mt-16">
+    <section class="h-full bg-gray-200 px-2 pb-bar pt-bar space-y-2 relative overflow-y-auto">
       <For each={state.devices}>
         {(device) => (
           <ActionContainer icon={BsCameraVideoFill} >
             <div class="flex items-center w-full justify-between">
               <h1 onClick={() => openDeviceInterface(device)} role="button" class="text-lg break-all text-left w-full">{device.name}</h1>
               <div class="flex space-x-5 items-center" >
-                <button class="text-blue-500" disabled={deviceBeingSet()[device.id]} onClick={() => setLocationForDevice(device)}>
-                  {deviceBeingSet()[device.id] ? <FaSolidSpinner size={32} class="animate-spin" /> : device.isConnected && !device.locationSet ?
+                <button class="text-blue-500" disabled={deviceBeingSet()[device?.id]} onClick={() => setLocationForDevice(device)}>
+                  {deviceBeingSet()[device?.id] ? <FaSolidSpinner size={32} class="animate-spin" /> : device?.isConnected && !device?.locationSet ?
                     <BiSolidLocationPlus size={32} /> : <BiRegularCurrentLocation size={32} />}
                 </button>
-                < RiSystemArrowRightSLine onClick={() => openDeviceInterface(device)} size={28} />
+                <div class="text-blue-500">
+                  < RiSystemArrowRightSLine onClick={() => openDeviceInterface(device)} size={32} />
+                </div>
               </div>
             </div>
           </ActionContainer>
         )}
       </For>
-      <div class="flex justify-center absolute inset-x-0 mx-auto bottom-[8%] pb-bar">
+      <div class="h-32 bg-gray-200"></div>
+      <div class="flex justify-center fixed inset-x-0 mx-auto bottom-[4vh] pb-bar">
         <div class="flex flex-col items-center">
           <button disabled={state.isDiscovering} class="rounded-full bg-white shadow-mda p-4 mb-2" onClick={searchDevice}>
             <Presence exitBeforeEnter>

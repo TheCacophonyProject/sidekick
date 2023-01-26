@@ -9,5 +9,10 @@
 	},
 	"ios": {
 		"path": "sidekick"
+	},
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		}
 	}
 }

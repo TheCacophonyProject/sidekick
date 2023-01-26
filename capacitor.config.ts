@@ -12,6 +12,12 @@ const config: CapacitorConfig = {
   ios: {
     path: 'sidekick'
   },
+  plugins: {
+    CapacitorHttp: {
+      enabled: true
+    }
+  }
+
   // server: {
   //   url: "http://192.168.86.33:3000",
   // },

@@ -15,11 +15,15 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+  .py-safe {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   .pt-bar {
-    padding-top: calc(env(safe-area-inset-top) + 2rem);
+    padding-top: calc(9rem - env(safe-area-inset-top));
   }
   .pb-bar {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 2rem);
+    padding-bottom: calc(7rem - env(safe-area-inset-bottom));
   }
   .mt-safe {
     margin-top: env(safe-area-inset-top);

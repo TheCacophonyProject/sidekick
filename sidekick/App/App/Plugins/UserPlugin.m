@@ -9,4 +9,8 @@
 
 CAP_PLUGIN(UserPlugin, "User",
     CAP_PLUGIN_METHOD(authenticateUser, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(requestDeletion, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(validateToken, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(setToTestServer, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(setToProductionServer, CAPPluginReturnPromise);
 )

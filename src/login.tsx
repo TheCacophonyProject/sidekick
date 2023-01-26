@@ -4,6 +4,7 @@ import { Browser } from '@capacitor/browser';
 import { UserContext } from "./contexts/User";
 import { z } from "zod"
 import CacaophonyLogo from "./components/CacaophonyLogo";
+import { logSuccess } from "./contexts/Notification";
 type LoginInput = Partial<{
   type: string;
   placeholder: string;
@@ -26,7 +27,7 @@ const emailSchema = z.string().email("Invalid Email")
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters")
 
 function Login() {
-  const [_user, { login, skip }] = useContext(UserContext)
+  const [_user, { login, skip, toggleServer }] = useContext(UserContext)
   const [emailError, setEmailError] = createSignal('')
   const [passwordError, setPasswordError] = createSignal('')
   const [error, setError] = createSignal('')
@@ -64,10 +65,20 @@ function Login() {
     }
     setError('')
   }
+  // Create a way to check if user is holding logo down for 5 taps
+  // If so, toggle server
+  const [pressed, setPressed] = createSignal(0)
+  const logoDown = () => {
+    setPressed(pressed() + 1)
+    if (pressed() === 5) {
+      toggleServer()
+      setPressed(0)
+    }
+  }
 
   return (
     <Form class="flex flex-col mx-8 gap-y-4 text-lg justify-center h-full">
-      <div class="mb-6 mt-24">
+      <div class="mb-6 mt-24" role="button" onTouchStart={logoDown}>
         <CacaophonyLogo />
       </div>
       <LoginInput type="email" placeholder="example@gmail.com" name="email" label="Email" invalid={Boolean(emailError())} onInput={onInput} />

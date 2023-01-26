@@ -8,6 +8,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import nz.org.cacophony.sidekick.CapacitorInterface
 import nz.org.cacophony.sidekick.PluginCall
+import nz.org.cacophony.sidekick.success
 
 @Suppress("UNUSED")
 class DeviceInterface : CapacitorInterface {
@@ -35,7 +36,7 @@ class DeviceInterface : CapacitorInterface {
                 .fold(
                     { error -> call.reject(error.toString()) },
                     { info ->
-                        call.resolve(
+                        success(call,
                             mapOf(
                                 "serverURL" to info.serverURL,
                                 "groupName" to info.groupname,
@@ -53,7 +54,7 @@ class DeviceInterface : CapacitorInterface {
             deviceApi.getConfig()
                 .fold(
                     { error -> call.reject(error.toString()) },
-                    { config -> call.resolve(mapOf("value" to config)) }
+                    { config -> success(call, config) }
                 )
         }
     }
@@ -64,8 +65,8 @@ class DeviceInterface : CapacitorInterface {
                 .map { (lat, long, alt, acc, time) ->
                     deviceApi.setLocation(Location(lat, long, alt, time, acc))
                         .fold(
-                            { call.resolve(mapOf("result" to "success")) },
-                            { call.reject("Unable to set location: $it Lat:$lat Long:$long Alt:$alt Acc:$acc time:$time") }
+                            { error -> call.reject("Unable to set location: $error Lat:$lat Long:$long Alt:$alt Acc:$acc time:$time") },
+                            { success(call) },
                         )
                 }
         }
@@ -76,7 +77,7 @@ class DeviceInterface : CapacitorInterface {
             deviceApi.getRecordings()
                 .fold(
                     { error -> call.reject(error.toString()) },
-                    { recordings -> call.resolve(mapOf("value" to recordings)) }
+                    { recordings -> success(call, recordings) }
                 )
         }
     }

@@ -4,12 +4,10 @@ import { createStore, Store } from "solid-js/store";
 import { Geolocation } from '@capacitor/geolocation';
 import Devices from "~/routes/devices";
 import { logError, logSuccess } from "./Notification";
+import { CallbackId, Result, URL } from ".";
 
 export type DeviceName = string
 export type DeviceType = "thermal" | "audio"
-type CallbackId = string
-type URL = string
-type Result<T> = { result: "success", data: T } | { result: "error", error: string }
 export type Host = { url: URL }
 
 export type DeviceDetails = {
@@ -45,10 +43,10 @@ export interface DevicePlugin {
   discoverDevices(onFoundDevice: (device: PluginOptions<{ endpoint: string } | undefined>) => void): Promise<CallbackId>;
   stopDiscoverDevices(options: { id: CallbackId }): Promise<void>;
   getDeviceConnection(options: { name: DeviceName }): Promise<Result<{ host: string, port: string }>>;
-  getDeviceInfo(options: Host): Promise<DeviceInfo>;
-  getDeviceConfig(options: Host): Promise<String>;
-  setDeviceLocation(options: Host & Location): Promise<void>;
-  getRecordings(options: Host): Promise<String[]>;
+  getDeviceInfo(options: Host): Promise<Result<DeviceInfo>>;
+  getDeviceConfig(options: Host): Promise<Result<String>>;
+  setDeviceLocation(options: Host & Location): Promise<Result>;
+  getRecordings(options: Host): Promise<Result<String[]>>;
   getTestText(): Promise<{ text: string }>;
 }
 
@@ -61,10 +59,7 @@ export interface DeviceActions {
   startDiscovery(): Promise<void>;
   stopDiscovery(): Promise<void>;
   getDeviceInterfaceUrl(host: string, port: string): string;
-  getDeviceInfo(device: ConnectedDevice): Promise<DeviceInfo>;
-  getDeviceConfig(device: ConnectedDevice): Promise<String>;
   setDeviceToCurrLocation(device: ConnectedDevice): Promise<void>;
-  getRecordings(device: ConnectedDevice): Promise<String[]>;
 }
 
 type DeviceContext = [DeviceState, DeviceActions]
@@ -76,8 +71,9 @@ interface DeviceProviderProps {
 }
 
 export function DeviceProvider(props: DeviceProviderProps) {
-  const [callbackID, setCallbackID] = createSignal<string>()
   const [state, setState] = createStore<DeviceState>({ devices: [], isDiscovering: false })
+  // Callback ID is used to determine if the device is currently discovering
+  const [callbackID, setCallbackID] = createSignal<string>()
 
   createEffect(() => {
     if (callbackID()) {
@@ -126,7 +122,7 @@ export function DeviceProvider(props: DeviceProviderProps) {
     if (state.isDiscovering) return
     setState("isDiscovering", true)
     const currentDevices = await getConnectedDevices(state.devices)
-    const setOriginalLocation = (device: Device) => {
+    const setOriginalLocation = (device: ConnectedDevice): ConnectedDevice => {
       const currentDevice = state.devices.find((currDevice) => currDevice.endpoint === device.endpoint)
       if (!currentDevice || !currentDevice.isConnected) return device
       return {
@@ -217,10 +213,7 @@ export function DeviceProvider(props: DeviceProviderProps) {
       startDiscovery,
       stopDiscovery,
       getDeviceInterfaceUrl,
-      getDeviceInfo,
-      getDeviceConfig,
       setDeviceToCurrLocation,
-      getRecordings
     }]}>
       {props.children}
     </DeviceContext.Provider>

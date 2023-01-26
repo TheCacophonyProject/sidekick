@@ -51,7 +51,7 @@ function NotificationBar(props: NotificationBarProps) {
   })
 
   return (
-    <section class={`bg-white border-4 ${color()} shadow-lg rounded-xl py-2 w-full]`}>
+    <section class={`bg-white border-4 ${color()} shadow-lg rounded-xl py-2 w-full z-50`}>
       <div class="flex mx-4 items-center justify-between py-1">
         <div class={` flex items-center w-full text-${color()}`}>
           {icon()}

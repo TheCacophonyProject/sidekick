@@ -1,23 +1,24 @@
 {
   ".solid/index.html": {
-    "file": "assets/index.c6c595c3.js",
+    "file": "assets/index.bd4965e6.js",
     "src": ".solid/index.html",
     "isEntry": true,
     "dynamicImports": [
       "src/routes/[...404].tsx",
       "src/routes/devices.tsx",
       "src/routes/index.tsx",
-      "src/routes/settings.tsx",
+      "src/routes/settings/index.tsx",
+      "src/routes/settings/user.tsx",
       "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/web.js",
       "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/web.js",
       "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation/dist/esm/web.js"
     ],
     "css": [
-      "assets/index.10b52fe6.css"
+      "assets/index.6d122e88.css"
     ]
   },
   "src/routes/[...404].tsx": {
-    "file": "assets/_...404_.688d4f72.js",
+    "file": "assets/_...404_.c6e2d4e9.js",
     "src": "src/routes/[...404].tsx",
     "isDynamicEntry": true,
     "imports": [
@@ -25,42 +26,59 @@
     ]
   },
   "src/routes/devices.tsx": {
-    "file": "assets/devices.34dcb59e.js",
+    "file": "assets/devices.6685069c.js",
     "src": "src/routes/devices.tsx",
     "isDynamicEntry": true,
     "imports": [
       ".solid/index.html",
-      "_ActionContainer.06b389ab.js"
+      "_ActionContainer.a4b05af6.js",
+      "_index.a94e72a9.js"
+    ]
+  },
+  "_ActionContainer.a4b05af6.js": {
+    "file": "assets/ActionContainer.a4b05af6.js",
+    "imports": [
+      ".solid/index.html"
+    ]
+  },
+  "_index.a94e72a9.js": {
+    "file": "assets/index.a94e72a9.js",
+    "imports": [
+      ".solid/index.html"
     ],
     "dynamicImports": [
       "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog/dist/esm/web.js"
     ]
   },
-  "_ActionContainer.06b389ab.js": {
-    "file": "assets/ActionContainer.06b389ab.js",
-    "imports": [
-      ".solid/index.html"
-    ]
-  },
   "src/routes/index.tsx": {
-    "file": "assets/index.2ce7443a.js",
+    "file": "assets/index.08515a1e.js",
     "src": "src/routes/index.tsx",
     "isDynamicEntry": true,
     "imports": [
       ".solid/index.html"
     ]
   },
-  "src/routes/settings.tsx": {
-    "file": "assets/settings.b80b8d73.js",
-    "src": "src/routes/settings.tsx",
+  "src/routes/settings/index.tsx": {
+    "file": "assets/index.fc408852.js",
+    "src": "src/routes/settings/index.tsx",
     "isDynamicEntry": true,
     "imports": [
       ".solid/index.html",
-      "_ActionContainer.06b389ab.js"
+      "_ActionContainer.a4b05af6.js"
+    ]
+  },
+  "src/routes/settings/user.tsx": {
+    "file": "assets/user.44d4df7d.js",
+    "src": "src/routes/settings/user.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      ".solid/index.html",
+      "_index.a94e72a9.js",
+      "_ActionContainer.a4b05af6.js"
     ]
   },
   "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/web.js": {
-    "file": "assets/web.3f0fe4a1.js",
+    "file": "assets/web.7d8ae5ad.js",
     "src": "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences/dist/esm/web.js",
     "isDynamicEntry": true,
     "imports": [
@@ -68,7 +86,7 @@
     ]
   },
   "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/web.js": {
-    "file": "assets/web.621685d1.js",
+    "file": "assets/web.d354fd72.js",
     "src": "node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser/dist/esm/web.js",
     "isDynamicEntry": true,
     "imports": [
@@ -76,7 +94,7 @@
     ]
   },
   "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation/dist/esm/web.js": {
-    "file": "assets/web.7c3652fd.js",
+    "file": "assets/web.0e674dcb.js",
     "src": "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation/dist/esm/web.js",
     "isDynamicEntry": true,
     "imports": [
@@ -84,7 +102,7 @@
     ]
   },
   "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog/dist/esm/web.js": {
-    "file": "assets/web.3373dc60.js",
+    "file": "assets/web.eef37515.js",
     "src": "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog/dist/esm/web.js",
     "isDynamicEntry": true,
     "imports": [
@@ -92,7 +110,7 @@
     ]
   },
   ".solid/index.css": {
-    "file": "assets/index.10b52fe6.css",
+    "file": "assets/index.6d122e88.css",
     "src": ".solid/index.css"
   }
 }

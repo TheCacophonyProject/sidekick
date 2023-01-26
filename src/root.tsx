@@ -43,7 +43,7 @@ export default function Root() {
 	return (
 		<Html lang="en">
 			<Head>
-				<Title>SolidStart - Bare</Title>
+				<Title>Sidekick</Title>
 				<Meta charset="utf-8" />
 				<Meta
 					name="viewport"
@@ -56,8 +56,8 @@ export default function Root() {
 					<ErrorBoundary>
 						<DeviceProvider>
 							<UserProvider>
-								<NotificationPopup />
 								<AppRoutes />
+								<NotificationPopup />
 							</UserProvider>
 						</DeviceProvider>
 					</ErrorBoundary>

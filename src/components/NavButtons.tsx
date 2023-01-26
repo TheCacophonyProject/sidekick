@@ -21,7 +21,6 @@ const NavButton = (props: NavButtonProps) => {
 			style="-webkit-tap-highlight-color: transparent;"
 			activeClass="text-blue-500"
 			inactiveClass="text-slate-300"
-			end={true}
 		>
 			<LabelledIcon size={32} icon={props.icon} label={props.label} />
 		</A>

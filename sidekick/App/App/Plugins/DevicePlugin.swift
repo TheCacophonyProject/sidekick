@@ -65,7 +65,7 @@ public class DevicePlugin: CAPPlugin {
         }
 
         connection.start(queue: .global())
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
             if (connection.state != .cancelled) {
                 connection.cancel()
                 call.resolve(["result":"error", "error": "Could not connect to device"])
