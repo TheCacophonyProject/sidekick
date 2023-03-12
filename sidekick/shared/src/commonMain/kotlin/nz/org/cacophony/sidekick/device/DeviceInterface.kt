@@ -1,18 +1,21 @@
 package nz.org.cacophony.sidekick.device
 
+import arrow.core.flatMap
+import arrow.core.right
 import io.ktor.client.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import nz.org.cacophony.sidekick.CapacitorInterface
-import nz.org.cacophony.sidekick.PluginCall
-import nz.org.cacophony.sidekick.success
+import nz.org.cacophony.sidekick.*
+import okio.Path.Companion.toPath
+import writeToFile
 
 @Suppress("UNUSED")
-class DeviceInterface : CapacitorInterface {
-    val client = HttpClient {
+class DeviceInterface(private val filePath: String): CapacitorInterface {
+    private val client = HttpClient {
         install(Auth) {
             basic {
                 sendWithoutRequest { true }
@@ -22,21 +25,21 @@ class DeviceInterface : CapacitorInterface {
         install(ContentNegotiation) {
             json(Json {
                 prettyPrint = true
-                ignoreUnknownKeys = true
+                isLenient = true
             })
         }
     }
-
-    private fun getDeviceFromCall(call: PluginCall) = validateCall(call, "url").map { (url) ->
-        DeviceApi(client, Device(url))
+    private fun getDeviceFromCall(call: PluginCall) = call.validateCall<Device>("url").map { device ->
+        DeviceApi(client, device)
     }
+
     fun getDeviceInfo(call: PluginCall) = runCatch(call) {
         getDeviceFromCall(call).map { deviceApi ->
             deviceApi.getDeviceInfo()
                 .fold(
                     { error -> call.reject(error.toString()) },
                     { info ->
-                        success(call,
+                        call.success(
                             mapOf(
                                 "serverURL" to info.serverURL,
                                 "groupName" to info.groupname,
@@ -53,20 +56,30 @@ class DeviceInterface : CapacitorInterface {
         getDeviceFromCall(call).map { deviceApi ->
             deviceApi.getConfig()
                 .fold(
-                    { error -> call.reject(error.toString()) },
-                    { config -> success(call, config) }
+                    { error -> call.failure(error.toString()) },
+                    { config -> call.success(config) }
+                )
+        }
+    }
+
+    fun getDeviceLocation(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call).map { deviceApi ->
+            deviceApi.getLocation()
+                .fold(
+                    { error -> call.reject(error.toString())},
+                    { call.success( it) }
                 )
         }
     }
 
     fun setDeviceLocation(call: PluginCall) = runCatch(call) {
         getDeviceFromCall(call).map { deviceApi ->
-            validateCall(call, "latitude", "longitude", "altitude", "accuracy", "timestamp")
-                .map { (lat, long, alt, acc, time) ->
-                    deviceApi.setLocation(Location(lat, long, alt, time, acc))
+            call.validateCall<Location>("latitude", "longitude", "altitude", "accuracy", "timestamp")
+                .map { location ->
+                    deviceApi.setLocation(location)
                         .fold(
-                            { error -> call.reject("Unable to set location: $error Lat:$lat Long:$long Alt:$alt Acc:$acc time:$time") },
-                            { success(call) },
+                            { error -> call.failure("Unable to set location: $error $location") },
+                            { call.success() },
                         )
                 }
         }
@@ -75,10 +88,61 @@ class DeviceInterface : CapacitorInterface {
     fun getRecordings(call: PluginCall) = runCatch(call) {
         getDeviceFromCall(call).map { deviceApi ->
             deviceApi.getRecordings()
-                .fold(
-                    { error -> call.reject(error.toString()) },
-                    { recordings -> success(call, recordings) }
-                )
+                .map { call.success(it) }
+                .mapLeft { call.failure("Unable to retrieve recordings from ${deviceApi.device.url}: $it") }
+        }
+    }
+
+    @Serializable
+    data class EventCall(val keys: String)
+    fun getEvents(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call).map { deviceApi ->
+            call.validateCall<EventCall>("keys").map { eventCall ->
+                deviceApi.getEvents(eventCall.keys).map {
+                    call.success(it)
+                }.mapLeft {
+                    call.failure("Unable to retrieve events from ${deviceApi.device.url}: $it")
+                }
+            }
+        }
+    }
+
+    fun deleteEvents(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call).map { deviceApi ->
+            call.validateCall<EventCall>("keys").map { eventCall ->
+                deviceApi.deleteEvents(eventCall.keys).map {
+                    call.success(it)
+                }.mapLeft {
+                    call.failure("Unable to delete events from ${deviceApi.device.url}: $it")
+                }
+            }
+        }
+    }
+
+    fun getEventKeys(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call).map { deviceApi ->
+            deviceApi.getEventKeys()
+                .map { call.success(it) }
+                .mapLeft { call.failure("Unable to retrieve event keys from ${deviceApi.device.url}: $it") }
+        }
+    }
+
+
+
+    @kotlinx.serialization.Serializable
+    data class Recording(val recordingPath: String)
+    fun downloadRecording(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call).map { deviceApi ->
+            call.validateCall<Recording>( "recordingPath")
+                .map { rec ->
+                    deviceApi.downloadFile(rec.recordingPath)
+                        .flatMap { file ->
+                            writeToFile(filePath.toPath().resolve("recordings/${rec.recordingPath}"), file).right()
+                                .map { call.success(mapOf("path" to it.toString(), "size" to file.size)) }
+                        }
+                        .mapLeft { call.failure("Unable to download file: $it") }
+                }
+
         }
     }
 

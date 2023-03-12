@@ -3,7 +3,13 @@ package nz.org.cacophony.sidekick
 import arrow.core.*
 import arrow.core.Either.Companion.resolve
 import io.ktor.client.plugins.*
+import io.ktor.util.reflect.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 
 // Zipper class for interface between Capacitor(iOS and Android) and Kotlin to allow direct passing
 // of data between the two
@@ -14,23 +20,31 @@ interface PluginCall {
     fun reject(message: String)
 }
 
-fun success(call: PluginCall, data: Any? = null) = data
-    .rightIfNotNull { call.resolve(mapOf("result" to "success")) }
-    .map { call.resolve(mapOf("result" to "success", "data" to it)) }
 
 sealed interface CapacitorInterfaceError {
     data class EmptyKey(val key: String) : CapacitorInterfaceError
 }
 
 interface CapacitorInterface {
-    fun <T> runCatch(call: PluginCall, block: suspend () -> T) = Either.catch {  runBlocking { block() } }.mapLeft { call.reject(it.message ?: "Unknown error") }
-    fun validateCall(call: PluginCall, vararg keys: String): ValidatedNel<CapacitorInterfaceError,  List<String>> =
-        keys.toList().traverse {
-           val value = call.getString(it)
-            when {
-                value.isNullOrEmpty() -> CapacitorInterfaceError.EmptyKey(it).invalidNel()
-                else -> value.validNel()
-            }
-        }
-
+    fun <T> runCatch(call: PluginCall, block: suspend () -> T) = Either.catch { runBlocking { block() } }.mapLeft { call.reject(it.message ?: "Unknown error") }
 }
+
+inline fun PluginCall.success(data: Any? = null) = data
+    .rightIfNotNull { resolve(mapOf("success" to true)) }
+    .map { resolve(mapOf("success" to true, "data" to it)) }
+
+inline fun PluginCall.failure(message: String) = resolve(
+    mapOf(
+        "success" to false,
+        "message" to message
+    )
+)
+inline fun <reified T> PluginCall.validateCall(vararg keys: String): Either<CapacitorInterfaceError, T> =
+    keys.toList()
+        .traverse { key ->
+            getString(key)
+                .rightIfNotNull { CapacitorInterfaceError.EmptyKey(key) }
+                .map { key to it }
+        }.map{ pairs -> pairs.associate { it.first to it.second }}.map {
+               return Json.decodeFromString<T>(Json.encodeToString(it)).right()
+        }.mapLeft { CapacitorInterfaceError.EmptyKey(it.key) }

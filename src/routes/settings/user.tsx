@@ -3,46 +3,50 @@ import { BiRegularLogOut } from "solid-icons/bi";
 import { BsPersonFill } from "solid-icons/bs";
 import { Show, useContext } from "solid-js";
 import ActionContainer from "~/components/ActionContainer";
-import { UserContext } from "~/contexts/User";
+import { useUserContext } from "~/contexts/User";
 
 function user() {
-  const [user, { logout, requestDeletion }] = useContext(UserContext)
+  const userContext = useUserContext();
   const logoutAccount = async () => {
-    // prompt user to confirm deletion
-    // if confirmed, call requestDeletion
     const { value } = await Dialog.confirm({
       title: "Confirm",
       message: `Are you sure you want to logout?`,
-    })
+    });
     if (value) {
-      logout()
+      userContext?.logout();
     }
-  }
+  };
   const deleteAccount = async () => {
-    // prompt user to confirm logout
-    // if confirmed, call logout
     const { value } = await Dialog.confirm({
       title: "Confirm",
       message: `Deletion of your account is irreversible and will take 24-48 hours to complete. Are you sure you want to delete your account?`,
-    })
+    });
     if (value) {
-      return requestDeletion()
+      return userContext?.requestDeletion();
     }
-  }
+  };
   return (
-    <div class="h-full px-2 pt-bar pb-bar space-y-2 bg-gray-200">
+    <div class="pt-bar pb-bar h-full space-y-2 bg-gray-200 px-2">
       <ActionContainer>
         <>
-          <button class="w-full text-2xl text-blue-500 flex items-center justify-center space-x-2" onClick={logoutAccount}>Logout<BiRegularLogOut size={24} /></button>
+          <button
+            class="flex w-full items-center justify-center space-x-2 text-2xl text-blue-500"
+            onClick={logoutAccount}
+          >
+            Logout
+            <BiRegularLogOut size={24} />
+          </button>
         </>
       </ActionContainer>
       <ActionContainer>
         <>
-          <button class="w-full text-2xl text-red-500" onClick={deleteAccount}>Delete Account</button>
+          <button class="w-full text-2xl text-red-500" onClick={deleteAccount}>
+            Delete Account
+          </button>
         </>
       </ActionContainer>
     </div>
-  )
+  );
 }
 
 export default user;

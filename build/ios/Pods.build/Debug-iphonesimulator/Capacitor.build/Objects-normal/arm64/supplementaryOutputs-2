@@ -1,0 +1,25 @@
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridge.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridge.d"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridge.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridge.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridge.dia"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPApplicationDelegateProxy.swift":
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPApplicationDelegateProxy.o"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPApplicationDelegateProxy.swiftdeps"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPApplicationDelegateProxy.dia"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPApplicationDelegateProxy.d"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/CapacitorHttp.swift":
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorHttp.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorHttp.o"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorHttp.d"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorHttp.dia"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/CapacitorUrlRequest.swift":
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorUrlRequest.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorUrlRequest.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorUrlRequest.dia"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CapacitorUrlRequest.d"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridgeDelegate.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeDelegate.d"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeDelegate.o"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeDelegate.swiftdeps"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeDelegate.dia"

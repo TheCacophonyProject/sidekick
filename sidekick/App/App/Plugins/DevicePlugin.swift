@@ -8,9 +8,11 @@
 import Network
 import Capacitor
 import shared
+import NetworkExtension
 
 let type = "_cacophonator-management._tcp"
 let domain = "local."
+
 @objc(DevicePlugin)
 public class DevicePlugin: CAPPlugin {
     enum CallType {
@@ -22,7 +24,8 @@ public class DevicePlugin: CAPPlugin {
         case success
         case failed
     }
-    @objc let device = DeviceInterface()
+    @objc let device = DeviceInterface(filePath: documentPath)
+    
     private var callQueue: [String: CallType] = [:]
     func createBrowser() -> NWBrowser {
         return NWBrowser(for: .bonjour(type: type, domain: domain), using: .tcp)
@@ -50,17 +53,17 @@ public class DevicePlugin: CAPPlugin {
         guard let id = call.getString("id") else { return call.reject("No Id Found")}
         bridge.releaseCall(withID: id)
         serviceBrowser?.cancel()
-        call.resolve(["result": "success", "id": id])
+        call.resolve(["success": true, "id": id])
     }
     @objc func getDeviceConnection(_ call: CAPPluginCall) {
-        guard let name = call.getString("name") else { return call.reject("Device name required")}
+        guard let name = call.getString("host") else { return call.reject("Device host required")}
         
         let connection = NWConnection.init(to: NWEndpoint.service(name: name, type: type, domain: domain, interface: .none), using: .tcp)
         connection.stateUpdateHandler = {(state: NWConnection.State) in
             if state == .ready, let innerEnpoint = connection.currentPath?.remoteEndpoint, case .hostPort(let host, let port) = innerEnpoint {
                 print(host, port)
                 connection.cancel()
-                call.resolve(["result":"success", "data":["host": host.debugDescription.replacingOccurrences(of: "%en0", with: ""), "port": port.debugDescription]])
+                call.resolve(["success": true, "data":["ip": host.debugDescription.replacingOccurrences(of: "%en0", with: ""), "port": port.debugDescription]])
             }
         }
 
@@ -68,7 +71,21 @@ public class DevicePlugin: CAPPlugin {
         DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
             if (connection.state != .cancelled) {
                 connection.cancel()
-                call.resolve(["result":"error", "error": "Could not connect to device"])
+                call.resolve(["success": false, "error": "Could not connect to device"])
+            }
+        }
+    }
+    
+    @objc func connectToDeviceAP(_ call: CAPPluginCall) {
+        let ssid = "bushnet"
+        let passphrase = "feathers"
+        let configuration = NEHotspotConfiguration(ssid: ssid, passphrase: passphrase, isWEP: false)
+        
+        NEHotspotConfigurationManager.shared.apply(configuration) { error in
+            if let error = error {
+                call.resolve(["success": false, "error": "\(error.localizedDescription)"])
+            } else {
+                call.resolve(["success": true])
             }
         }
     }
@@ -81,12 +98,30 @@ public class DevicePlugin: CAPPlugin {
         device.getDeviceConfig(call: pluginCall(call: call))
     }
     
+    @objc func getDeviceLocation(_ call: CAPPluginCall) {
+        device.getDeviceLocation(call: pluginCall(call: call))
+    }
+    
     @objc func setDeviceLocation(_ call: CAPPluginCall) {
         device.setDeviceLocation(call: pluginCall(call: call))
     }
 
     @objc func getRecordings(_ call: CAPPluginCall) {
         device.getRecordings(call: pluginCall(call: call))
+    }
+    
+    @objc func getEvents(_ call: CAPPluginCall) {
+        device.getEvents(call: pluginCall(call: call))
+    }
+    @objc func deleteEvents(_ call: CAPPluginCall) {
+        device.deleteEvents(call: pluginCall(call: call))
+    }
+    @objc func getEventKeys(_ call: CAPPluginCall) {
+        device.getEventKeys(call: pluginCall(call: call))
+    }
+    
+    @objc func downloadRecording(_ call: CAPPluginCall) {
+        device.downloadRecording(call: pluginCall(call: call))
     }
     
     @objc func getTestText(_ call: CAPPluginCall) {

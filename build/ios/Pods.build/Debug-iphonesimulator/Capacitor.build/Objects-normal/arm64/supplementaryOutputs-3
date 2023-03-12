@@ -1,0 +1,25 @@
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPFile.swift":
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPFile.o"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPFile.swiftdeps"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPFile.dia"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPFile.d"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridgeProtocol.swift":
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeProtocol.swiftdeps"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeProtocol.d"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeProtocol.dia"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeProtocol.o"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPInstanceConfiguration.swift":
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceConfiguration-1dc43213e22392177ae35d931b3ef0f3.dia"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceConfiguration-1dc43213e22392177ae35d931b3ef0f3.d"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceConfiguration-1dc43213e22392177ae35d931b3ef0f3.o"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceConfiguration-1dc43213e22392177ae35d931b3ef0f3.swiftdeps"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPInstanceDescriptor.swift":
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceDescriptor-70465de4c441afe932a948b460a6848b.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceDescriptor-70465de4c441afe932a948b460a6848b.o"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceDescriptor-70465de4c441afe932a948b460a6848b.d"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPInstanceDescriptor-70465de4c441afe932a948b460a6848b.dia"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridgeViewController.swift":
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeViewController.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeViewController.dia"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeViewController.swiftdeps"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/CAPBridgeViewController.d"

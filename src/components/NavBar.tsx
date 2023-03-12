@@ -1,21 +1,20 @@
 import { A } from "solid-start";
 import {
-	DashboardNav,
-	DevicesNav,
-	StorageNav,
-	SettingsNav,
+  DashboardNav,
+  DevicesNav,
+  StorageNav,
+  SettingsNav,
 } from "./NavButtons";
 
-
 function NavBar() {
-	return (
-		<nav class="fixed bottom-0 flex flex-row justify-around pb-bar w-screen px-4 bg-gray-50 border border-t-2 h-28">
-			{/* <DashboardNav /> */}
-			<DevicesNav />
-			{/* <StorageNav /> */}
-			<SettingsNav />
-		</nav>
-	);
+  return (
+    <nav class="pb-bar fixed bottom-0 flex h-28 w-screen flex-row justify-around border border-t-2 bg-gray-50 px-4">
+      {/* <DashboardNav /> */}
+      <DevicesNav />
+      <StorageNav />
+      <SettingsNav />
+    </nav>
+  );
 }
 
 export default NavBar;

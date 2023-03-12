@@ -1,10 +1,10 @@
 import { createSignal, Show, useContext } from "solid-js";
 import { A, createRouteAction, Navigate } from "solid-start";
-import { Browser } from '@capacitor/browser';
-import { UserContext } from "./contexts/User";
-import { z } from "zod"
+import { Browser } from "@capacitor/browser";
+import { z } from "zod";
 import CacaophonyLogo from "./components/CacaophonyLogo";
 import { logSuccess } from "./contexts/Notification";
+import { useUserContext } from "./contexts/User";
 type LoginInput = Partial<{
   type: string;
   placeholder: string;
@@ -12,91 +12,135 @@ type LoginInput = Partial<{
   label: string;
   invalid: boolean;
   onInput: (event: Event) => void;
-}>
+}>;
 
 const LoginInput = (props: LoginInput) => {
   return (
     <div class="flex flex-col text-gray-600">
-      <label class="font-base" for={props.name}>{props.label}</label>
-      <input class="shadow-inner rounded-md py-3 px-2 border-2 transition-colors" classList={{ "border-slate-50": !props.invalid, "border-red-300": props.invalid }} type={props.type} placeholder={props.placeholder} name={props.name} onInput={props.onInput} />
+      <label class="font-base" for={props.name}>
+        {props.label}
+      </label>
+      <input
+        class="rounded-md border-2 py-3 px-2 shadow-inner transition-colors"
+        classList={{
+          "border-slate-50": !props.invalid,
+          "border-red-300": props.invalid,
+        }}
+        type={props.type}
+        placeholder={props.placeholder}
+        name={props.name}
+        onInput={props.onInput}
+      />
     </div>
-  )
-}
+  );
+};
 
-const emailSchema = z.string().email("Invalid Email")
-const passwordSchema = z.string().min(8, "Password must be at least 8 characters")
+const emailSchema = z.string().email("Invalid Email");
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters");
 
 function Login() {
-  const [_user, { login, skip, toggleServer }] = useContext(UserContext)
-  const [emailError, setEmailError] = createSignal('')
-  const [passwordError, setPasswordError] = createSignal('')
-  const [error, setError] = createSignal('')
-  const [loggingIn, setLoggingIn] = createSignal(false)
+  const user = useUserContext();
+  const [emailError, setEmailError] = createSignal("");
+  const [passwordError, setPasswordError] = createSignal("");
+  const [error, setError] = createSignal("");
+  const [loggingIn, setLoggingIn] = createSignal(false);
   const [_form, { Form }] = createRouteAction(async (formData: FormData) => {
-    setLoggingIn(true)
-    setEmailError('')
-    setPasswordError('')
-    setError('')
-    const email = emailSchema.safeParse(formData.get('email'))
+    setLoggingIn(true);
+    setEmailError("");
+    setPasswordError("");
+    setError("");
+    const email = emailSchema.safeParse(formData.get("email"));
     if (email.success === false) {
-      setEmailError(email.error.message)
+      setEmailError(email.error.message);
     }
-    const password = passwordSchema.safeParse(formData.get('password'));
+    const password = passwordSchema.safeParse(formData.get("password"));
     if (password.success === false) {
-      setPasswordError(password.error.message)
+      setPasswordError(password.error.message);
     }
     if (emailError() || passwordError()) {
-      setError("Invalid Email or Password")
+      setError("Invalid Email or Password");
     }
     if (email.success && password.success) {
-      await login(email.data, password.data).catch((error) => {
-        setError("Invalid Email or Password")
-      })
+      await user?.login(email.data, password.data).catch((error) => {
+        setError("Invalid Email or Password");
+      });
     }
-    setLoggingIn(false)
-  })
+    setLoggingIn(false);
+  });
   const onInput = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    if (target.name === 'email') {
-      setEmailError('')
+    const target = event.target as HTMLInputElement;
+    if (target.name === "email") {
+      setEmailError("");
     }
-    if (target.name === 'password') {
-      setPasswordError('')
+    if (target.name === "password") {
+      setPasswordError("");
     }
-    setError('')
-  }
+    setError("");
+  };
   // Create a way to check if user is holding logo down for 5 taps
   // If so, toggle server
-  const [pressed, setPressed] = createSignal(0)
+  const [pressed, setPressed] = createSignal(0);
   const logoDown = () => {
-    setPressed(pressed() + 1)
+    setPressed(pressed() + 1);
     if (pressed() === 5) {
-      toggleServer()
-      setPressed(0)
+      user?.toggleServer();
+      setPressed(0);
     }
-  }
+  };
 
   return (
-    <Form class="flex flex-col mx-8 gap-y-4 text-lg justify-center h-full">
+    <Form class="mx-8 flex h-full flex-col justify-center gap-y-4 text-lg">
       <div class="mb-6 mt-24" role="button" onTouchStart={logoDown}>
         <CacaophonyLogo />
       </div>
-      <LoginInput type="email" placeholder="example@gmail.com" name="email" label="Email" invalid={Boolean(emailError())} onInput={onInput} />
-      <LoginInput type="password" name="password" label="Password" invalid={Boolean(passwordError())} onInput={onInput} />
+      <LoginInput
+        type="email"
+        placeholder="example@gmail.com"
+        name="email"
+        label="Email"
+        invalid={Boolean(emailError())}
+        onInput={onInput}
+      />
+      <LoginInput
+        type="password"
+        name="password"
+        label="Password"
+        invalid={Boolean(passwordError())}
+        onInput={onInput}
+      />
       <Show when={error} fallback={<div class="h-8" />}>
-        <p class="text-red-500 h-8">{error}</p>
+        <p class="h-8 text-red-500">{error}</p>
       </Show>
-      <button class="mb-8 py-4 rounded-md font-semibold bg-blue-500 text-white" type="submit">{loggingIn() ? "Logging In..." : "Login"}</button>
-      <p class="text-gray-600 text-base">
+      <button
+        class="mb-8 rounded-md bg-blue-500 py-4 font-semibold text-white"
+        type="submit"
+      >
+        {loggingIn() ? "Logging In..." : "Login"}
+      </button>
+      <p class="text-base text-gray-600">
         Don't have a Cacophony Account?
-        <button class="text-blue-500 ml-1" onClick={() => Browser.open({ url: 'https://browse.cacophony.org.nz/register' })}>Register</button>
+        <button
+          class="ml-1 text-blue-500"
+          onClick={() => {
+            Browser.open({ url: "https://browse.cacophony.org.nz/register" });
+          }}
+        >
+          Register
+        </button>
       </p>
-      <button class="text-blue-500" onClick={(e) => {
-        e.preventDefault()
-        skip()
-      }}>Skip Login</button>
+      <button
+        class="text-blue-500"
+        onClick={(e) => {
+          e.preventDefault();
+          user?.skip();
+        }}
+      >
+        Skip Login
+      </button>
     </Form>
-  )
+  );
 }
 
 export default Login;

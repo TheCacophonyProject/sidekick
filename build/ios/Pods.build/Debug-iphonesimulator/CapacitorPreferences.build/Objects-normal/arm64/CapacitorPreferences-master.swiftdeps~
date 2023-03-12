@@ -1,0 +1,9 @@
+version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
+options: "506857fe01c52d7d8ad5ca0e02ced20b8d9c977b6a9af7f3c66f1f2321dec1af"
+build_start_time: [1678250638, 584941864]
+build_end_time: [1678250638, 606912136]
+inputs:
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.6.3/node_modules/@capacitor/preferences/ios/Plugin/Preferences.swift"
+  : !private [1670798005, 982874631]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.6.3/node_modules/@capacitor/preferences/ios/Plugin/PreferencesPlugin.swift"
+  : !private [1670798005, 983175039]

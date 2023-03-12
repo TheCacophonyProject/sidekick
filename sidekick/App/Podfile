@@ -8,13 +8,15 @@ use_frameworks!
 install! 'cocoapods', :disable_input_output_paths => true
 
 def capacitor_pods
-  pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios'
-  pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios'
-  pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser'
-  pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard'
-  pod 'CapacitorDialog', :path => '../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog'
-  pod 'CapacitorGeolocation', :path => '../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation'
-  pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences'
+  pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios'
+  pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite'
+  pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser'
+  pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/clipboard'
+  pod 'CapacitorDialog', :path => '../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog'
+  pod 'CapacitorFilesystem', :path => '../../node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem'
+  pod 'CapacitorGeolocation', :path => '../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation'
+  pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences'
 end
 
 target 'App' do

@@ -8,12 +8,9 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.util.date.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import nz.org.cacophony.sidekick.cacophony.user.AuthToken
-import nz.org.cacophony.sidekick.cacophony.user.Token
-import kotlin.time.Duration
+import nz.org.cacophony.sidekick.cacophony.Token
 
 @optics
 sealed interface ApiError
@@ -72,9 +69,37 @@ suspend inline fun <reified T> Api.postJSON(
     }.right()
 }.mapLeft { PostError(it.message ?: "Unknown error Post Request", childPath(path)) }
 
-suspend inline fun Api.getRequest(path: String): Either<GetError, HttpResponse> =
+suspend inline fun Api.post(
+    path: String,
+    block: HttpRequestBuilder.() -> Unit,
+): Either<PostError, HttpResponse> = Either.catch {
+    return client.post(childPath(path),block).right()
+}.mapLeft { PostError(it.message ?: "Unknown error Post Request", childPath(path)) }
+
+suspend inline fun Api.get(
+    path: String,
+    block: HttpRequestBuilder.() -> Unit,
+): Either<GetError, HttpResponse> = Either.catch {
+    return client.get(childPath(path),block).right()
+}.mapLeft { GetError(it.message ?: "Unknown error Post Request", childPath(path)) }
+
+suspend inline fun Api.delete(
+    path: String,
+    block: HttpRequestBuilder.() -> Unit,
+): Either<GetError, HttpResponse> = Either.catch {
+    return client.delete(childPath(path),block).right()
+}.mapLeft { GetError(it.message ?: "Unknown error Post Request", childPath(path)) }
+
+
+suspend inline fun Api.getRequest(path: String, token: Token? = null): Either<GetError, HttpResponse> =
     Either.catch {
-        return client.get(childPath(path)).right()
+        return client.get(childPath(path)) {
+            headers {
+                token?.let {
+                    append(HttpHeaders.Authorization, token)
+                }
+            }
+        }.right()
     }.mapLeft {
         GetError(it.message ?: "Unknown error Get Request", childPath(path))
     }
@@ -90,9 +115,15 @@ suspend inline fun Api.deleteRequest(path: String, token: Token? = null): Either
         DeleteError(it.message ?: "Unknown error Delete Request", childPath(path))
     }
 
-suspend inline fun Api.submitForm(path: String, form: Parameters): Either<GetError, HttpResponse> =
+suspend inline fun Api.submitForm(path: String, form: Parameters, token: Token? = null, encodeInQuery: Boolean = false): Either<GetError, HttpResponse> =
     Either.catch {
-        return client.submitForm(childPath(path), form).right()
+        return client.submitForm(childPath(path), form, encodeInQuery) {
+            headers {
+                token?.let {
+                    append(HttpHeaders.Authorization, token)
+                }
+            }
+        }.right()
     }.mapLeft {
         GetError(
             it.message ?: "Unknown error Get Request",
@@ -101,6 +132,7 @@ suspend inline fun Api.submitForm(path: String, form: Parameters): Either<GetErr
     }
 
 suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<InvalidResponse, T> {
+    println(response.contentType())
     return when (response.status) {
         HttpStatusCode.OK -> Either.catch {
             return response.body<T>().right()
@@ -120,7 +152,8 @@ suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<
 
 inline fun <reified T> decodeToJSON(json: String): Either<ParsingError, T> {
     return Either.catch {
-        return Json.decodeFromString<T>(json).right()
+        val json = Json.decodeFromString<T>(json)
+        return json.right()
     }.mapLeft {
         ParsingError("Error parsing JSON ${it.cause?.message}: ${it.message}")
     }

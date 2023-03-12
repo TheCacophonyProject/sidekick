@@ -7,12 +7,8 @@ plugins {
 
 kotlin {
     android()
-    iosX64 {
-        compilations["main"].cinterops.create("ios_nw")
-    }
-    iosArm64 {
-        compilations["main"].cinterops.create("ios_nw")
-    }
+    iosX64()
+    iosArm64()
     iosSimulatorArm64()
 
 
@@ -42,9 +38,10 @@ kotlin {
                 implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
                 implementation("io.ktor:ktor-client-auth:$ktorVersion")
-
+                implementation("io.ktor:ktor-client-encoding:$ktorVersion")
 
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+                implementation("com.squareup.okio:okio:3.3.0")
 
             }
         }
@@ -60,7 +57,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
             }
         }
-        val androidTest by getting
+        val androidUnitTest by getting
         val iosX64Main by getting
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting

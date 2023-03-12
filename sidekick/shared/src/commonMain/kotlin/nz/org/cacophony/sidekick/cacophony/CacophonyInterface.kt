@@ -1,0 +1,106 @@
+package nz.org.cacophony.sidekick.cacophony
+
+import arrow.core.Either
+import arrow.core.flatMap
+import arrow.core.right
+import kotlinx.serialization.Serializable
+import nz.org.cacophony.sidekick.*
+import okio.Path
+import okio.Path.Companion.toPath
+import writeToFile
+
+@Suppress("UNUSED")
+data class CacophonyInterface(val filePath: String): CapacitorInterface {
+    val api = CacophonyApi()
+    private val userApi = UserApi(api)
+    private val recordingApi = RecordingApi(api)
+
+    @kotlinx.serialization.Serializable
+    data class User(val email: String, val password: String)
+    fun authenticateUser(call: PluginCall) = runCatch(call) {
+        call.validateCall<User>("email", "password").map { (email, password) ->
+                userApi.authenticateUser(email, password)
+                    .fold(
+                        { error -> call.failure(error.toString()) },
+                        { authUser ->
+                            val resolvedObj = mapOf(
+                                "id" to authUser.id.toString(),
+                                "email" to authUser.email,
+                                "token" to authUser.token.token,
+                                "refreshToken" to authUser.token.refreshToken,
+                            )
+                            call.success(resolvedObj)
+                        }
+                    )
+            }
+        }
+    private fun getTokenFromCall(call: PluginCall): Either<Unit, AuthToken> = call.validateCall<AuthToken>("token", "refreshToken", "expiry")
+        .mapLeft { call.reject("Invalid arguments for token $it") }
+
+    data class RequestDeletion(val token: String)
+    fun requestDeletion(call: PluginCall) = runCatch(call) {
+        call.validateCall<RequestDeletion>("token").map { (token) ->
+            userApi.requestDeletion(token)
+
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success() }
+                )
+        }
+    }
+
+    fun validateToken(call: PluginCall) = runCatch(call) {
+        getTokenFromCall(call).map { token ->
+            userApi.validateToken(token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { authUser ->
+                        call.success(mapOf(
+                            "token" to authUser.token,
+                            "refreshToken" to authUser.refreshToken,
+                            "expiry" to authUser.expiry,
+                        ))
+                    }
+                )
+        }
+    }
+
+    @Serializable
+    data class Recording(val token: String, val device: String,val file: String, val type: String, val filename: String)
+    fun uploadRecording(call: PluginCall) = runCatch(call) {
+        call.validateCall<Recording>("token", "device", "file", "type", "filename").map { recording ->
+                recordingApi.uploadRecording(
+                    filePath.toPath().resolve("recordings/${recording.filename}"), recording.filename, recording.device, recording.token, recording.type)
+                    .fold(
+                        { error -> call.reject(error.toString()) },
+                        { call.success(mapOf("recordingId" to it.recordingId, "messages" to it.messages)) }
+                    )
+        }
+    }
+
+    @Serializable
+    data class UploadEventCall(val token: String, val device: String, val eventId: String, val type: String, val details: String, val timeStamp: String)
+    fun uploadEvent(call: PluginCall) = runCatch(call) {
+        call.validateCall<UploadEventCall>("token", "device", "eventId", "type", "details", "timeStamp").map { event ->
+            recordingApi.uploadEvent( event.device,event.token, RecordingApi.UploadEventBody(event.eventId.toInt(), listOf(event.timeStamp), RecordingApi.UploadEventDescription(event.type, event.details)))
+                .fold(
+                    { error -> call.reject(error.toString()) },
+                    { call.success(mapOf(
+                       "eventDetailId" to it.eventDetailId,
+                        "eventsAdded" to it.eventsAdded,
+                        "messages" to it.messages
+                    )) }
+                )
+        }
+    }
+
+    fun setToTestServer(call: PluginCall) = runCatch(call) {
+        api.setToTest();
+        call.success()
+    }
+
+    fun setToProductionServer(call: PluginCall) = runCatch(call) {
+        api.setToProd();
+        call.success()
+    }
+}

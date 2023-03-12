@@ -2,102 +2,162 @@
   "/*404": [
     {
       "type": "script",
-      "href": "/assets/_...404_.c6e2d4e9.js"
+      "href": "/assets/_...404_-b3d55b5d.js"
     },
     {
       "type": "script",
-      "href": "/assets/index.bd4965e6.js"
+      "href": "/assets/index-f88eeaa7.js"
     },
     {
       "type": "style",
-      "href": "/assets/index.6d122e88.css"
+      "href": "/assets/index-01936849.css"
     }
   ],
   "/devices": [
     {
       "type": "script",
-      "href": "/assets/devices.6685069c.js"
+      "href": "/assets/devices-a74cc982.js"
     },
     {
       "type": "script",
-      "href": "/assets/index.bd4965e6.js"
+      "href": "/assets/index-f88eeaa7.js"
     },
     {
       "type": "style",
-      "href": "/assets/index.6d122e88.css"
+      "href": "/assets/index-01936849.css"
     },
     {
       "type": "script",
-      "href": "/assets/ActionContainer.a4b05af6.js"
+      "href": "/assets/ActionContainer-3cd0ceda.js"
     },
     {
       "type": "script",
-      "href": "/assets/index.a94e72a9.js"
+      "href": "/assets/index-f1e8cfe7.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/CircleButton-5d610d1b.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/index-cb72b98b.js"
     }
   ],
   "/": [
     {
       "type": "script",
-      "href": "/assets/index.08515a1e.js"
+      "href": "/assets/index-c0b3408b.js"
     },
     {
       "type": "script",
-      "href": "/assets/index.bd4965e6.js"
+      "href": "/assets/index-f88eeaa7.js"
     },
     {
       "type": "style",
-      "href": "/assets/index.6d122e88.css"
+      "href": "/assets/index-01936849.css"
     }
   ],
   "/settings/": [
     {
       "type": "script",
-      "href": "/assets/index.fc408852.js"
+      "href": "/assets/index-9974814e.js"
     },
     {
       "type": "script",
-      "href": "/assets/index.bd4965e6.js"
+      "href": "/assets/index-f88eeaa7.js"
     },
     {
       "type": "style",
-      "href": "/assets/index.6d122e88.css"
+      "href": "/assets/index-01936849.css"
     },
     {
       "type": "script",
-      "href": "/assets/ActionContainer.a4b05af6.js"
+      "href": "/assets/index-cb72b98b.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/ActionContainer-3cd0ceda.js"
     }
   ],
   "/settings/user": [
     {
       "type": "script",
-      "href": "/assets/user.44d4df7d.js"
+      "href": "/assets/user-c34561f4.js"
     },
     {
       "type": "script",
-      "href": "/assets/index.bd4965e6.js"
+      "href": "/assets/index-f88eeaa7.js"
     },
     {
       "type": "style",
-      "href": "/assets/index.6d122e88.css"
+      "href": "/assets/index-01936849.css"
     },
     {
       "type": "script",
-      "href": "/assets/index.a94e72a9.js"
+      "href": "/assets/index-f1e8cfe7.js"
     },
     {
       "type": "script",
-      "href": "/assets/ActionContainer.a4b05af6.js"
+      "href": "/assets/ActionContainer-3cd0ceda.js"
+    }
+  ],
+  "/storage/": [
+    {
+      "type": "script",
+      "href": "/assets/index-51308bc9.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/index-f88eeaa7.js"
+    },
+    {
+      "type": "style",
+      "href": "/assets/index-01936849.css"
+    },
+    {
+      "type": "script",
+      "href": "/assets/index-cb72b98b.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/ActionContainer-3cd0ceda.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/CircleButton-5d610d1b.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/index-f1e8cfe7.js"
+    }
+  ],
+  "/storage/recordings": [
+    {
+      "type": "script",
+      "href": "/assets/recordings-f8b62327.js"
+    },
+    {
+      "type": "script",
+      "href": "/assets/index-f88eeaa7.js"
+    },
+    {
+      "type": "style",
+      "href": "/assets/index-01936849.css"
+    },
+    {
+      "type": "script",
+      "href": "/assets/ActionContainer-3cd0ceda.js"
     }
   ],
   "entry-client": [],
   "index.html": [
     {
       "type": "script",
-      "href": "/assets/index.bd4965e6.js"
+      "href": "/assets/index-f88eeaa7.js"
     },
     {
       "type": "style",
-      "href": "/assets/index.6d122e88.css"
+      "href": "/assets/index-01936849.css"
     }
   ]
 }

@@ -1,0 +1,9 @@
+version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
+options: "ba7c90aab67e47fc47273a0d6be5c4dc8ed24797a08f52d1082074b34ebfe3b6"
+build_start_time: [1678250640, 731672048]
+build_end_time: [1678250642, 786113977]
+inputs:
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.6.3/node_modules/@capacitor/browser/ios/Plugin/Browser.swift"
+  : [1670798004, 460891008]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.6.3/node_modules/@capacitor/browser/ios/Plugin/BrowserPlugin.swift"
+  : [1670798004, 463311672]

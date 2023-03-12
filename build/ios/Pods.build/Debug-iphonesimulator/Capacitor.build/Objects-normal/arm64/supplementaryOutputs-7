@@ -1,0 +1,25 @@
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/TmpViewController.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/TmpViewController.d"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/TmpViewController.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/TmpViewController.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/TmpViewController.dia"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/NotificationRouter.swift":
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationRouter.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationRouter.dia"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationRouter.swiftdeps"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationRouter.d"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/PluginCallResult.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginCallResult.d"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginCallResult.swiftdeps"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginCallResult.dia"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginCallResult.o"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Router.swift":
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/Router.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/Router.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/Router.dia"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/Router.d"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/PluginConfig.swift":
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginConfig.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginConfig.dia"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginConfig.swiftdeps"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/PluginConfig.d"

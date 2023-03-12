@@ -1,184 +1,181 @@
-import { registerPlugin } from "@capacitor/core";
-import { createContext, createEffect, createResource, createSignal, JSX, onMount, Resource } from "solid-js";
-import { createStore, Store } from "solid-js/store";
-import { Preferences } from '@capacitor/preferences';
+import { createEffect, createResource, createSignal, onMount } from "solid-js";
+import { createContextProvider } from "@solid-primitives/context";
+import { createStore } from "solid-js/store";
+import { Preferences } from "@capacitor/preferences";
 import { logError, logSuccess } from "./Notification";
-import { Result } from ".";
-export interface UserPlugin {
-  authenticateUser(user: { email: string, password: string }): Promise<Result<{ token: string, id: string, email: string, refreshToken: string }>>;
-  requestDeletion(user: { token: string }): Promise<Result<string>>;
-  validateToken(token: AuthToken): Promise<Result<AuthToken>>;
-  setToProductionServer(): Promise<Result>
-  setToTestServer(): Promise<Result>
-}
+import { PromiseResult, Result } from ".";
+import { z } from "zod";
+import { CacophonyPlugin } from "./CacophonyApi";
+const UserSchema = z.object({
+  token: z.string(),
+  id: z.string(),
+  email: z.string(),
+  refreshToken: z.string(),
+  expiry: z.string(),
+  prod: z.boolean(),
+});
 
-const ApiUrl = "https://api-test.cacophony.org.nz/api/v1"
-
-const UserPlugin = registerPlugin<UserPlugin>("User");
-
-type AuthToken = {
-  token: string;
-  refreshToken: string;
-  expiry: string;
-}
-type User = AuthToken & {
-  id: string;
-  email: string;
-}
-
-type UserState = Store<{
-  data: Resource<User>;
-  skippedLogin: Resource<boolean>;
-  isAuthorized: boolean;
-}>
-
-interface UserActions {
-  login(email: string, password: string): Promise<void>;
-  logout(): void;
-  requestDeletion(): Promise<{
-    data: any; result: "success"
-  }>;
-  skip(): void;
-  toggleServer(): Promise<void>;
-}
-
-type UserContext = [UserState, UserActions]
-
-export const UserContext = createContext<UserContext>()
-
-interface UserProviderProps {
-  children: JSX.Element
-}
-
-export function UserProvider(props: UserProviderProps) {
-
-  const [isProd, setIsProd] = createSignal(true)
-  const [storedUser, { mutate: mutateUser, refetch }] = createResource(async () => {
-    const storedUser = await Preferences.get({ key: 'user' })
-    if (storedUser.value) {
-      const json = JSON.parse(storedUser.value)
-      if (json.token && json.id && json.email && json.refreshToken) {
-        setIsProd(json.prod ?? true)
-        if (json.prod) {
-          await UserPlugin.setToProductionServer()
-        } else {
-          await UserPlugin.setToTestServer()
+const [UserProvider, useUserContext] = createContextProvider(() => {
+  const [isProd, setIsProd] = createSignal(true);
+  const [isAuthorized, setIsAuthorized] = createSignal(false);
+  const [data, { mutate: mutateUser, refetch }] = createResource(async () => {
+    try {
+      const storedUser = await Preferences.get({ key: "user" });
+      if (storedUser.value) {
+        const json = JSON.parse(storedUser.value);
+        // check json is not an empty object
+        if (json && Object.keys(json).length === 0) {
+          return null;
         }
-        return { ...json } as User
+        const user = UserSchema.parse(JSON.parse(storedUser.value));
+        if (user.prod) {
+          await CacophonyPlugin.setToProductionServer();
+          setIsProd(true);
+        } else {
+          await CacophonyPlugin.setToTestServer();
+          setIsProd(false);
+        }
+        return user;
       }
+    } catch (error) {
+      console.log(error);
+      return null;
     }
-  })
+  });
   const [skippedLogin, { mutate: mutateSkip }] = createResource(async () => {
-    const skippedLogin = await Preferences.get({ key: 'skippedLogin' })
+    const skippedLogin = await Preferences.get({ key: "skippedLogin" });
     if (skippedLogin.value) {
-      const json = JSON.parse(skippedLogin.value)
+      const json = JSON.parse(skippedLogin.value);
       if (json) {
-        return json as boolean
+        return json as boolean;
       }
     }
-  })
-  const [user, setUser] = createStore<UserState>({
-    data: storedUser,
-    skippedLogin,
-    isAuthorized: false,
-  })
+    return false;
+  });
+
+  onMount(async () => {
+    await validateCurrToken();
+  });
 
   createEffect(() => {
-    if (!user.data.loading) {
-      if (user.data() && user.data().token && user.data().id && user.data().email) {
-        setUser('isAuthorized', true)
-      } else {
-        setUser('isAuthorized', false)
-      }
+    const user = data();
+    if (user) {
+      setIsAuthorized(true);
+    } else {
+      setIsAuthorized(false);
     }
-  })
+    console.log("isAuthorized", isAuthorized(), skippedLogin());
+  });
 
   createEffect(() => {
-    const currUser = user.data()
-    if (currUser && currUser.token && currUser.id && currUser.email) {
-      const { token, id, email, refreshToken } = currUser
-      Preferences.set({ key: 'user', value: JSON.stringify({ token, id, email, expiry: currUser.expiry, refreshToken, prod: isProd() }) })
+    try {
+      const user = data();
+      if (!user) return;
+      console.log(user);
+      const currUser = UserSchema.parse(user);
+      const { token, id, email, refreshToken, prod } = currUser;
+      Preferences.set({
+        key: "user",
+        value: JSON.stringify({
+          token,
+          id,
+          email,
+          expiry: currUser.expiry,
+          refreshToken,
+          prod,
+        }),
+      });
+    } catch (error) {
+      console.log(error);
     }
-  })
-
-  const validateCurrToken = async () => {
-    if (user.data() && user.data().token) {
-      const { token, refreshToken, expiry, email, id } = user.data()
-      console.log("Validating token", user.data())
-
-      const result = await UserPlugin.validateToken({ token, refreshToken, expiry })
-      if (result.result === "success") {
-        const { token, refreshToken, expiry } = result.data
-        mutateUser({ id, email, token, refreshToken, expiry })
-      }
-    }
+  });
+  async function logout() {
+    await Preferences.set({ key: "user", value: "" });
+    await Preferences.set({ key: "skippedLogin", value: "false" });
+    mutateSkip(false);
+    await refetch();
   }
 
-  const userContext: UserContext = [
-    user,
-    {
-      async login(email: string, password: string) {
-        try {
-          const authUser = await UserPlugin.authenticateUser({ email, password })
-          if (authUser.result !== "success") {
-            logError("Could not login.")
-            return
-          }
-          const { token, id, refreshToken } = authUser.data
-          Preferences.set({ key: 'skippedLogin', value: "false" })
-          mutateUser({ token, id, email, refreshToken, expiry: new Date().toISOString() })
-          mutateSkip(false)
-        } catch (error) {
-          logError(`Could not login.`, error)
-          throw error
-        }
-      },
-      async logout() {
-        await Preferences.set({ key: 'user', value: JSON.stringify({}) })
-        await Preferences.set({ key: 'skippedLogin', value: "false" })
-        mutateSkip(false)
-        await refetch()
-      },
-      skip() {
-        Preferences.set({ key: 'skippedLogin', value: "true" })
-        mutateSkip(true)
-      },
-      async requestDeletion(): Promise<Result<string>> {
-        if (!user.data()) return Promise.reject("No user to delete")
-        await validateCurrToken()
-        try {
-          const value = await UserPlugin.requestDeletion({ token: user.data().token })
-          logSuccess("Deletion request sent")
-          return value
-        } catch (error) {
-          logError("Could not request deletion", error)
-        }
-      },
-      async toggleServer() {
-        if (isProd()) {
-          const res = await UserPlugin.setToTestServer()
-          if (res.result !== "success") {
-            logError("Could not set to test server")
-            return
-          }
-          setIsProd(false)
-          logSuccess("Set to test server")
-        } else {
-          const res = await UserPlugin.setToProductionServer()
-          if (res.result !== "success") {
-            logError("Could not set to production server")
-            return
-          }
-          setIsProd(true)
-          logSuccess("Set to production server")
-        }
+  const validateCurrToken = async () => {
+    const user = data();
+    if (user) {
+      const { token, refreshToken, expiry, email, id } = user;
+      const result = await CacophonyPlugin.validateToken({
+        token,
+        refreshToken,
+        expiry,
+      });
+      if (result.success) {
+        const { token, refreshToken, expiry } = result.data;
+        mutateUser({ id, email, token, refreshToken, expiry, prod: isProd() });
+      } else {
+        console.log("Token invalid");
+        logout();
       }
     }
-  ]
+  };
 
-  return (
-    <UserContext.Provider value={userContext}>
-      {props.children}
-    </UserContext.Provider>
-  )
-}
+  return {
+    data,
+    isAuthorized,
+    skippedLogin,
+    validateCurrToken,
+    async login(email: string, password: string) {
+      const authUser = await CacophonyPlugin.authenticateUser({
+        email,
+        password,
+      });
+      if (!authUser.success) {
+        logError("Could not login");
+        return;
+      }
+      const { token, id, refreshToken } = authUser.data;
+      Preferences.set({ key: "skippedLogin", value: "false" });
+      mutateUser({
+        token,
+        id,
+        email,
+        refreshToken,
+        expiry: new Date().toISOString(),
+        prod: isProd(),
+      });
+      mutateSkip(false);
+    },
+    logout,
+    skip() {
+      Preferences.set({ key: "skippedLogin", value: "true" });
+      mutateSkip(true);
+    },
+    async requestDeletion(): PromiseResult<string> {
+      const usr = data();
+      if (!usr) return Promise.reject("No user to delete");
+      await validateCurrToken();
+      const value = await CacophonyPlugin.requestDeletion({
+        token: usr.token,
+      });
+      logSuccess("Deletion request sent");
+      return value;
+    },
+    async toggleServer() {
+      if (isProd()) {
+        const res = await CacophonyPlugin.setToTestServer();
+        if (!res.success) {
+          logError("Could not set to test server");
+          return;
+        }
+        setIsProd(false);
+        logSuccess("Set to test server");
+      } else {
+        const res = await CacophonyPlugin.setToProductionServer();
+        if (!res.success) {
+          logError("Could not set to production server");
+          return;
+        }
+        setIsProd(true);
+        logSuccess("Set to production server");
+      }
+    },
+  };
+});
+
+export { UserProvider, useUserContext };

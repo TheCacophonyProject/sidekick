@@ -1,0 +1,7 @@
+version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
+options: "c7ba9d2930c468efb6126ab397adaa4c2e5c93efa961efd5e901b1e84cf40cf6"
+build_start_time: [1678250638, 797779083]
+build_end_time: [1678250638, 829115867]
+inputs:
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.6.3/node_modules/@capacitor/dialog/ios/Plugin/DialogPlugin.swift"
+  : !private [1673322132, 249023914]

@@ -1,0 +1,87 @@
+version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
+options: "4181851f5eb5eed99d1bdeb636c27578e5717925abebbe99b2d62dcf01e94db7"
+build_start_time: [1678250637, 371495008]
+build_end_time: [1678250642, 425237178]
+inputs:
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/AppUUID.swift"
+  : [1669331541, 281161308]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Array+Capacitor.swift"
+  : [1669331541, 281662940]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPApplicationDelegateProxy.swift"
+  : [1669331541, 299327611]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridge.swift"
+  : [1669331541, 307553291]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridgeDelegate.swift"
+  : [1669331541, 307569026]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridgeProtocol.swift"
+  : [1677020262, 206851005]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPBridgeViewController.swift"
+  : [1677020262, 206231117]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPFile.swift"
+  : [1669331541, 333993196]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPInstanceConfiguration.swift"
+  : [1669331541, 336909294]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPInstanceDescriptor.swift"
+  : [1669331541, 338523387]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPInstancePlugin.swift"
+  : [1677020262, 207398176]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPLog.swift"
+  : [1669331541, 338607788]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPNotifications.swift"
+  : [1669331541, 344112873]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPPlugin+LoadInstance.swift"
+  : [1677020262, 207029342]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPPluginCall.swift"
+  : [1669331541, 341123819]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CAPWebView.swift"
+  : [1677020262, 207118511]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CapacitorBridge.swift"
+  : [1677020262, 205406904]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/CapacitorExtension.swift"
+  : [1669331541, 292623043]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Data+Capacitor.swift"
+  : [1669331541, 343992948]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/DocLinks.swift"
+  : [1669331541, 359154224]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/JS.swift"
+  : [1669331541, 365719795]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/JSExport.swift"
+  : [1669331541, 374004125]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/JSTypes.swift"
+  : [1669331541, 380193710]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/KeyPath.swift"
+  : [1669331541, 380178928]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/NotificationHandlerProtocol.swift"
+  : [1669331541, 382678747]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/NotificationRouter.swift"
+  : [1669331541, 384482622]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/PluginCallResult.swift"
+  : [1669331541, 382804870]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/PluginConfig.swift"
+  : [1669331541, 384424448]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/CapacitorCookieManager.swift"
+  : [1677020262, 206155061]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/CapacitorCookies.swift"
+  : [1677020262, 205461025]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/CapacitorHttp.swift"
+  : [1677020262, 206174135]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/CapacitorUrlRequest.swift"
+  : [1669331541, 299290180]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/Console.swift"
+  : [1669331541, 358977317]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/HttpRequestHandler.swift"
+  : [1677020262, 207275152]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Plugins/WebView.swift"
+  : [1669331541, 384413719]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/Router.swift"
+  : [1669331541, 382784366]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/TmpViewController.swift"
+  : [1669331541, 382765054]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/UIColor.swift"
+  : [1669331541, 382736206]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/WKWebView+Capacitor.swift"
+  : [1669331541, 401947498]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewAssetHandler.swift"
+  : [1669331541, 396751880]
+  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewDelegationHandler.swift"
+  : [1677020262, 209274291]

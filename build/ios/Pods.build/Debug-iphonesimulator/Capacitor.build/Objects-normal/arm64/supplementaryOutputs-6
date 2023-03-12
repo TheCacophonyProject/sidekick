@@ -1,0 +1,25 @@
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/JS.swift":
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JS.dia"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JS.d"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JS.o"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JS.swiftdeps"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/JSExport.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSExport.d"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSExport.swiftdeps"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSExport.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSExport.dia"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/NotificationHandlerProtocol.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationHandlerProtocol.d"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationHandlerProtocol.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationHandlerProtocol.dia"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/NotificationHandlerProtocol.swiftdeps"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/JSTypes.swift":
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSTypes.o"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSTypes.swiftdeps"
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSTypes.d"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/JSTypes.dia"
+"/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+ios@4.6.3_@capacitor+core@4.6.3/node_modules/@capacitor/ios/Capacitor/Capacitor/KeyPath.swift":
+  dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/KeyPath.d"
+  object: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/KeyPath.o"
+  diagnostics: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/KeyPath.dia"
+  swift-dependencies: "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/Capacitor.build/Objects-normal/arm64/KeyPath.swiftdeps"

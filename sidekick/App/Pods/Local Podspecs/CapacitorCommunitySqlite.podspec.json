@@ -1,0 +1,29 @@
+{
+  "name": "CapacitorCommunitySqlite",
+  "version": "4.6.2-3",
+  "summary": "Community plugin for native & electron SQLite databases",
+  "license": "MIT",
+  "homepage": "git+https://github.com/capacitor-community/sqlite.git",
+  "authors": "Jean Pierre Quéau",
+  "source": {
+    "git": "git+https://github.com/capacitor-community/sqlite.git",
+    "tag": "4.6.2-3"
+  },
+  "source_files": "ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}",
+  "platforms": {
+    "ios": "13.0"
+  },
+  "dependencies": {
+    "Capacitor": [
+
+    ],
+    "SQLCipher": [
+
+    ],
+    "ZIPFoundation": [
+
+    ]
+  },
+  "swift_versions": "5.1",
+  "swift_version": "5.1"
+}

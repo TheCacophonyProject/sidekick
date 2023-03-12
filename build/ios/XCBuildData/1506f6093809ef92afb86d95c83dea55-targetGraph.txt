@@ -1,0 +1,49 @@
+Target dependency graph (14 targets)
+CapacitorCordova in Pods, no dependencies
+Capacitor in Pods, depends on:
+CapacitorCordova in Pods (explicit)
+CapacitorBrowser in Pods, depends on:
+Capacitor in Pods (explicit)
+CapacitorClipboard in Pods, depends on:
+Capacitor in Pods (explicit)
+SQLCipher in Pods, no dependencies
+ZIPFoundation in Pods, no dependencies
+CapacitorCommunitySqlite in Pods, depends on:
+Capacitor in Pods (explicit)
+SQLCipher in Pods (explicit)
+ZIPFoundation in Pods (explicit)
+CapacitorDialog in Pods, depends on:
+Capacitor in Pods (explicit)
+CapacitorFilesystem in Pods, depends on:
+Capacitor in Pods (explicit)
+CapacitorGeolocation in Pods, depends on:
+Capacitor in Pods (explicit)
+CapacitorPreferences in Pods, depends on:
+Capacitor in Pods (explicit)
+shared in Pods, no dependencies
+Pods-App in Pods, depends on:
+Capacitor in Pods (explicit)
+CapacitorBrowser in Pods (explicit)
+CapacitorClipboard in Pods (explicit)
+CapacitorCommunitySqlite in Pods (explicit)
+CapacitorCordova in Pods (explicit)
+CapacitorDialog in Pods (explicit)
+CapacitorFilesystem in Pods (explicit)
+CapacitorGeolocation in Pods (explicit)
+CapacitorPreferences in Pods (explicit)
+SQLCipher in Pods (explicit)
+ZIPFoundation in Pods (explicit)
+shared in Pods (explicit)
+App in App, depends on:
+Pods-App in Pods (implicit dependency via file 'Pods_App.framework' in build phase 'Link Binary')
+Capacitor in Pods (implicit dependency via options '-framework Capacitor' in build setting 'OTHER_LDFLAGS')
+CapacitorBrowser in Pods (implicit dependency via options '-framework CapacitorBrowser' in build setting 'OTHER_LDFLAGS')
+CapacitorClipboard in Pods (implicit dependency via options '-framework CapacitorClipboard' in build setting 'OTHER_LDFLAGS')
+CapacitorCommunitySqlite in Pods (implicit dependency via options '-framework CapacitorCommunitySqlite' in build setting 'OTHER_LDFLAGS')
+CapacitorDialog in Pods (implicit dependency via options '-framework CapacitorDialog' in build setting 'OTHER_LDFLAGS')
+CapacitorFilesystem in Pods (implicit dependency via options '-framework CapacitorFilesystem' in build setting 'OTHER_LDFLAGS')
+CapacitorGeolocation in Pods (implicit dependency via options '-framework CapacitorGeolocation' in build setting 'OTHER_LDFLAGS')
+CapacitorPreferences in Pods (implicit dependency via options '-framework CapacitorPreferences' in build setting 'OTHER_LDFLAGS')
+CapacitorCordova in Pods (implicit dependency via options '-framework Cordova' in build setting 'OTHER_LDFLAGS')
+SQLCipher in Pods (implicit dependency via options '-framework SQLCipher' in build setting 'OTHER_LDFLAGS')
+ZIPFoundation in Pods (implicit dependency via options '-framework ZIPFoundation' in build setting 'OTHER_LDFLAGS')

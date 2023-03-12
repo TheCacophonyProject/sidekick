@@ -1,57 +1,84 @@
 PODS:
-  - Capacitor (4.5.0):
+  - Capacitor (4.7.0):
     - CapacitorCordova
-  - CapacitorBrowser (4.1.0):
+  - CapacitorBrowser (4.1.1):
     - Capacitor
   - CapacitorClipboard (4.1.0):
     - Capacitor
-  - CapacitorCordova (4.5.0)
+  - CapacitorCommunitySqlite (4.6.2-3):
+    - Capacitor
+    - SQLCipher
+    - ZIPFoundation
+  - CapacitorCordova (4.7.0)
   - CapacitorDialog (4.1.0):
+    - Capacitor
+  - CapacitorFilesystem (4.1.4):
     - Capacitor
   - CapacitorGeolocation (4.1.0):
     - Capacitor
   - CapacitorPreferences (4.0.2):
     - Capacitor
   - shared (1.0)
+  - SQLCipher (4.5.3):
+    - SQLCipher/standard (= 4.5.3)
+  - SQLCipher/common (4.5.3)
+  - SQLCipher/standard (4.5.3):
+    - SQLCipher/common
+  - ZIPFoundation (0.9.16)
 
 DEPENDENCIES:
-  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
-  - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser`)"
-  - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard`)"
-  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios`)"
-  - "CapacitorDialog (from `../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog`)"
-  - "CapacitorGeolocation (from `../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation`)"
-  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences`)"
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios`)"
+  - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser`)"
+  - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/clipboard`)"
+  - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios`)"
+  - "CapacitorDialog (from `../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog`)"
+  - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem`)"
+  - "CapacitorGeolocation (from `../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation`)"
+  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences`)"
   - shared (from `../shared`)
+
+SPEC REPOS:
+  trunk:
+    - SQLCipher
+    - ZIPFoundation
 
 EXTERNAL SOURCES:
   Capacitor:
-    :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios"
   CapacitorBrowser:
-    :path: "../../node_modules/.pnpm/@capacitor+browser@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/browser"
+    :path: "../../node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser"
   CapacitorClipboard:
-    :path: "../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/clipboard"
+    :path: "../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/clipboard"
+  CapacitorCommunitySqlite:
+    :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite"
   CapacitorCordova:
-    :path: "../../node_modules/.pnpm/@capacitor+ios@4.5.0_@capacitor+core@4.5.0/node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios"
   CapacitorDialog:
-    :path: "../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/dialog"
+    :path: "../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog"
+  CapacitorFilesystem:
+    :path: "../../node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem"
   CapacitorGeolocation:
-    :path: "../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.5.0/node_modules/@capacitor/geolocation"
+    :path: "../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation"
   CapacitorPreferences:
-    :path: "../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.5.0/node_modules/@capacitor/preferences"
+    :path: "../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences"
   shared:
     :path: "../shared"
 
 SPEC CHECKSUMS:
-  Capacitor: 94ea746d6b460711feb030f0f6585680fd4599ad
-  CapacitorBrowser: 05b68799d62b7b864974f59a5af3e4ddcce953f1
+  Capacitor: 146dc340ebdf751fa1b999919e4423494c243d29
+  CapacitorBrowser: b7d161fb82d591294cb81fcb12f950ae73470035
   CapacitorClipboard: 4c092a2608520afb799429e63820256c3a59f1e5
-  CapacitorCordova: 1ba7a0509217944974297afab40fec6093e93848
+  CapacitorCommunitySqlite: 7b5113a57ba41cbffb3196b4c50c533aeac5edc0
+  CapacitorCordova: b9c6fdd02470c85e39baf9ae638260477a7f46f3
   CapacitorDialog: c8a6558d29767e76a32a056bb5e0fc9104b985b0
+  CapacitorFilesystem: 3d665e5b3719d9f6e240480a7468861b0bb35f93
   CapacitorGeolocation: e792888b4eca5cf31ed984491b645d42666278cb
   CapacitorPreferences: 1d66dc32299f55ed632c5611f312878979275ea5
-  shared: db3ed1590fdbc9588e4f3bf2f62fdfc6b8476473
+  shared: 825978f2a80ce00aa0d9e76613eb649352d916b5
+  SQLCipher: 57fa9f863fa4a3ed9dd3c90ace52315db8c0fdca
+  ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: a22478020bdbf995f9131e391207987f67196d7e
+PODFILE CHECKSUM: 6466d7fcb3435bb562147eec28b8a0eb1b3de784
 
 COCOAPODS: 1.11.3

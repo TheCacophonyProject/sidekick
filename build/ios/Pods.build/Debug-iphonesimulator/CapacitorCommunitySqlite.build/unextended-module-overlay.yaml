@@ -1,0 +1,14 @@
+{
+  'version': 0,
+  'use-external-names': 'false',
+  'case-sensitive': 'false',
+  'roots': [{
+    'type': 'directory',
+    'name': "/Users/patrickbaxter/code/sidekick/build/ios/Debug-iphonesimulator/CapacitorCommunitySqlite/CapacitorCommunitySqlite.framework/Modules"
+    'contents': [{
+      'type': 'file',
+      'name': "module.modulemap",
+      'external-contents': "/Users/patrickbaxter/code/sidekick/build/ios/Pods.build/Debug-iphonesimulator/CapacitorCommunitySqlite.build/unextended-module.modulemap",
+    }]
+  }]
+}

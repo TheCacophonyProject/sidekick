@@ -15,12 +15,11 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: {
       enabled: true
-    }
+    },
+    CapacitorSQLite: {
+      "iosDatabaseLocation": "Library/CapacitorDatabase"
+    },
   }
-
-  // server: {
-  //   url: "http://192.168.86.33:3000",
-  // },
 };
 
 export default config;

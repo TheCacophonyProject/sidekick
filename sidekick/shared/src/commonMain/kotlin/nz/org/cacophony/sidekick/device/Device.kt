@@ -11,6 +11,7 @@ typealias URL = String
 @optics data class Host(val name: Hostname, val port: Port)
 
 @optics
+@kotlinx.serialization.Serializable
 data class Device(
      val url: URL,
 )

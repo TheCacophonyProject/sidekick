@@ -1,0 +1,24 @@
+{
+	"appId": "nz.org.cacophony.sidekick",
+	"appName": "Sidekick",
+	"webDir": "dist/public",
+	"bundledWebRuntime": false,
+	"android": {
+		"path": "sidekick",
+		"useLegacyBridge": false
+	},
+	"ios": {
+		"path": "sidekick"
+	},
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		},
+		"CapacitorSQLite": {
+			"iosDatabaseLocation": "Library/CapacitorDatabase"
+		}
+	},
+	"server": {
+		"url": "http://192.168.86.140:3000"
+	}
+}
