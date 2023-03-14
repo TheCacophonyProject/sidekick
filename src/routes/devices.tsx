@@ -12,7 +12,7 @@ import {
   useContext,
 } from "solid-js";
 import ActionContainer from "~/components/ActionContainer";
-import { Device, useDevice } from "~/contexts/Device";
+import { Device, DevicePlugin, useDevice } from "~/contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
 import { Dialog } from "@capacitor/dialog";
@@ -21,14 +21,11 @@ import CircleButton from "~/components/CircleButton";
 import { Geolocation, Position } from "@capacitor/geolocation";
 import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
-import {
-  Recording,
-  Event,
-  SavedEvents,
-  SavedRecordings,
-} from "~/contexts/Storage";
+import { Recording, Event, useStorage } from "~/contexts/Storage";
 import { ReactiveSet } from "@solid-primitives/set";
 import { ImNotification } from "solid-icons/im";
+import { headerMap } from "~/components/Header";
+import { FaSolidWifi } from "solid-icons/fa";
 
 interface DeviceDetailsProps {
   device: Device;
@@ -37,24 +34,26 @@ interface DeviceDetailsProps {
 
 function DeviceDetails(props: DeviceDetailsProps) {
   const context = useDevice();
+  const storage = useStorage();
   const [savedRecs, setSavedRecs] = createSignal<Recording[]>([]);
   const [deviceRecs, setDeviceRecs] = createSignal<string[]>([]);
   const [savedEvents, setSavedEvents] = createSignal<Event[]>([]);
   const [eventKeys, setEventKeys] = createSignal<number[]>([]);
+  const [isDownloading, setIsDownloading] = createSignal(false);
 
   const [disabledDownload, setDisabledDownload] = createSignal(false);
   createEffect(() => {
     const hasRecsToDownload =
-      deviceRecs().length > 0 || deviceRecs().length !== savedRecs().length;
+      deviceRecs().length > 0 && deviceRecs().length !== savedRecs().length;
     const hasEventsToDownload =
-      eventKeys().length > 0 || savedEvents().length !== eventKeys().length;
+      eventKeys().length > 0 && savedEvents().length !== eventKeys().length;
     setDisabledDownload(!hasRecsToDownload && !hasEventsToDownload);
   });
 
   createEffect(() => {
-    const saved = SavedEvents().filter(
-      (event) => event.device === props.device.id && !event.isUploaded
-    );
+    const saved = storage
+      .SavedEvents()
+      .filter((event) => event.device === props.device.id && !event.isUploaded);
     const device = [...(context.deviceEventKeys.get(props.device.id) ?? [])];
 
     setSavedEvents(saved);
@@ -62,9 +61,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
   });
 
   createEffect(() => {
-    const saved = SavedRecordings().filter(
-      (rec) => rec.device === props.device.id && !rec.isUploaded
-    );
+    const saved = storage
+      .SavedRecordings()
+      .filter((rec) => rec.device === props.device.id && !rec.isUploaded);
     const device = [...(context.deviceRecordings.get(props.device.id) ?? [])];
     setSavedRecs(saved);
     setDeviceRecs(device);
@@ -87,15 +86,19 @@ function DeviceDetails(props: DeviceDetailsProps) {
     await context?.setDeviceToCurrLocation(device);
   };
 
-  const donwload = async (device: Device) => {
+  const download = async (device: Device) => {
     const { value } = await Dialog.confirm({
       title: "Confirm",
       message: `Are you sure you want to download all recordings and events from ${device.name}?`,
     });
     if (!value) return;
     if (!device.isConnected) return;
-    context.saveRecordings(device);
-    context.saveEvents(device);
+    setIsDownloading(true);
+    await Promise.all([
+      context.saveRecordings(device),
+      context.saveEvents(device),
+    ]);
+    setIsDownloading(false);
   };
 
   return (
@@ -112,7 +115,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
       <div class="flex items-center justify-between px-2">
         <div onClick={() => openDeviceInterface(props.device)} role="button">
           <h1 class="break-all text-left text-lg">{props.device.name}</h1>
-
           <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
             <BsCameraVideoFill size={20} />
             <p class="text-sm">
@@ -124,21 +126,29 @@ function DeviceDetails(props: DeviceDetailsProps) {
             <p class="text-sm">
               Events Saved:{" "}
               {
-                SavedEvents().filter((val) => val.device === props.device.id)
-                  .length
+                storage
+                  .SavedEvents()
+                  .filter((val) => val.device === props.device.id).length
               }
               /{context.deviceEventKeys.get(props.device.id)?.length ?? 0}{" "}
             </p>
           </div>
         </div>
-        <div class="flex items-center space-x-6 px-2">
-          <button
-            class={`${disabledDownload() ? "text-slate-300" : "text-blue-500"}`}
-            disabled={disabledDownload()}
-            onClick={() => donwload(props.device)}
+        <div class="flex items-center space-x-6 px-2 text-blue-500">
+          <Show
+            when={!isDownloading()}
+            fallback={<FaSolidSpinner size={28} class="animate-spin" />}
           >
-            <FiDownload size={28} />
-          </button>
+            <button
+              class={`${
+                disabledDownload() ? "text-slate-300" : "text-blue-500"
+              }`}
+              disabled={disabledDownload()}
+              onClick={() => download(props.device)}
+            >
+              <FiDownload size={28} />
+            </button>
+          </Show>
           <button
             class="text-blue-500"
             disabled={context.locationBeingSet.has(props.device.id)}
@@ -168,15 +178,26 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
 function Devices() {
   const context = useDevice();
+  const deviceLocToUpdate = new ReactiveSet<string>();
+  const [pos, setPos] = createSignal<Position>();
+  const [cancel, setCancel] = createSignal(false);
+
+  const connectToBushnet = async () => {
+    const { value } = await Dialog.confirm({
+      title: "Connecting to Offline Device",
+      message: `Please ensure you have reset the device and have waited atleast a few minutes for bootup. Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
+    });
+
+    if (!value) return;
+    await DevicePlugin.connectToDeviceAP();
+  };
+
   const searchDevice = () => {
     context.startDiscovery();
     setTimeout(() => {
       context.stopDiscovery();
     }, 5000);
   };
-  const deviceLocToUpdate = new ReactiveSet<string>();
-  const [pos, setPos] = createSignal<Position>();
-  const [cancel, setCancel] = createSignal(false);
 
   onMount(async () => {
     searchDevice();
@@ -193,6 +214,17 @@ function Devices() {
         enableHighAccuracy: true,
       })
     );
+
+    // Add delete button to header
+    const header = headerMap.get("/devices");
+    if (!header) return;
+
+    headerMap.set("/devices", [
+      header[0],
+      <button onClick={connectToBushnet} class="text-blue-500">
+        <FaSolidWifi size={28} />
+      </button>,
+    ]);
   });
 
   createEffect(() => {
@@ -224,13 +256,23 @@ function Devices() {
     if (isDiscovering) return;
     const devices = deviceLocToUpdate.values();
     untrack(async () => {
-      const shouldUpdate =
-        [...devices].filter((val) => !context.locationBeingSet.has(val))
-          .length > 0;
+      const devicesToUpdate = [...devices].filter(
+        (val) => !context.locationBeingSet.has(val)
+      );
+      const shouldUpdate = devicesToUpdate.length > 0;
       if (shouldUpdate && !cancel()) {
+        const message =
+          devicesToUpdate.length === 1
+            ? `${
+                context.devices.get(devicesToUpdate[0])?.name
+              } has a different location stored. Would you like to update it to your current location?`
+            : `${devicesToUpdate.join(
+                ", "
+              )} have different location stored. Would you like to update them to the current location?`;
+
         const { value } = await Dialog.confirm({
-          title: "Update Locations",
-          message: `Some devices are not at your current location. Would you like to update their locations?`,
+          title: "Update Location",
+          message,
         });
         if (value) {
           for (const device of context.devices.values()) {
@@ -247,7 +289,9 @@ function Devices() {
   });
   return (
     <section class="pb-bar pt-bar relative h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
-      <For each={[...context.devices.values()]}>
+      <For
+        each={[...context.devices.values()].filter((dev) => dev.isConnected)}
+      >
         {(device) =>
           device && (
             <DeviceDetails
@@ -261,8 +305,8 @@ function Devices() {
       <div class="pb-bar fixed inset-x-0 bottom-[4vh] mx-auto flex justify-center">
         <CircleButton
           onClick={searchDevice}
-          disabled={context?.isDiscovering()}
-          loading={context?.isDiscovering()}
+          disabled={context.isDiscovering()}
+          loading={context.isDiscovering()}
           text="Search Devices"
           loadingText="Searching..."
         />

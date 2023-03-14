@@ -25,7 +25,7 @@ const AppRoutes = () => {
   const context = useUserContext();
   return (
     <Show
-      when={context?.isAuthorized() || context?.skippedLogin()}
+      when={context?.data() || context?.skippedLogin()}
       fallback={<Login />}
     >
       <Header />

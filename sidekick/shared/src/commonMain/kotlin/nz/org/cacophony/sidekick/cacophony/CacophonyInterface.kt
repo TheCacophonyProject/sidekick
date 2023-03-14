@@ -1,19 +1,15 @@
 package nz.org.cacophony.sidekick.cacophony
 
 import arrow.core.Either
-import arrow.core.flatMap
-import arrow.core.right
 import kotlinx.serialization.Serializable
 import nz.org.cacophony.sidekick.*
-import okio.Path
 import okio.Path.Companion.toPath
-import writeToFile
 
 @Suppress("UNUSED")
 data class CacophonyInterface(val filePath: String): CapacitorInterface {
     val api = CacophonyApi()
     private val userApi = UserApi(api)
-    private val recordingApi = RecordingApi(api)
+    private val recordingApi = DeviceApi(api)
 
     @kotlinx.serialization.Serializable
     data class User(val email: String, val password: String)
@@ -82,7 +78,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     data class UploadEventCall(val token: String, val device: String, val eventId: String, val type: String, val details: String, val timeStamp: String)
     fun uploadEvent(call: PluginCall) = runCatch(call) {
         call.validateCall<UploadEventCall>("token", "device", "eventId", "type", "details", "timeStamp").map { event ->
-            recordingApi.uploadEvent( event.device,event.token, RecordingApi.UploadEventBody(event.eventId.toInt(), listOf(event.timeStamp), RecordingApi.UploadEventDescription(event.type, event.details)))
+            recordingApi.uploadEvent( event.device,event.token, listOf(event.timeStamp), event.type, event.details)
                 .fold(
                     { error -> call.reject(error.toString()) },
                     { call.success(mapOf(

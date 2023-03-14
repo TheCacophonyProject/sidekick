@@ -1,7 +1,10 @@
 import {
+  CapacitorSQLite,
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
+import { Recording } from "./Entities/Recording";
+
 /**
  *
  * @param conName  database name
@@ -34,4 +37,7 @@ export const openConnection = async (
   } catch (err) {
     return Promise.reject(err);
   }
+};
+export const removeEscapedQuotes = (str: string) => {
+  return str.replace(/\\\"/g, '"').replace(/^"(.*)"$/, "$1");
 };

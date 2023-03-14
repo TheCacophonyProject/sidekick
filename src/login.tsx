@@ -5,6 +5,7 @@ import { z } from "zod";
 import CacaophonyLogo from "./components/CacaophonyLogo";
 import { logSuccess } from "./contexts/Notification";
 import { useUserContext } from "./contexts/User";
+import { ImCog } from "solid-icons/im";
 type LoginInput = Partial<{
   type: string;
   placeholder: string;
@@ -90,8 +91,18 @@ function Login() {
     }
   };
 
+  const openRegisterPage = () => {
+    Browser.open({ url: "https://browse.cacophony.org.nz/register" });
+  };
+
   return (
     <Form class="mx-8 flex h-full flex-col justify-center gap-y-4 text-lg">
+      <Show when={!user?.isProd()}>
+        <div class="pt-safe absolute top-0 mt-8 flex items-center pr-8 font-bold text-neutral-700">
+          <ImCog size={32} />
+          <h1 class="ml-2">Test Mode</h1>
+        </div>
+      </Show>
       <div class="mb-6 mt-24" role="button" onTouchStart={logoDown}>
         <CacaophonyLogo />
       </div>
@@ -121,12 +132,7 @@ function Login() {
       </button>
       <p class="text-base text-gray-600">
         Don't have a Cacophony Account?
-        <button
-          class="ml-1 text-blue-500"
-          onClick={() => {
-            Browser.open({ url: "https://browse.cacophony.org.nz/register" });
-          }}
-        >
+        <button class="ml-1 text-blue-500" onClick={openRegisterPage}>
           Register
         </button>
       </p>

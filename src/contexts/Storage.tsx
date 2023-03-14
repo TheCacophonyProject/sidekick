@@ -3,7 +3,7 @@ import {
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createResource, createSignal, onMount } from "solid-js";
+import { createMemo, createResource, createSignal, onMount } from "solid-js";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { DeviceDetails, DeviceId } from "./Device";
 import { useUserContext } from "./User";
@@ -15,9 +15,10 @@ import {
   getEvents,
   insertEvent,
   deleteEvents as deleteEventsFromDb,
+  deleteEvent as deleteEventFromDb,
   updateEvent,
-} from "~/database/Event";
-import type { Event } from "~/database/Event";
+} from "~/database/Entities/Event";
+import type { Event } from "~/database/Entities/Event";
 import {
   createRecordingSchema,
   getRecordings,
@@ -25,8 +26,8 @@ import {
   deleteRecordings as deleteRecordingsFromDb,
   updateRecording as updateRecordingInDb,
   insertRecording,
-} from "~/database/Recording";
-import type { Recording } from "~/database/Recording";
+} from "~/database/Entities/Recording";
+import type { Recording } from "~/database/Entities/Recording";
 import { openConnection } from "~/database";
 
 type RecordingFile = {
@@ -35,13 +36,25 @@ type RecordingFile = {
   size: number;
   isProd: boolean;
 };
-const [SavedRecordings, setSavedRecordings] = createSignal<Recording[]>([]);
-const [SavedEvents, setSavedEvents] = createSignal<Event[]>([]);
 
 const [StorageProvider, useStorage] = createContextProvider(() => {
   const userContext = useUserContext();
   const driver = new SQLiteConnection(CapacitorSQLite);
   const [db, setDb] = createSignal<SQLiteDBConnection>();
+  const [SavedRecordings, setSavedRecordings] = createSignal<Recording[]>([]);
+  const UploadedRecordings = createMemo(() =>
+    SavedRecordings().filter((rec) => rec.isUploaded)
+  );
+  const UnuploadedRecordings = createMemo(() =>
+    SavedRecordings().filter((rec) => !rec.isUploaded)
+  );
+  const [SavedEvents, setSavedEvents] = createSignal<Event[]>([]);
+  const UploadedEvents = createMemo(() =>
+    SavedEvents().filter((event) => event.isUploaded)
+  );
+  const UnuploadedEvents = createMemo(() =>
+    SavedEvents().filter((event) => !event.isUploaded)
+  );
 
   const DatabaseName = "Cacophony";
   onMount(async () => {
@@ -60,6 +73,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       setDb(db);
       const recs = await getSavedRecordings();
       const events = await getSavedEvents();
+      console.log(events);
       setSavedRecordings(recs);
       setSavedEvents(events);
     } catch (e) {
@@ -99,10 +113,12 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         device: id,
         size: size.toString(),
         isProd,
+        isUploaded: false,
       };
 
       const savedRecording = await insertRecording(currdb)(recording);
       setSavedRecordings((prev) => [...prev, recording]);
+      console.log(saveRecording);
       return savedRecording;
     } catch (e) {
       console.error(e);
@@ -125,17 +141,21 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     details: Object;
     timestamp: string;
     device: DeviceId;
+    isProd: boolean;
   }) => {
     const currdb = db();
     if (!currdb) return;
-    const { key, type, details, timestamp, device } = options;
+    const { key, type, details, timestamp, device, isProd } = options;
+    const detailString = JSON.stringify(details);
+    console.log(detailString);
     const event: Event = {
       key: key.toString(),
       type,
-      details: JSON.stringify(details),
+      details: detailString,
       timestamp,
       device,
       isUploaded: false,
+      isProd,
     };
     await insertEvent(currdb)(event);
 
@@ -160,42 +180,37 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const uploadEvents = async () => {
     const currdb = db();
     if (!currdb) return;
-    if (!userContext?.isAuthorized) return;
-    const events = SavedEvents().filter((e) => !e.isUploaded);
-    await userContext.validateCurrToken();
     const user = userContext.data();
-    if (!user) return;
-    await Promise.all(
-      events.map(async (event) => {
-        try {
-          const res = await CacophonyPlugin.uploadEvent({
-            token: user.token,
-            device: event.device,
-            eventId: event.key,
-            type: event.type,
-            details: event.details,
-            timeStamp: event.timestamp,
+    if (!user || !userContext.isAuthorized) return;
+    for (const event of UnuploadedEvents()) {
+      try {
+        const res = await CacophonyPlugin.uploadEvent({
+          token: user.token,
+          device: event.device,
+          eventId: event.key,
+          type: event.type,
+          details: event.details,
+          timeStamp: event.timestamp,
+        });
+        console.log(res);
+        if (res.success) {
+          event.isUploaded = true;
+          await updateEvent(currdb)(event);
+          setSavedEvents((prev) => {
+            return [...prev.filter((e) => e.key !== event.key), event];
           });
-          console.log(res);
-          if (res.success) {
-            event.isUploaded = true;
-            await updateEvent(currdb)(event);
-            setSavedEvents((prev) => {
-              return [...prev.filter((e) => e.key !== event.key), event];
-            });
-          }
-        } catch (e) {
-          console.error(e);
         }
-      })
-    );
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
   const deleteEvent = async (event: Event) => {
     try {
       const currdb = await db();
       if (!currdb) return;
-      await deleteEventsFromDb(currdb)([event]);
+      await deleteEventFromDb(currdb)(event);
       setSavedEvents(SavedEvents().filter((e) => e.key !== event.key));
     } catch (e) {
       throw e;
@@ -228,11 +243,15 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
 
   const deleteRecording = async (recording: Recording) => {
     try {
+      const currdb = await db();
+      if (!currdb) return;
       const name = recording.name;
       await Filesystem.deleteFile({
         path: `recordings/${name}`,
         directory: Directory.Documents,
       });
+
+      await deleteRecordingFromDb(currdb)(recording);
       await setSavedRecordings((prev) => prev.filter((r) => r.name !== name));
     } catch (e) {
       throw e;
@@ -247,7 +266,8 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         path: "recordings",
         directory: Directory.Documents,
       });
-      // Delete all recordings from the database
+      // Delete all recordings from the database apart from uploaded ones
+      // as the device may not have internet access
       const savedRecordings = SavedRecordings().filter((r) => !r.isUploaded);
       await deleteRecordingsFromDb(currdb)(savedRecordings);
       setSavedRecordings(SavedRecordings().filter((r) => r.isUploaded));
@@ -257,51 +277,54 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 
   const uploadRecordings = async () => {
-    if (!userContext) return;
-    if (!userContext.isAuthorized) return;
     const currdb = await db();
     if (!currdb) return;
-    await userContext.validateCurrToken();
     const user = userContext.data();
-    if (!user) return;
-    const recordings = SavedRecordings().filter((r) => !r.isUploaded);
-    await Promise.all(
-      recordings.map(async (recording) => {
-        try {
-          const res = await CacophonyPlugin.uploadRecording({
-            token: user.token,
-            type: "thermalRaw",
-            file: recording.path,
-            device: recording.device,
-            filename: recording.name,
-          });
-
-          if (res.success) {
-            recording.isUploaded = true;
-            recording.uploadId = res.data.recordingId;
-            await updateRecordingInDb(currdb)(recording);
-            setSavedRecordings((prev) => {
-              return [
-                ...prev.filter((r) => r.name !== recording.name),
-                recording,
-              ];
-            });
-            const path = `recordings/${recording.name}`;
-            await Filesystem.deleteFile({
-              path,
-              directory: Directory.Documents,
-            });
-          }
-        } catch (e) {
-          if (e instanceof Error) {
-            logError(`Unable to upload ${recording.name}`, e?.message);
-          }
-        }
-      })
+    if (!user || !userContext.isAuthorized) return;
+    const recordings = UnuploadedRecordings().filter(
+      (rec) => rec.isProd === userContext.isProd()
     );
+    for (const recording of recordings) {
+      try {
+        const res = await CacophonyPlugin.uploadRecording({
+          token: user.token,
+          type: "thermalRaw",
+          file: recording.path,
+          device: recording.device,
+          filename: recording.name,
+        });
+
+        if (res.success) {
+          recording.isUploaded = true;
+          recording.uploadId = res.data.recordingId;
+          await updateRecordingInDb(currdb)(recording);
+          setSavedRecordings((prev) => {
+            return [
+              ...prev.filter((r) => r.name !== recording.name),
+              recording,
+            ];
+          });
+          const path = `recordings/${recording.name}`;
+          await Filesystem.deleteFile({
+            path,
+            directory: Directory.Documents,
+          });
+        }
+      } catch (e) {
+        if (e instanceof Error) {
+          logError(`Unable to upload ${recording.name}`, e?.message);
+        }
+      }
+    }
   };
 
   return {
+    SavedRecordings,
+    UnuploadedRecordings,
+    UploadedRecordings,
+    UploadedEvents,
+    SavedEvents,
+    UnuploadedEvents,
     saveRecording,
     deleteRecording,
     deleteRecordings,
@@ -315,11 +338,4 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 });
 const definiteUseStorage = () => useStorage()!;
-export {
-  Recording,
-  Event,
-  SavedRecordings,
-  SavedEvents,
-  StorageProvider,
-  definiteUseStorage as useStorage,
-};
+export { Recording, Event, StorageProvider, definiteUseStorage as useStorage };

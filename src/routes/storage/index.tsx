@@ -1,19 +1,15 @@
 import { BsCameraVideoFill } from "solid-icons/bs";
 import { ImNotification } from "solid-icons/im";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
-import { createEffect, createSignal, onMount } from "solid-js";
+import { Show, createEffect, createSignal, onMount } from "solid-js";
 import { A } from "solid-start";
 import ActionContainer from "~/components/ActionContainer";
 import CircleButton from "~/components/CircleButton";
 import { headerMap } from "~/components/Header";
-import {
-  Recording,
-  useStorage,
-  SavedRecordings,
-  SavedEvents,
-} from "~/contexts/Storage";
+import { Recording, useStorage } from "~/contexts/Storage";
 import { FaRegularTrashCan } from "solid-icons/fa";
 import { Dialog } from "@capacitor/dialog";
+import { useUserContext } from "~/contexts/User";
 
 interface StorageProps {
   // add props here
@@ -21,6 +17,7 @@ interface StorageProps {
 
 export default function Storage() {
   const storage = useStorage();
+  const user = useUserContext();
   const [uploading, setUploading] = createSignal(false);
 
   const deleteSaved = async () => {
@@ -50,13 +47,19 @@ export default function Storage() {
   const upload = async () => {
     setUploading(true);
     try {
-      await storage.uploadRecordings();
-      await storage.uploadEvents();
+      if (!user) return;
+      await user.validateCurrToken();
+      if (!user.isAuthorized) return;
+
+      await Promise.all([storage.uploadRecordings(), storage.uploadEvents()]);
       setUploading(false);
     } catch (e) {
       setUploading(false);
     }
   };
+  const isProd = (rec: { isProd: boolean }) => rec.isProd;
+  const isSame = (rec: { isProd: boolean }) => rec.isProd === user.isProd();
+  const isDev = (rec: { isProd: boolean }) => !rec.isProd;
   return (
     <section class="pb-bar pt-bar relative h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
       <ActionContainer
@@ -70,34 +73,62 @@ export default function Storage() {
       >
         <A href="recordings" class="flex items-center text-gray-800">
           <span class="w-24">
-            Saved:{" "}
-            {SavedRecordings().filter(({ isUploaded }) => !isUploaded).length}{" "}
+            Saved: {storage.UnuploadedRecordings().length}{" "}
           </span>
           <span class="ml-2">
-            Uploaded:{" "}
-            {SavedRecordings().filter(({ isUploaded }) => isUploaded).length}
+            Uploaded: {storage.UploadedRecordings().length}
           </span>
         </A>
       </ActionContainer>
       <ActionContainer icon={ImNotification} header="Events">
         <p class="flex items-center text-gray-800">
-          <span class="w-24">
-            Saved:{" "}
-            {SavedEvents().filter(({ isUploaded }) => !isUploaded).length}{" "}
-          </span>
-          <span class="ml-2">
-            Uploaded:{" "}
-            {SavedEvents().filter(({ isUploaded }) => isUploaded).length}
-          </span>
+          <span class="w-24">Saved: {storage.UnuploadedEvents().length} </span>
+          <span class="ml-2">Uploaded: {storage.UploadedEvents().length}</span>
         </p>
       </ActionContainer>
+      <Show when={!user.isProd()}>
+        <ActionContainer
+          icon={BsCameraVideoFill}
+          header="Test Recordings"
+          action={
+            <A href="recordings" class="text-blue-500">
+              <RiSystemArrowRightSLine size={32} />
+            </A>
+          }
+        >
+          <A href="recordings" class="flex items-center text-gray-800">
+            <span class="w-24">
+              Saved: {storage.UnuploadedRecordings().filter(isDev).length}{" "}
+            </span>
+            <span class="ml-2">
+              Uploaded: {storage.UploadedRecordings().filter(isDev).length}
+            </span>
+          </A>
+        </ActionContainer>
+        <ActionContainer icon={ImNotification} header="Events">
+          <p class="flex items-center text-gray-800">
+            <span class="w-24">
+              Saved: {storage.UnuploadedEvents().filter(isDev).length}{" "}
+            </span>
+            <span class="ml-2">
+              Uploaded: {storage.UploadedEvents().filter(isDev).length}
+            </span>
+          </p>
+        </ActionContainer>
+      </Show>
 
       <div class="pb-bar fixed inset-x-0 bottom-[4vh] mx-auto flex justify-center">
         <CircleButton
-          text="Upload to Cacophony"
+          text={
+            user.isProd() ? "Upload to Cacophony" : "Upload to Cacophony Test"
+          }
           loadingText="Uploading..."
           onClick={upload}
-          disabled={uploading()}
+          disabled={
+            uploading() ||
+            (storage.UnuploadedRecordings().filter(isSame).length === 0 &&
+              storage.UnuploadedEvents().filter(isSame).length === 0)
+          }
           loading={uploading()}
         />
       </div>

@@ -53,8 +53,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     return false;
   });
 
-  onMount(async () => {
-    await validateCurrToken();
+  createEffect(async () => {
+    if (!data.loading) {
+      await validateCurrToken();
+    }
   });
 
   createEffect(() => {
@@ -64,14 +66,12 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     } else {
       setIsAuthorized(false);
     }
-    console.log("isAuthorized", isAuthorized(), skippedLogin());
   });
 
   createEffect(() => {
     try {
       const user = data();
       if (!user) return;
-      console.log(user);
       const currUser = UserSchema.parse(user);
       const { token, id, email, refreshToken, prod } = currUser;
       Preferences.set({
@@ -100,6 +100,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     const user = data();
     if (user) {
       const { token, refreshToken, expiry, email, id } = user;
+      if (new Date(expiry).getTime() > Date.now()) return;
       const result = await CacophonyPlugin.validateToken({
         token,
         refreshToken,
@@ -109,8 +110,8 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         const { token, refreshToken, expiry } = result.data;
         mutateUser({ id, email, token, refreshToken, expiry, prod: isProd() });
       } else {
-        console.log("Token invalid");
-        logout();
+        logError("Invalid Authentication", result.message);
+        setIsAuthorized(false);
       }
     }
   };
@@ -120,6 +121,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     isAuthorized,
     skippedLogin,
     validateCurrToken,
+    isProd,
     async login(email: string, password: string) {
       const authUser = await CacophonyPlugin.authenticateUser({
         email,
@@ -178,4 +180,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   };
 });
 
-export { UserProvider, useUserContext };
+const defineUserContext = () => useUserContext()!;
+
+export { UserProvider, defineUserContext as useUserContext };

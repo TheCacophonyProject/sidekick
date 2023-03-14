@@ -56,7 +56,7 @@ function Header() {
         <div class="flex w-6 items-center justify-center">{backNav()}</div>
         <h2 class="ml-4 text-4xl font-bold text-gray-800">{header()}</h2>
       </div>
-      <div class="pt-6">{HeaderButton()}</div>
+      <div class="pt-6 pr-2">{HeaderButton()}</div>
     </div>
   );
 }

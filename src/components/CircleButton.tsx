@@ -25,7 +25,9 @@ function CircleButton(props: CircleButtonProps) {
                 initial={{ opacity: 1 }}
                 exit={{ opacity: [1, 0] }}
                 transition={{ duration: 0.1 }}
-                class="rounded-full border-2 border-blue-400 p-4"
+                class={`rounded-full border-2 ${
+                  props.disabled ? "border-neutral-400" : "border-blue-400"
+                } p-4`}
               />
             }
           >

@@ -47,7 +47,7 @@ function Settings() {
       </ActionContainer>
       <ActionContainer icon={ImMobile} header="App Version">
         <>
-          <h1>1.0</h1>
+          <h1>1.1</h1>
         </>
       </ActionContainer>
       <Show when={!userContext?.data()?.prod}>

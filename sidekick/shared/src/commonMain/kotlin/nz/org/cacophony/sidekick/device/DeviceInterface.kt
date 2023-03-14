@@ -3,6 +3,7 @@ package nz.org.cacophony.sidekick.device
 import arrow.core.flatMap
 import arrow.core.right
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -28,6 +29,10 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                 isLenient = true
             })
         }
+        install(HttpTimeout) {
+            socketTimeoutMillis = 3000
+            requestTimeoutMillis = 3000
+        }
     }
     private fun getDeviceFromCall(call: PluginCall) = call.validateCall<Device>("url").map { device ->
         DeviceApi(client, device)
@@ -37,7 +42,7 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
         getDeviceFromCall(call).map { deviceApi ->
             deviceApi.getDeviceInfo()
                 .fold(
-                    { error -> call.reject(error.toString()) },
+                    { error -> call.failure(error.toString()) },
                     { info ->
                         call.success(
                             mapOf(

@@ -25,6 +25,7 @@ specifiers:
   cordova-res: 0.15.4
   eslint: ^8.34.0
   eslint-plugin-solid: 0.10.0
+  kysely: ^0.23.5
   motion: ^10.15.5
   postcss: ^8.4.21
   prettier: ^2.8.4
@@ -58,6 +59,7 @@ dependencies:
   '@solid-primitives/set': 0.4.2_solid-js@1.6.13
   '@solidjs/meta': 0.28.2_solid-js@1.6.13
   '@solidjs/router': 0.7.0_solid-js@1.6.13
+  kysely: 0.23.5
   motion: 10.15.5
   solid-icons: 1.0.4_solid-js@1.6.13
   solid-js: 1.6.13
@@ -3804,6 +3806,11 @@ packages:
 
   /kolorist/1.7.0:
     resolution: {integrity: sha512-ymToLHqL02udwVdbkowNpzjFd6UzozMtshPQKVi5k1EjKRqKqBrOnE9QbLEb0/pV76SAiIT13hdL8R6suc+f3g==}
+
+  /kysely/0.23.5:
+    resolution: {integrity: sha512-TH+b56pVXQq0tsyooYLeNfV11j6ih7D50dyN8tkM0e7ndiUH28Nziojiog3qRFlmEj9XePYdZUrNJ2079Qjdow==}
+    engines: {node: '>=14.0.0'}
+    dev: false
 
   /levn/0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}

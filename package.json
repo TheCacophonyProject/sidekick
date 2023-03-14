@@ -46,6 +46,7 @@
     "@solid-primitives/set": "^0.4.2",
     "@solidjs/meta": "^0.28.2",
     "@solidjs/router": "^0.7.0",
+    "kysely": "^0.23.5",
     "motion": "^10.15.5",
     "solid-icons": "^1.0.4",
     "solid-js": "^1.6.11",

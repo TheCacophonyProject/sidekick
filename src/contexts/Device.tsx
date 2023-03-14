@@ -5,7 +5,7 @@ import { logError } from "./Notification";
 import { CallbackId, PromiseResult, Result, URL } from ".";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
-import { SavedEvents, SavedRecordings, useStorage } from "./Storage";
+import { useStorage } from "./Storage";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useUserContext } from "./User";
 import { createContextProvider } from "@solid-primitives/context";
@@ -83,7 +83,7 @@ export type DeviceInfo = {
 };
 
 const [DeviceProvider, useDevice] = createContextProvider(() => {
-  const storageContext = useStorage();
+  const storage = useStorage();
   const userContext = useUserContext();
   const devices = new ReactiveMap<DeviceId, Device>();
   const [isDiscovering, setIsDiscovering] = createSignal(false);
@@ -105,12 +105,25 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     return `http://${name}.local`;
   };
 
+  const clearUploaded = async (device: ConnectedDevice) => {
+    const setCurrRec = async (device: ConnectedDevice) =>
+      deviceRecordings.set(device.id, await getRecordings(device));
+    const setCurrEvents = async (device: ConnectedDevice) =>
+      deviceEventKeys.set(device.id, await getEventKeys(device));
+    await Promise.all([
+      deleteUploadedRecordings(device),
+      deleteUploadedEvents(device),
+    ]);
+    await Promise.all([setCurrRec(device), setCurrEvents(device)]);
+  };
+
   const endpointToDevice = async (
     endpoint: string
   ): Promise<ConnectedDevice | Device> => {
     const [host] = endpoint.split(".");
     const [name, group] = host.split("-");
     const url = getDeviceInterfaceUrl(host);
+    debugger;
     const info = await DevicePlugin.getDeviceInfo({ url });
     const id: DeviceId = info.success ? info.data.deviceID.toString() : host;
     const deviceDetails: DeviceDetails = {
@@ -138,11 +151,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         };
 
     if (device.isConnected) {
-      await deleteUploadedRecordings(device);
-      await deleteUploadedEvents(device);
-      deviceRecordings.set(device.id, await getRecordings(device));
-      const keys = await getEventKeys(device);
-      deviceEventKeys.set(device.id, keys);
+      clearUploaded(device);
     }
     return device;
   };
@@ -150,22 +159,26 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   const startDiscovery = async () => {
     if (isDiscovering()) return;
     setIsDiscovering(true);
-    devices.forEach(async (device) => {
-      const newDevice = await endpointToDevice(device.endpoint);
-      if (newDevice.isConnected) {
-        devices.set(device.id, {
-          ...newDevice,
-          locationSet: device.isConnected ? device.locationSet : false,
-        });
+    for (const device of devices.values()) {
+      const connection = await DevicePlugin.getDeviceConnection({
+        host: device.host,
+      });
+      if (connection.success && device.isConnected) {
+        clearUploaded(device);
       } else {
         devices.delete(device.id);
       }
-    });
+    }
 
     const id = await DevicePlugin.discoverDevices(async (newDevice) => {
       if (!newDevice) return;
-      const connectedDevice = await await endpointToDevice(newDevice.endpoint);
-      devices.set(connectedDevice.id, connectedDevice);
+      for (let i = 0; i < 3; i++) {
+        const connectedDevice = await endpointToDevice(newDevice.endpoint);
+        if (connectedDevice.isConnected) {
+          devices.set(connectedDevice.id, connectedDevice);
+          break;
+        }
+      }
     });
     setCallbackID(id);
   };
@@ -225,22 +238,25 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     try {
       const { url } = device;
       const currDeviceRecordings = await getRecordings(device);
-      const uploadedRecordings = await storageContext.getSavedRecordings({
+      const savedRecordings = await storage.getSavedRecordings({
         device: device.id,
-        uploaded: true,
       });
-      for (const rec of uploadedRecordings) {
+      for (const rec of savedRecordings) {
         if (currDeviceRecordings.includes(rec.name)) {
-          const res: HttpResponse = await CapacitorHttp.delete({
-            url: `${url}/api/recording/${rec.name}`,
-            headers,
-            webFetchExtra: {
-              credentials: "include",
-            },
-          });
-          if (res.status !== 200) return;
+          if (rec.isUploaded) {
+            const res: HttpResponse = await CapacitorHttp.delete({
+              url: `${url}/api/recording/${rec.name}`,
+              headers,
+              webFetchExtra: {
+                credentials: "include",
+              },
+            });
+            if (res.status !== 200) return;
+          } else {
+            return;
+          }
         }
-        await storageContext.deleteRecording(rec);
+        await storage.deleteRecording(rec);
       }
     } catch (error) {
       logError(
@@ -254,16 +270,19 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
   const saveRecordings = async (device: ConnectedDevice) => {
     const recs = deviceRecordings.get(device.id);
-    const savedRecs = SavedRecordings();
+    const savedRecs = storage.SavedRecordings();
+    console.log("recs", recs, savedRecs);
     if (!recs) return;
-    for (const rec of recs) {
-      if (savedRecs.find((saved) => saved.name === rec)) return;
+    // Filter out recordings that have already been saved
+    for (const rec of recs.filter(
+      (r) => !savedRecs.find((s) => s.name === r)
+    )) {
       const res = await DevicePlugin.downloadRecording({
         url: device.url,
         recordingPath: rec,
       });
       if (!res.success) return;
-      const data = await storageContext?.saveRecording({
+      const data = await storage?.saveRecording({
         ...device,
         filename: rec,
         path: res.data.path,
@@ -293,12 +312,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     try {
       const { url } = device;
       const currEvents = await getEventKeys(device);
-      const uploadedEvents = await storageContext.getSavedEvents({
+      const savedEvents = await storage.getSavedEvents({
         device: device.id,
-        uploaded: true,
       });
-      const eventsToDel = uploadedEvents.filter((event) =>
-        currEvents.includes(Number(event.key))
+      const eventsToDel = savedEvents.filter(
+        (event) => currEvents.includes(Number(event.key)) && event.isUploaded
       );
       const keys = eventsToDel.map((event) => Number(event.key));
       if (keys.length !== 0) {
@@ -310,12 +328,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       }
       // Delete events if they are not on the device, or if they were deleted on the device
       const deletedEvents = [
-        ...uploadedEvents.filter(
+        ...savedEvents.filter(
           (event) => !currEvents.includes(Number(event.key))
         ),
         ...eventsToDel,
       ];
-      await storageContext.deleteEvents({ events: deletedEvents });
+      await storage.deleteEvents({ events: deletedEvents });
     } catch (error) {
       logError(
         "Could not delete events",
@@ -349,13 +367,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       });
       if (!res.success) return [];
       const json = JSON.parse(res.data);
-      const events = eventSchema.parse(json);
+      const events = eventSchema.safeParse(json);
+      if (!events.success) return [];
       // map over the events and add the device id to the event
-      const eventsWithDevice = Object.entries(events).map(([key, value]) => ({
-        ...value.event,
-        key,
-        device: device.id,
-      }));
+      const eventsWithDevice = Object.entries(events.data).map(
+        ([key, value]) => ({
+          ...value.event,
+          key,
+          device: device.id,
+          isProd: device.isProd,
+        })
+      );
       return eventsWithDevice;
     } catch (error) {
       if (error instanceof Error) {
@@ -369,24 +391,23 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     const eventKeys = await getEventKeys(device);
     deviceEventKeys.set(device.id, eventKeys);
     if (!eventKeys) return;
-    const savedEvents = await SavedEvents();
+    const savedEvents = storage.SavedEvents();
     const events = await getEvents(
       device,
       eventKeys.filter(
         (key) => !savedEvents.find((event) => event.key === key.toString())
       )
     );
-    return Promise.all(
-      events.map(async (event) =>
-        storageContext?.saveEvent({
-          key: parseInt(event.key),
-          device: device.id,
-          type: event.Type,
-          timestamp: event.Timestamp,
-          details: JSON.stringify(event.Details),
-        })
-      )
-    );
+    for (const event of events) {
+      storage?.saveEvent({
+        key: parseInt(event.key),
+        device: device.id,
+        isProd: device.isProd,
+        type: event.Type,
+        timestamp: event.Timestamp,
+        details: JSON.stringify(event.Details),
+      });
+    }
   };
 
   const setDeviceToCurrLocation = async (device: ConnectedDevice) => {
