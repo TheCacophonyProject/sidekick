@@ -1,6 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@capacitor-community/keep-awake': ^3.0.0
   '@capacitor-community/sqlite': 4.6.2-3
   '@capacitor/android': ^4.6.3
   '@capacitor/browser': ^4.1.1
@@ -43,6 +44,7 @@ specifiers:
   zod: ^3.20.6
 
 dependencies:
+  '@capacitor-community/keep-awake': 3.0.0_@capacitor+core@4.7.0
   '@capacitor-community/sqlite': 4.6.2-3_@capacitor+core@4.7.0
   '@capacitor/android': 4.7.0_@capacitor+core@4.7.0
   '@capacitor/browser': 4.1.1_@capacitor+core@4.7.0
@@ -1185,6 +1187,14 @@ packages:
       '@babel/helper-string-parser': 7.19.4
       '@babel/helper-validator-identifier': 7.19.1
       to-fast-properties: 2.0.0
+
+  /@capacitor-community/keep-awake/3.0.0_@capacitor+core@4.7.0:
+    resolution: {integrity: sha512-amK9qcQOtsLNBEQ+THXLtNRgHds6SmJUsZ5ZrxGfcqBK8NKzalljejqLUkx2wIbB4ixsKKlrtzlwByyuRGAK+w==}
+    peerDependencies:
+      '@capacitor/core': ^4.0.0
+    dependencies:
+      '@capacitor/core': 4.7.0
+    dev: false
 
   /@capacitor-community/sqlite/4.6.2-3_@capacitor+core@4.7.0:
     resolution: {integrity: sha512-QCpxpmOVV4p9OTHjR6TpfzvmpicLq3YGFNQ/M9/aqUgcxGl2CK1Rm8mlJFyBfm65Elin0lDSa1aOQhEyIw/ijw==}

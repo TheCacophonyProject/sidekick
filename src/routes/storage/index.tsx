@@ -18,11 +18,10 @@ interface StorageProps {
 export default function Storage() {
   const storage = useStorage();
   const user = useUserContext();
-  const [uploading, setUploading] = createSignal(false);
 
   const deleteSaved = async () => {
     const { value } = await Dialog.confirm({
-      title: "Delete Recordings",
+      title: "Delete Saved",
       message:
         "Are you sure you want to delete all saved items? Note: Uploaded items will not be deleted, until the device is notified",
     });
@@ -45,17 +44,19 @@ export default function Storage() {
     console.log(headerMap.get("/storage"));
   });
   const upload = async () => {
-    setUploading(true);
-    try {
-      if (!user) return;
-      await user.validateCurrToken();
-      if (!user.isAuthorized) return;
-
-      await Promise.all([storage.uploadRecordings(), storage.uploadEvents()]);
-      setUploading(false);
-    } catch (e) {
-      setUploading(false);
+    if (!user.data()) {
+      const { value } = await Dialog.confirm({
+        title: "Login",
+        message: "You are not currently logged in.\n Would you like to login?",
+      });
+      if (!value) return;
+      await user.logout();
+      return;
     }
+    await user.validateCurrToken();
+    if (!user.isAuthorized()) return;
+
+    await storage.uploadItems();
   };
   const isProd = (rec: { isProd: boolean }) => rec.isProd;
   const isSame = (rec: { isProd: boolean }) => rec.isProd === user.isProd();
@@ -73,17 +74,21 @@ export default function Storage() {
       >
         <A href="recordings" class="flex items-center text-gray-800">
           <span class="w-24">
-            Saved: {storage.UnuploadedRecordings().length}{" "}
+            Saved: {storage.UnuploadedRecordings().filter(isProd).length}{" "}
           </span>
           <span class="ml-2">
-            Uploaded: {storage.UploadedRecordings().length}
+            Uploaded: {storage.UploadedRecordings().filter(isProd).length}
           </span>
         </A>
       </ActionContainer>
       <ActionContainer icon={ImNotification} header="Events">
         <p class="flex items-center text-gray-800">
-          <span class="w-24">Saved: {storage.UnuploadedEvents().length} </span>
-          <span class="ml-2">Uploaded: {storage.UploadedEvents().length}</span>
+          <span class="w-24">
+            Saved: {storage.UnuploadedEvents().filter(isProd).length}{" "}
+          </span>
+          <span class="ml-2">
+            Uploaded: {storage.UploadedEvents().filter(isProd).length}
+          </span>
         </p>
       </ActionContainer>
       <Show when={!user.isProd()}>
@@ -105,7 +110,7 @@ export default function Storage() {
             </span>
           </A>
         </ActionContainer>
-        <ActionContainer icon={ImNotification} header="Events">
+        <ActionContainer icon={ImNotification} header="Test Events">
           <p class="flex items-center text-gray-800">
             <span class="w-24">
               Saved: {storage.UnuploadedEvents().filter(isDev).length}{" "}
@@ -125,11 +130,11 @@ export default function Storage() {
           loadingText="Uploading..."
           onClick={upload}
           disabled={
-            uploading() ||
+            storage.isUploading() ||
             (storage.UnuploadedRecordings().filter(isSame).length === 0 &&
               storage.UnuploadedEvents().filter(isSame).length === 0)
           }
-          loading={uploading()}
+          loading={storage.isUploading()}
         />
       </div>
     </section>

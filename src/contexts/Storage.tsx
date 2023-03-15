@@ -28,6 +28,7 @@ import {
   insertRecording,
 } from "~/database/Entities/Recording";
 import type { Recording } from "~/database/Entities/Recording";
+import { KeepAwake } from "@capacitor-community/keep-awake";
 import { openConnection } from "~/database";
 
 type RecordingFile = {
@@ -42,6 +43,9 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const driver = new SQLiteConnection(CapacitorSQLite);
   const [db, setDb] = createSignal<SQLiteDBConnection>();
   const [SavedRecordings, setSavedRecordings] = createSignal<Recording[]>([]);
+  const [devicesDownloading, setDevicesDownloading] = createSignal<DeviceId[]>(
+    []
+  );
   const UploadedRecordings = createMemo(() =>
     SavedRecordings().filter((rec) => rec.isUploaded)
   );
@@ -55,6 +59,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const UnuploadedEvents = createMemo(() =>
     SavedEvents().filter((event) => !event.isUploaded)
   );
+  const [isUploading, setIsUploading] = createSignal(false);
 
   const DatabaseName = "Cacophony";
   onMount(async () => {
@@ -93,6 +98,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
 
   const saveRecording = async ({
     id,
+    name,
     group,
     path,
     filename,
@@ -111,6 +117,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         path,
         groupName: group,
         device: id,
+        deviceName: name,
         size: size.toString(),
         isProd,
         isUploaded: false,
@@ -118,11 +125,12 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
 
       const savedRecording = await insertRecording(currdb)(recording);
       setSavedRecordings((prev) => [...prev, recording]);
-      console.log(saveRecording);
       return savedRecording;
     } catch (e) {
-      console.error(e);
-      throw e;
+      if (e instanceof Error) {
+        console.error(e);
+        logError("Failed to save recording", e.message);
+      }
     }
   };
 
@@ -182,7 +190,9 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
-    for (const event of UnuploadedEvents()) {
+    for (const event of UnuploadedEvents().filter(
+      (e) => e.isProd === userContext.isProd()
+    )) {
       try {
         const res = await CacophonyPlugin.uploadEvent({
           token: user.token,
@@ -318,6 +328,19 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     }
   };
 
+  const uploadItems = async () => {
+    if (isUploading()) return;
+    setIsUploading(true);
+    if (await KeepAwake.isSupported()) {
+      await KeepAwake.keepAwake();
+    }
+    await Promise.all([uploadRecordings(), uploadEvents()]);
+    if (await KeepAwake.isSupported()) {
+      await KeepAwake.allowSleep();
+    }
+    setIsUploading(false);
+  };
+
   return {
     SavedRecordings,
     UnuploadedRecordings,
@@ -332,6 +355,8 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     getSavedRecordings,
     saveEvent,
     uploadEvents,
+    uploadItems,
+    isUploading,
     getSavedEvents,
     deleteEvents,
     deleteEvent,

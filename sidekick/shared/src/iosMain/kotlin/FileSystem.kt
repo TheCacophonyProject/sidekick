@@ -9,6 +9,10 @@ actual fun writeToFile(file: Path, data: ByteArray): Path  {
     if (parent != null && !FileSystem.SYSTEM.exists(parent)) {
         FileSystem.SYSTEM.createDirectory(parent, true)
     }
+    // if file exists, delete it
+    if (FileSystem.SYSTEM.exists(file)) {
+        FileSystem.SYSTEM.delete(file, false)
+    }
     val res = FileSystem.SYSTEM.write(file, true) {
         write(data)
     }

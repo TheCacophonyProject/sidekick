@@ -6,7 +6,14 @@ import {
 } from "solid-icons/bs";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { FaSolidAngleDown } from "solid-icons/fa";
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import {
+  For,
+  Show,
+  createMemo,
+  createSignal,
+  mergeProps,
+  onMount,
+} from "solid-js";
 import ActionContainer from "~/components/ActionContainer";
 import { useDevice } from "~/contexts/Device";
 import { Recording, useStorage } from "~/contexts/Storage";
@@ -14,11 +21,12 @@ import { useUserContext } from "~/contexts/User";
 interface DeviceRecordingsProps {
   deviceId: string;
   recordings: Recording[];
+  open?: boolean;
 }
 
 function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
-  const device = useDevice();
-  const [toggle, setToggle] = createSignal(false);
+  const merged = mergeProps({ open: false }, props);
+  const [toggle, setToggle] = createSignal(merged.open);
   const openRecording = (id: string, isProd: boolean) => {
     Browser.open({
       url: `https://browse${
@@ -32,9 +40,7 @@ function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
         class="flex items-center  justify-between px-4 py-4 text-slate-800"
         onClick={() => setToggle(!toggle())}
       >
-        <h1 class="text-2xl font-bold ">
-          {device.devices.get(props.deviceId)?.name}
-        </h1>
+        <h1 class="text-2xl font-bold ">{props.deviceId}</h1>
         <FaSolidAngleDown
           size={24}
           class={`${toggle() ? "rotate-180 transform" : ""}`}
@@ -67,27 +73,23 @@ function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
 
 function Recordings() {
   const storage = useStorage();
-  const DeviceRecordings = createMemo(() => {
-    // Group recordings by device as [[device, [recording, recording, recording],[device, [recording, recording, recording]]]
-    const recordings = storage.UploadedRecordings();
-    const devices = new Map<string, Recording[]>();
-    recordings.forEach((recording) => {
-      const device = recording.device;
-      if (!devices.has(device)) {
-        devices.set(device, []);
-      }
-      devices.get(device)!.push(recording);
-    });
-    return devices;
+  const Devices = createMemo(() => {
+    const devices = new Set<string>(
+      storage.UploadedRecordings().map((rec) => rec.deviceName)
+    );
+    return [...devices];
   });
 
   return (
     <section class="pb-bar pt-bar relative h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
-      <For each={[...DeviceRecordings().entries()]}>
-        {([deviceId, recordings]) => (
+      <For each={Devices()}>
+        {(device) => (
           <DeviceRecordingsDisplay
-            deviceId={deviceId}
-            recordings={recordings}
+            deviceId={device}
+            recordings={storage
+              .UploadedRecordings()
+              .filter((rec) => rec.deviceName === device)}
+            {...(Devices().length === 1 && { open: true })}
           />
         )}
       </For>

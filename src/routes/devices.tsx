@@ -23,9 +23,11 @@ import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
 import { Recording, Event, useStorage } from "~/contexts/Storage";
 import { ReactiveSet } from "@solid-primitives/set";
-import { ImNotification } from "solid-icons/im";
+import { ImCog, ImNotification } from "solid-icons/im";
 import { headerMap } from "~/components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
+import CacaophonyLogo from "~/components/CacaophonyLogo";
+import BackgroundLogo from "~/components/BackgroundLogo";
 
 interface DeviceDetailsProps {
   device: Device;
@@ -39,7 +41,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const [deviceRecs, setDeviceRecs] = createSignal<string[]>([]);
   const [savedEvents, setSavedEvents] = createSignal<Event[]>([]);
   const [eventKeys, setEventKeys] = createSignal<number[]>([]);
-  const [isDownloading, setIsDownloading] = createSignal(false);
 
   const [disabledDownload, setDisabledDownload] = createSignal(false);
   createEffect(() => {
@@ -93,12 +94,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
     });
     if (!value) return;
     if (!device.isConnected) return;
-    setIsDownloading(true);
-    await Promise.all([
-      context.saveRecordings(device),
-      context.saveEvents(device),
-    ]);
-    setIsDownloading(false);
+    await context.saveItems(device);
   };
 
   return (
@@ -112,9 +108,14 @@ function DeviceDetails(props: DeviceDetailsProps) {
         </button>
       }
     >
-      <div class="flex items-center justify-between px-2">
+      <div class="z-30 flex items-center justify-between px-2">
         <div onClick={() => openDeviceInterface(props.device)} role="button">
-          <h1 class="break-all text-left text-lg">{props.device.name}</h1>
+          <div class="flex items-center space-x-2 ">
+            <Show when={!props.device.isProd}>
+              <ImCog size={20} />
+            </Show>
+            <h1 class="break-all text-left text-lg">{props.device.name}</h1>
+          </div>
           <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
             <BsCameraVideoFill size={20} />
             <p class="text-sm">
@@ -134,9 +135,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
             </p>
           </div>
         </div>
-        <div class="flex items-center space-x-6 px-2 text-blue-500">
+        <div class="z-30 flex items-center space-x-6 px-2 text-blue-500">
           <Show
-            when={!isDownloading()}
+            when={!context.devicesDownloading.has(props.device.id)}
             fallback={<FaSolidSpinner size={28} class="animate-spin" />}
           >
             <button
@@ -184,8 +185,8 @@ function Devices() {
 
   const connectToBushnet = async () => {
     const { value } = await Dialog.confirm({
-      title: "Connecting to Offline Device",
-      message: `Please ensure you have reset the device and have waited atleast a few minutes for bootup. Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
+      title: "Connecting to Device",
+      message: `Please turn on the device and wait at least 2 mintues for the device to setup it's Wi-Fi then press "Ok".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
     });
 
     if (!value) return;
@@ -266,9 +267,11 @@ function Devices() {
             ? `${
                 context.devices.get(devicesToUpdate[0])?.name
               } has a different location stored. Would you like to update it to your current location?`
-            : `${devicesToUpdate.join(
-                ", "
-              )} have different location stored. Would you like to update them to the current location?`;
+            : `${devicesToUpdate
+                .map((val) => context.devices.get(val)?.name)
+                .join(
+                  ", "
+                )} have different location stored. Would you like to update them to the current location?`;
 
         const { value } = await Dialog.confirm({
           title: "Update Location",
@@ -288,7 +291,7 @@ function Devices() {
     if (context.isDiscovering()) return;
   });
   return (
-    <section class="pb-bar pt-bar relative h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
+    <section class="pb-bar pt-bar h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
       <For
         each={[...context.devices.values()].filter((dev) => dev.isConnected)}
       >
@@ -301,8 +304,7 @@ function Devices() {
           )
         }
       </For>
-      <div class="h-32 bg-gray-200"></div>
-      <div class="pb-bar fixed inset-x-0 bottom-[4vh] mx-auto flex justify-center">
+      <div class="pb-bar fixed inset-x-0 bottom-[4vh] z-20 mx-auto flex justify-center">
         <CircleButton
           onClick={searchDevice}
           disabled={context.isDiscovering()}
@@ -310,6 +312,24 @@ function Devices() {
           text="Search Devices"
           loadingText="Searching..."
         />
+      </div>
+      <div class="pt-bar absolute inset-0 flex flex-col pb-32">
+        <div class="my-auto">
+          <BackgroundLogo />
+          <div class="flex h-32 w-full justify-center">
+            <Show when={context.devices.size <= 0}>
+              <p class="mt-6 max-w-sm px-4 text-center text-neutral-600">
+                No devices detected.
+                <br /> To access a device please turn it on, wait for 2 mintues,
+                then press{" "}
+                <span class="inline-block">
+                  <FaSolidWifi />
+                </span>{" "}
+                to connect to the device's Wi-Fi
+              </p>
+            </Show>
+          </div>
+        </div>
       </div>
     </section>
   );

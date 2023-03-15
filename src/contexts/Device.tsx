@@ -11,6 +11,7 @@ import { useUserContext } from "./User";
 import { createContextProvider } from "@solid-primitives/context";
 import { ReactiveSet } from "@solid-primitives/set";
 import { z } from "zod";
+import { KeepAwake } from "@capacitor-community/keep-awake";
 
 export type DeviceId = string;
 export type DeviceName = string;
@@ -88,6 +89,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   const devices = new ReactiveMap<DeviceId, Device>();
   const [isDiscovering, setIsDiscovering] = createSignal(false);
   const locationBeingSet = new ReactiveSet<string>();
+  const devicesDownloading = new ReactiveSet<DeviceId>();
   const deviceRecordings = new ReactiveMap<string, RecordingName[]>();
   const deviceEventKeys = new ReactiveMap<string, number[]>();
 
@@ -119,41 +121,34 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
   const endpointToDevice = async (
     endpoint: string
-  ): Promise<ConnectedDevice | Device> => {
+  ): Promise<ConnectedDevice | undefined> => {
     const [host] = endpoint.split(".");
     const [name, group] = host.split("-");
     const url = getDeviceInterfaceUrl(host);
-    debugger;
     const info = await DevicePlugin.getDeviceInfo({ url });
     const id: DeviceId = info.success ? info.data.deviceID.toString() : host;
-    const deviceDetails: DeviceDetails = {
-      id,
-      host,
-      name: info.success ? info.data.deviceName : name,
-      group,
-      type: "thermal",
-      endpoint,
-      isProd: info.success ? !info.data.serverURL.includes("test") : true,
-    };
     const connection = await DevicePlugin.getDeviceConnection({
       host,
     });
-    const device: Device = connection.success
-      ? {
-          ...deviceDetails,
-          url,
-          isConnected: true,
-          locationSet: false,
-        }
-      : {
-          ...deviceDetails,
-          isConnected: false,
-        };
-
-    if (device.isConnected) {
+    if (connection.success && info.success) {
+      const deviceDetails: DeviceDetails = {
+        id,
+        host,
+        name: info.data.deviceName,
+        group,
+        type: "thermal",
+        endpoint,
+        isProd: !info.data.serverURL.includes("test"),
+      };
+      const device: ConnectedDevice = {
+        ...deviceDetails,
+        url,
+        isConnected: true,
+        locationSet: false,
+      };
       clearUploaded(device);
+      return device;
     }
-    return device;
   };
 
   const startDiscovery = async () => {
@@ -174,7 +169,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (!newDevice) return;
       for (let i = 0; i < 3; i++) {
         const connectedDevice = await endpointToDevice(newDevice.endpoint);
-        if (connectedDevice.isConnected) {
+        if (connectedDevice) {
           devices.set(connectedDevice.id, connectedDevice);
           break;
         }
@@ -271,7 +266,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   const saveRecordings = async (device: ConnectedDevice) => {
     const recs = deviceRecordings.get(device.id);
     const savedRecs = storage.SavedRecordings();
-    console.log("recs", recs, savedRecs);
     if (!recs) return;
     // Filter out recordings that have already been saved
     for (const rec of recs.filter(
@@ -410,6 +404,20 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
+  const saveItems = async (device: ConnectedDevice) => {
+    const { id } = device;
+    const isSupported = await KeepAwake.isSupported();
+    if (isSupported) {
+      await KeepAwake.keepAwake();
+    }
+    devicesDownloading.add(id);
+    await Promise.all([saveRecordings(device), saveEvents(device)]);
+    devicesDownloading.delete(id);
+    if (isSupported) {
+      await KeepAwake.allowSleep();
+    }
+  };
+
   const setDeviceToCurrLocation = async (device: ConnectedDevice) => {
     try {
       const { url } = device;
@@ -497,6 +505,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   return {
     devices,
     isDiscovering,
+    devicesDownloading,
     locationBeingSet,
     deviceRecordings,
     deviceEventKeys,
@@ -506,8 +515,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     setDeviceToCurrLocation,
     deleteUploadedRecordings,
     getEvents,
-    saveRecordings,
-    saveEvents,
+    saveItems,
     getLocation,
   };
 });

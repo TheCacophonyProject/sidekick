@@ -1,12 +1,13 @@
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
 
-const DBName = "recordings";
+const DBName = "RecordingTable";
 export type Recording = {
   name: string;
   path: string;
   groupName: string;
   device: string;
+  deviceName: string;
   isUploaded: boolean;
   uploadId?: string | null;
   size: string;
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS ${DBName}(
   path TEXT NOT NULL,
   groupName TEXT NOT NULL,
   device TEXT NOT NULL,
+  deviceName TEXT NOT NULL,
   isUploaded BOOLEAN NOT NULL DEFAULT 0,
   uploadId TEXT,
   size TEXT NOT NULL,
@@ -31,6 +33,7 @@ const RecordingSchema = z.object({
   path: z.string(),
   groupName: z.string(),
   device: z.string(),
+  deviceName: z.string(),
   isUploaded: z.boolean(),
   uploadId: z.string().nullable(),
   size: z.string(),
@@ -79,12 +82,14 @@ export const getRecordings =
 
 export const insertRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
-    const sql = `INSERT INTO ${DBName} (name, path, groupName, device, size, isProd) VALUES (?, ?, ?, ?, ?, ?);`;
+    const sql = `INSERT INTO ${DBName} (name, path, groupName, device, deviceName, size, isProd) VALUES (?, ?, ?, ?, ?, ?, ?);`;
+    debugger;
     const values = [
       recording.name,
       recording.path,
       recording.groupName,
       recording.device,
+      recording.deviceName,
       recording.size,
       recording.isProd,
     ];

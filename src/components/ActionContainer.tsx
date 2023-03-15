@@ -8,8 +8,8 @@ const ActionContainer = (props: {
   action?: JSX.Element;
 }) => {
   return (
-    <div class="h-min-2 mt-2 flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
-      <div class="flex w-full flex-row items-center gap-x-4">
+    <div class="h-min-2 z-30 mt-2 flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
+      <div class="z-30 flex w-full flex-row items-center gap-x-4">
         {props.icon && (
           <div class="text-gray-700">
             <props.icon size={38} class="text-4xl" />
@@ -24,7 +24,9 @@ const ActionContainer = (props: {
           {props.children}
         </div>
       </div>
-      <Show when={props.action}>{props.action}</Show>
+      <div class="z-30 flex items-center justify-center">
+        <Show when={props.action}>{props.action}</Show>
+      </div>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { logError, logSuccess } from "./Notification";
 import { PromiseResult, Result } from ".";
 import { z } from "zod";
 import { CacophonyPlugin } from "./CacophonyApi";
+import { useNavigate } from "solid-start";
 const UserSchema = z.object({
   token: z.string(),
   id: z.string(),
@@ -16,6 +17,7 @@ const UserSchema = z.object({
 });
 
 const [UserProvider, useUserContext] = createContextProvider(() => {
+  const nav = useNavigate();
   const [isProd, setIsProd] = createSignal(true);
   const [isAuthorized, setIsAuthorized] = createSignal(false);
   const [data, { mutate: mutateUser, refetch }] = createResource(async () => {
@@ -146,6 +148,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     logout,
     skip() {
       Preferences.set({ key: "skippedLogin", value: "true" });
+      nav("/devices");
       mutateSkip(true);
     },
     async requestDeletion(): PromiseResult<string> {

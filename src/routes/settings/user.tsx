@@ -7,15 +7,6 @@ import { useUserContext } from "~/contexts/User";
 
 function user() {
   const userContext = useUserContext();
-  const logoutAccount = async () => {
-    const { value } = await Dialog.confirm({
-      title: "Confirm",
-      message: `Are you sure you want to logout?`,
-    });
-    if (value) {
-      userContext?.logout();
-    }
-  };
   const deleteAccount = async () => {
     const { value } = await Dialog.confirm({
       title: "Confirm",
@@ -27,17 +18,6 @@ function user() {
   };
   return (
     <div class="pt-bar pb-bar h-full space-y-2 bg-gray-200 px-2">
-      <ActionContainer>
-        <>
-          <button
-            class="flex w-full items-center justify-center space-x-2 text-2xl text-blue-500"
-            onClick={logoutAccount}
-          >
-            Logout
-            <BiRegularLogOut size={24} />
-          </button>
-        </>
-      </ActionContainer>
       <ActionContainer>
         <>
           <button class="w-full text-2xl text-red-500" onClick={deleteAccount}>

@@ -31,7 +31,6 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
         }
         install(HttpTimeout) {
             socketTimeoutMillis = 3000
-            requestTimeoutMillis = 3000
         }
     }
     private fun getDeviceFromCall(call: PluginCall) = call.validateCall<Device>("url").map { device ->
