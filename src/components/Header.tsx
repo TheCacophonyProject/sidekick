@@ -51,7 +51,7 @@ function Header() {
   });
 
   return (
-    <div class="pt-safe fixed top-0 z-10 flex h-36 w-screen items-center justify-between bg-white px-6 pb-4">
+    <div class="pt-safe fixed top-0 z-10 flex max-h-44 w-screen items-center justify-between bg-white px-6 pb-4">
       <div class="flex items-center pt-6">
         <div class="flex w-6 items-center justify-center">{backNav()}</div>
         <h2 class="ml-4 text-4xl font-bold text-gray-800">{header()}</h2>

@@ -2,7 +2,7 @@ import { HttpResponse, registerPlugin } from "@capacitor/core";
 import { createEffect, createSignal } from "solid-js";
 import { Geolocation } from "@capacitor/geolocation";
 import { logError } from "./Notification";
-import { CallbackId, PromiseResult, Result, URL } from ".";
+import { CallbackId, Result, URL } from ".";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
 import { useStorage } from "./Storage";
@@ -55,9 +55,7 @@ export interface DevicePlugin {
     onFoundDevice: (device: { endpoint: string } | undefined) => void
   ): Promise<CallbackId>;
   stopDiscoverDevices(options: { id: CallbackId }): Promise<void>;
-  getDeviceConnection(options: {
-    host: DeviceHost;
-  }): Result<{ ip: string; port: string }>;
+  checkDeviceConnection(options: DeviceUrl): Result;
   getDeviceInfo(options: DeviceUrl): Result<DeviceInfo>;
   getDeviceConfig(options: DeviceUrl): Result<string>;
   getDeviceLocation(options: DeviceUrl): Result<string>;
@@ -127,9 +125,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     const url = getDeviceInterfaceUrl(host);
     const info = await DevicePlugin.getDeviceInfo({ url });
     const id: DeviceId = info.success ? info.data.deviceID.toString() : host;
-    const connection = await DevicePlugin.getDeviceConnection({
-      host,
-    });
+    const connection = await DevicePlugin.checkDeviceConnection({ url });
     if (connection.success && info.success) {
       const deviceDetails: DeviceDetails = {
         id,
@@ -155,8 +151,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     if (isDiscovering()) return;
     setIsDiscovering(true);
     for (const device of devices.values()) {
-      const connection = await DevicePlugin.getDeviceConnection({
-        host: device.host,
+      if (!device.isConnected) continue;
+      const connection = await DevicePlugin.checkDeviceConnection({
+        url: device.url,
       });
       if (connection.success && device.isConnected) {
         clearUploaded(device);
@@ -459,7 +456,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
   const getLocation = async (
     device: ConnectedDevice
-  ): PromiseResult<Location<number>> => {
+  ): Result<Location<number>> => {
     try {
       const { url } = device;
       const locationSchema = z.object({

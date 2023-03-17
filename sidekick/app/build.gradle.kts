@@ -17,7 +17,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.3.0"
+        kotlinCompilerExtensionVersion = "1.4.3"
     }
     packagingOptions {
         resources {
@@ -42,12 +42,7 @@ repositories {
 dependencies {
     implementation(project(":shared"))
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
-    implementation("androidx.appcompat:appcompat:1.4.2")
-    implementation("androidx.activity:activity-compose:1.4.0")
-    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
-    implementation("androidx.core:core-splashscreen:1.0.0-rc01")
-    implementation(project(":capacitor-android"))
-    implementation(project(":capacitor-cordova-android-plugins"))
+    implementation(project(mapOf("path" to ":capacitor-android")))
 }
 
 apply(from = "capacitor.build.gradle")

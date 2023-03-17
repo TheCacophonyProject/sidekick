@@ -55,25 +55,8 @@ public class DevicePlugin: CAPPlugin {
         serviceBrowser?.cancel()
         call.resolve(["success": true, "id": id])
     }
-    @objc func getDeviceConnection(_ call: CAPPluginCall) {
-        guard let name = call.getString("host") else { return call.reject("Device host required")}
-        
-        let connection = NWConnection.init(to: NWEndpoint.service(name: name, type: type, domain: domain, interface: .none), using: .tcp)
-        connection.stateUpdateHandler = {(state: NWConnection.State) in
-            if state == .ready, let innerEnpoint = connection.currentPath?.remoteEndpoint, case .hostPort(let host, let port) = innerEnpoint {
-                print(host, port)
-                connection.cancel()
-                call.resolve(["success": true, "data":["ip": host.debugDescription.replacingOccurrences(of: "%en0", with: ""), "port": port.debugDescription]])
-            }
-        }
-
-        connection.start(queue: .global())
-        DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
-            if (connection.state != .cancelled) {
-                connection.cancel()
-                call.resolve(["success": false, "error": "Could not connect to device"])
-            }
-        }
+    @objc func checkDeviceConnection(_ call: CAPPluginCall) {
+        device.checkDeviceConnection(call: pluginCall(call: call))
     }
     
     @objc func connectToDeviceAP(_ call: CAPPluginCall) {
@@ -122,9 +105,5 @@ public class DevicePlugin: CAPPlugin {
     
     @objc func downloadRecording(_ call: CAPPluginCall) {
         device.downloadRecording(call: pluginCall(call: call))
-    }
-    
-    @objc func getTestText(_ call: CAPPluginCall) {
-        device.getTestText(call: pluginCall(call: call))
     }
 }

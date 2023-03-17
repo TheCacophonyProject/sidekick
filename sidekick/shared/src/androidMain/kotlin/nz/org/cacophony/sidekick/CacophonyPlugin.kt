@@ -1,4 +1,40 @@
 package nz.org.cacophony.sidekick
 
-class CacophonyPlugin {
+import android.content.Context
+import com.getcapacitor.Plugin
+import com.getcapacitor.PluginCall
+import com.getcapacitor.PluginMethod
+import nz.org.cacophony.sidekick.cacophony.CacophonyInterface
+
+class CacophonyPlugin(context: Context) : Plugin() {
+    val cacophony = CacophonyInterface(context.filesDir.absolutePath)
+
+    @PluginMethod
+    fun authenticateUser(call: PluginCall) {
+        cacophony.authenticateUser(pluginCall(call))
+    }
+    @PluginMethod
+    fun requestDeletion(call: PluginCall) {
+        cacophony.requestDeletion(pluginCall(call))
+    }
+    @PluginMethod
+    fun validateToken(call: PluginCall) {
+        cacophony.validateToken(pluginCall(call))
+    }
+    @PluginMethod
+    fun setToTestServer(call: PluginCall) {
+        cacophony.setToTestServer(pluginCall(call))
+    }
+    @PluginMethod
+    fun setToProductionServer(call: PluginCall) {
+        cacophony.setToProductionServer(pluginCall(call))
+    }
+    @PluginMethod
+    fun uploadRecording(call: PluginCall) {
+        cacophony.uploadRecording(pluginCall(call))
+    }
+    @PluginMethod
+    fun uploadEvent(call: PluginCall) {
+        cacophony.uploadEvent(pluginCall(call))
+    }
 }

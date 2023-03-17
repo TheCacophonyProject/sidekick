@@ -96,14 +96,18 @@ function Login() {
   };
 
   return (
-    <Form class="mx-8 flex h-full flex-col justify-center gap-y-4 text-lg">
+    <Form class="flex h-screen w-screen flex-col justify-center gap-y-4 bg-white px-8 text-lg">
       <Show when={!user?.isProd()}>
         <div class="pt-safe absolute top-0 mt-8 flex items-center pr-8 font-bold text-neutral-700">
           <ImCog size={32} />
           <h1 class="ml-2">Test Mode</h1>
         </div>
       </Show>
-      <div class="mb-6 mt-24" role="button" onTouchStart={logoDown}>
+      <div
+        class="mb-6 mt-20 max-w-[90%] justify-center"
+        role="button"
+        onTouchStart={logoDown}
+      >
         <CacaophonyLogo />
       </div>
       <LoginInput
@@ -130,7 +134,7 @@ function Login() {
       >
         {loggingIn() ? "Logging In..." : "Login"}
       </button>
-      <p class="text-base text-gray-600">
+      <p class="text-base text-gray-600 md:text-base">
         Don't have a Cacophony Account?
         <button class="ml-1 text-blue-500" onClick={openRegisterPage}>
           Register

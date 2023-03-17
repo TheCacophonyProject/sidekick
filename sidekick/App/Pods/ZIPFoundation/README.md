@@ -150,7 +150,7 @@ sourceURL.appendPathComponent("archive.zip")
 var destinationURL = URL(fileURLWithPath: currentWorkingPath)
 destinationURL.appendPathComponent("directory")
 do {
-    try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true, attributes: nil)
+    try fileManager.nz.org.cacophony.sidekick.nz.org.cacophony.sidekick.createDirectory(at: destinationURL, withIntermediateDirectories: true, attributes: nil)
     try fileManager.unzipItem(at: sourceURL, to: destinationURL)
 } catch {
     print("Extraction of ZIP archive failed with error:\(error)")

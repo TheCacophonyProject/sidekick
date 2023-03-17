@@ -10,7 +10,7 @@
 CAP_PLUGIN(DevicePlugin, "Device",
            CAP_PLUGIN_METHOD(discoverDevices, CAPPluginReturnCallback);
            CAP_PLUGIN_METHOD(stopDiscoverDevices, CAPPluginReturnPromise);
-           CAP_PLUGIN_METHOD(getDeviceConnection, CAPPluginReturnPromise);
+           CAP_PLUGIN_METHOD(checkDeviceConnection, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(getDeviceInfo, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(getDeviceConfig, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(connectToDeviceAP, CAPPluginReturnPromise);
@@ -21,6 +21,5 @@ CAP_PLUGIN(DevicePlugin, "Device",
            CAP_PLUGIN_METHOD(deleteEvents, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(getEventKeys, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(downloadRecording, CAPPluginReturnPromise);
-           CAP_PLUGIN_METHOD(getTestText, CAPPluginReturnPromise);
            
 )

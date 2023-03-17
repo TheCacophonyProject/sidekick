@@ -51,10 +51,15 @@ kotlin {
             }
         }
         val androidMain by getting  {
+            dependsOn(commonMain)
             dependencies {
                 implementation(project(":capacitor-android"))
                 implementation(project(":capacitor-cordova-android-plugins"))
                 implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+                implementation("androidx.appcompat:appcompat:1.4.2")
+                implementation("androidx.activity:activity-compose:1.4.0")
+                implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
+                implementation("androidx.core:core-splashscreen:1.0.0-rc01")
             }
         }
         val androidUnitTest by getting
@@ -84,14 +89,11 @@ kotlin {
 
 android {
     namespace = "nz.org.cacophony.sidekick"
-    compileSdk = 32
+    compileSdk = 33
     defaultConfig {
         minSdk = 21
-        targetSdk = 32
+        targetSdk = 33
     }
-}
-dependencies {
-    implementation(project(mapOf("path" to ":capacitor-android")))
 }
 repositories {
     google()

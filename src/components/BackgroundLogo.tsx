@@ -2,7 +2,7 @@ function BackgroundLogo() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      class="mx-8"
+      class="mx-auto w-[80%] max-w-lg"
       fill="none"
       viewBox="0 0 206 54"
     >

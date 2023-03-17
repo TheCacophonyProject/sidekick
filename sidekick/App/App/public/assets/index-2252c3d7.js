@@ -1,0 +1,1 @@
+import{Y as o,_ as i}from"./index-b4794d68.js";const t=o("Dialog",{web:()=>i(()=>import("./web-c40aea95.js"),["assets/web-c40aea95.js","assets/index-b4794d68.js","assets/index-5d1feca2.css"]).then(e=>new e.DialogWeb)});export{t as D};

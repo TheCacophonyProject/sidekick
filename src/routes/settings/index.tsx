@@ -16,31 +16,22 @@ function Settings() {
   const userContext = useUserContext();
   const action = () => (
     <div class="text-blue-500">
-      <Show
-        when={userContext?.skippedLogin() || !userContext?.data()}
-        fallback={
-          <A href="user">
-            <RiSystemArrowRightSLine size={32} />
-          </A>
-        }
-      >
-        <button
-          onClick={userContext?.logout}
-          class="flex flex-row items-center"
-        >
-          <p class="w-32">Return to Login</p>
-          <BiRegularLogIn size={24} />
-        </button>
+      <Show when={userContext.data()}>
+        <A href="user">
+          <RiSystemArrowRightSLine size={32} />
+        </A>
       </Show>
     </div>
   );
   const logoutAccount = async () => {
     const { value } = await Dialog.confirm({
       title: "Confirm",
-      message: `Are you sure you want to logout?`,
+      message: `Are you sure you want to ${
+        userContext.data() ? "logout" : "return to login screen"
+      }?`,
     });
     if (value) {
-      userContext?.logout();
+      userContext.logout();
     }
   };
 
@@ -64,7 +55,7 @@ function Settings() {
               class="flex w-full items-center justify-center space-x-2 text-2xl text-blue-500"
               onClick={logoutAccount}
             >
-              Logout
+              {userContext.data() ? "Logout" : "Return to Login"}
               <BiRegularLogOut size={24} />
             </button>
           </>

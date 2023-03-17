@@ -4,7 +4,7 @@ import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.right
 import arrow.core.rightIfNotNull
-import getFile
+import nz.org.cacophony.sidekick.getFile
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*

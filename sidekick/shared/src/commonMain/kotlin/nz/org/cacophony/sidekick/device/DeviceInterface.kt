@@ -12,7 +12,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import nz.org.cacophony.sidekick.*
 import okio.Path.Companion.toPath
-import writeToFile
 
 @Suppress("UNUSED")
 class DeviceInterface(private val filePath: String): CapacitorInterface {
@@ -133,7 +132,7 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
 
 
 
-    @kotlinx.serialization.Serializable
+    @Serializable
     data class Recording(val recordingPath: String)
     fun downloadRecording(call: PluginCall) = runCatch(call) {
         getDeviceFromCall(call).map { deviceApi ->
@@ -152,5 +151,18 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
 
     fun getTestText(call: PluginCall) = runCatch(call) {
         call.resolve(mapOf("text" to "This is test text"))
+    }
+
+    fun checkDeviceConnection(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call)
+            .map { deviceApi ->
+                deviceApi.connectToHost()
+                    .fold(
+                        { error -> call.failure(error.toString()) },
+                        {
+                            call.success()
+                        }
+                    )
+            }
     }
 }

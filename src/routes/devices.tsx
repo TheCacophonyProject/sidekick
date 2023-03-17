@@ -108,7 +108,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
         </button>
       }
     >
-      <div class="z-30 flex items-center justify-between px-2">
+      <div class=" flex items-center justify-between px-2">
         <div onClick={() => openDeviceInterface(props.device)} role="button">
           <div class="flex items-center space-x-2 ">
             <Show when={!props.device.isProd}>
@@ -135,7 +135,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
             </p>
           </div>
         </div>
-        <div class="z-30 flex items-center space-x-6 px-2 text-blue-500">
+        <div class=" flex items-center space-x-6 px-2 text-blue-500">
           <Show
             when={!context.devicesDownloading.has(props.device.id)}
             fallback={<FaSolidSpinner size={28} class="animate-spin" />}
@@ -186,7 +186,7 @@ function Devices() {
   const connectToBushnet = async () => {
     const { value } = await Dialog.confirm({
       title: "Connecting to Device",
-      message: `Please turn on the device and wait at least 2 mintues for the device to setup it's Wi-Fi then press "Ok".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
+      message: `Please turn on the device and wait at least 2 minutes for the device to setup its Wi-Fi then press "OK".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
     });
 
     if (!value) return;
@@ -291,36 +291,37 @@ function Devices() {
     if (context.isDiscovering()) return;
   });
   return (
-    <section class="pb-bar pt-bar h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
-      <For
-        each={[...context.devices.values()].filter((dev) => dev.isConnected)}
-      >
-        {(device) =>
-          device && (
+    <>
+      <section class="pb-bar pt-bar  -full space-y-2 overflow-y-auto px-2">
+        <For
+          each={[...context.devices.values()].filter((dev) => dev.isConnected)}
+        >
+          {(device) => (
             <DeviceDetails
               device={device}
               shouldUpdateLocation={deviceLocToUpdate.has(device.id)}
             />
-          )
-        }
-      </For>
-      <div class="pb-bar fixed inset-x-0 bottom-[4vh] z-20 mx-auto flex justify-center">
-        <CircleButton
-          onClick={searchDevice}
-          disabled={context.isDiscovering()}
-          loading={context.isDiscovering()}
-          text="Search Devices"
-          loadingText="Searching..."
-        />
-      </div>
-      <div class="pt-bar absolute inset-0 flex flex-col pb-32">
+          )}
+        </For>
+        <div class="h-32" />
+        <div class="pb-bar fixed inset-x-0 bottom-[4vh] mx-auto flex justify-center">
+          <CircleButton
+            onClick={searchDevice}
+            disabled={context.isDiscovering()}
+            loading={context.isDiscovering()}
+            text="Search Devices"
+            loadingText="Searching..."
+          />
+        </div>
+      </section>
+      <div class="pt-bar fixed inset-0 -z-10 flex flex-col pb-32">
         <div class="my-auto">
           <BackgroundLogo />
           <div class="flex h-32 w-full justify-center">
             <Show when={context.devices.size <= 0}>
-              <p class="mt-6 max-w-sm px-4 text-center text-neutral-600">
+              <p class="mt-4 max-w-sm px-4 text-center text-neutral-600">
                 No devices detected.
-                <br /> To access a device please turn it on, wait for 2 mintues,
+                <br /> To access a device please turn it on, wait for 2 minutes,
                 then press{" "}
                 <span class="inline-block">
                   <FaSolidWifi />
@@ -331,7 +332,7 @@ function Devices() {
           </div>
         </div>
       </div>
-    </section>
+    </>
   );
 }
 

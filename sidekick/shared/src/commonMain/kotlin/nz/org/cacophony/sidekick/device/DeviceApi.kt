@@ -3,18 +3,11 @@ package nz.org.cacophony.sidekick.device
 import arrow.core.*
 import io.ktor.client.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.utils.io.charsets.*
-import okio.Path
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 import nz.org.cacophony.sidekick.*
-import okio.FileSystem
-import writeToFile
 
 @Serializable
 data class DeviceInfo (
@@ -96,4 +89,15 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             }
         }
             .flatMap { validateResponse(it) }
+
+    suspend fun connectToHost(
+    ): Either<ApiError, HttpResponse> = Either.catch {
+        return client.get(device.url) {
+            headers {
+                append(HttpHeaders.Authorization, token)
+            }
+        }.right()
+    }
+        .mapLeft { ParsingError("Unable to connect to host: ${it}")}
+        .map { return validateResponse(it) }
 }
