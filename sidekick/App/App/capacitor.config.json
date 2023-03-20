@@ -4,7 +4,6 @@
 	"webDir": "dist/public",
 	"bundledWebRuntime": false,
 	"android": {
-		"path": "sidekick",
 		"useLegacyBridge": false
 	},
 	"ios": {

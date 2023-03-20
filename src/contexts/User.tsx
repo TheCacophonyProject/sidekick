@@ -1,9 +1,8 @@
-import { createEffect, createResource, createSignal, onMount } from "solid-js";
+import { createEffect, createResource, createSignal, on } from "solid-js";
 import { createContextProvider } from "@solid-primitives/context";
-import { createStore } from "solid-js/store";
 import { Preferences } from "@capacitor/preferences";
 import { logError, logSuccess } from "./Notification";
-import { PromiseResult, Result } from ".";
+import { Result } from ".";
 import { z } from "zod";
 import { CacophonyPlugin } from "./CacophonyApi";
 import { useNavigate } from "solid-start";
@@ -55,10 +54,12 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     return false;
   });
 
-  createEffect(async () => {
-    if (!data.loading) {
-      await validateCurrToken();
-    }
+  createEffect(() => {
+    on(data, async () => {
+      if (!data.loading) {
+        await validateCurrToken();
+      }
+    });
   });
 
   createEffect(() => {
@@ -151,7 +152,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       nav("/devices");
       mutateSkip(true);
     },
-    async requestDeletion(): PromiseResult<string> {
+    async requestDeletion(): Result<string> {
       const usr = data();
       if (!usr) return Promise.reject("No user to delete");
       await validateCurrToken();

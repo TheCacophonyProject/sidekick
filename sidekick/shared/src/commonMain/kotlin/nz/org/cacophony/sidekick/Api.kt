@@ -152,8 +152,7 @@ suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<
 
 inline fun <reified T> decodeToJSON(json: String): Either<ParsingError, T> {
     return Either.catch {
-        val json = Json.decodeFromString<T>(json)
-        return json.right()
+        return Json.decodeFromString<T>(json).right()
     }.mapLeft {
         ParsingError("Error parsing JSON ${it.cause?.message}: ${it.message}")
     }

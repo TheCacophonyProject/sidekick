@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.AaptOptions
+
 plugins {
     kotlin("multiplatform")
     kotlin("native.cocoapods")
@@ -23,7 +25,7 @@ kotlin {
             baseName = "shared"
         }
     }
-    
+
     sourceSets {
         val ktorVersion = "2.1.3"
         val arrowVersion = "1.1.3"
@@ -53,13 +55,7 @@ kotlin {
         val androidMain by getting  {
             dependsOn(commonMain)
             dependencies {
-                implementation(project(":capacitor-android"))
-                implementation(project(":capacitor-cordova-android-plugins"))
                 implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
-                implementation("androidx.appcompat:appcompat:1.4.2")
-                implementation("androidx.activity:activity-compose:1.4.0")
-                implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
-                implementation("androidx.core:core-splashscreen:1.0.0-rc01")
             }
         }
         val androidUnitTest by getting

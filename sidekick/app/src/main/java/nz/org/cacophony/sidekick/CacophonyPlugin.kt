@@ -4,8 +4,10 @@ import android.content.Context
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.cacophony.CacophonyInterface
 
+@CapacitorPlugin(name = "Cacophony")
 class CacophonyPlugin(context: Context) : Plugin() {
     val cacophony = CacophonyInterface(context.filesDir.absolutePath)
 

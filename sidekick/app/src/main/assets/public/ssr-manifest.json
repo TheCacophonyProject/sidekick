@@ -8,7 +8,7 @@
   "node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser/dist/esm/index.js": [
   ],
   "node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser/dist/esm/web.js": [
-    "/assets/web-d5183d3b.js"
+    "/assets/web-0295c258.js"
   ],
   "node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/clipboard/dist/esm/index.js": [
   ],
@@ -17,196 +17,196 @@
   "node_modules/.pnpm/@capacitor+core@4.7.0/node_modules/@capacitor/core/dist/index.js": [
   ],
   "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog/dist/esm/index.js": [
-    "/assets/index-2252c3d7.js"
+    "/assets/index-fd205907.js"
   ],
   "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog/dist/esm/web.js": [
-    "/assets/web-c40aea95.js"
+    "/assets/web-a0fdc715.js"
   ],
   "node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem/dist/esm/definitions.js": [
   ],
   "node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem/dist/esm/index.js": [
   ],
   "node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem/dist/esm/web.js": [
-    "/assets/web-5b0325a3.js"
+    "/assets/web-ab6bb950.js"
   ],
   "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation/dist/esm/index.js": [
   ],
   "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation/dist/esm/web.js": [
-    "/assets/web-6ebb8191.js"
+    "/assets/web-fb75844e.js"
   ],
   "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences/dist/esm/index.js": [
   ],
   "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences/dist/esm/web.js": [
-    "/assets/web-e97a2a28.js"
+    "/assets/web-0aca909c.js"
   ],
   "node_modules/.pnpm/@capacitor-community+keep-awake@3.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/keep-awake/dist/esm/index.js": [
   ],
   "node_modules/.pnpm/@capacitor-community+keep-awake@3.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/keep-awake/dist/esm/web.js": [
-    "/assets/web-747e61e9.js"
+    "/assets/web-17bee10c.js"
   ],
   "node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite/dist/esm/definitions.js": [
   ],
   "node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite/dist/esm/index.js": [
   ],
   "node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite/dist/esm/web.js": [
-    "/assets/web-d886ebff.js"
+    "/assets/web-2cb57f9e.js"
   ],
   "node_modules/.pnpm/@motionone+animation@10.15.1/node_modules/@motionone/animation/dist/Animation.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+animation@10.15.1/node_modules/@motionone/animation/dist/utils/easing.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/animate-style.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/data.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/style.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/css-var.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/easing.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/feature-detection.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/get-style-name.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/get-unit.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/keyframes.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/options.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/stop-animation.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/style-object.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/animate/utils/transforms.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/gestures/in-view.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/gestures/hover.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/gestures/in-view.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/gestures/press.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/index.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/utils/events.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/utils/has-changed.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/utils/is-variant.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/utils/resolve-variant.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/state/utils/schedule.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+dom@10.15.5/node_modules/@motionone/dom/dist/utils/resolve-elements.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+easing@10.15.1/node_modules/@motionone/easing/dist/cubic-bezier.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+easing@10.15.1/node_modules/@motionone/easing/dist/steps.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+solid@10.15.5_solid-js@1.6.13/node_modules/@motionone/solid/dist/source/context.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+solid@10.15.5_solid-js@1.6.13/node_modules/@motionone/solid/dist/source/motion.jsx": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+solid@10.15.5_solid-js@1.6.13/node_modules/@motionone/solid/dist/source/presence.jsx": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+solid@10.15.5_solid-js@1.6.13/node_modules/@motionone/solid/dist/source/primitives.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+types@10.15.1/node_modules/@motionone/types/dist/MotionValue.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/array.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/clamp.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/defaults.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/easing.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/interpolate.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-cubic-bezier.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-easing-generator.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-easing-list.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-function.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-number.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/is-string.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/mix.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/noop.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/offset.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/progress.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/time.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@motionone+utils@10.15.1/node_modules/@motionone/utils/dist/wrap.es.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@solid-primitives+context@0.1.4_solid-js@1.6.13/node_modules/@solid-primitives/context/dist/index.js": [
   ],
   "node_modules/.pnpm/@solid-primitives+map@0.4.2_solid-js@1.6.13/node_modules/@solid-primitives/map/dist/index.js": [
   ],
   "node_modules/.pnpm/@solid-primitives+props@3.1.1_solid-js@1.6.13/node_modules/@solid-primitives/props/dist/index.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/@solid-primitives+set@0.4.2_solid-js@1.6.13/node_modules/@solid-primitives/set/dist/index.js": [
   ],
@@ -231,7 +231,7 @@
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.13/node_modules/solid-icons/fa/index.js": [
   ],
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.13/node_modules/solid-icons/fi/index.js": [
-    "/assets/devices-894a2c4e.js"
+    "/assets/devices-42dafda7.js"
   ],
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.13/node_modules/solid-icons/im/index.js": [
   ],
@@ -242,7 +242,7 @@
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.13/node_modules/solid-icons/ri/index.js": [
   ],
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.13/node_modules/solid-icons/tb/index.js": [
-    "/assets/devices-894a2c4e.js"
+    "/assets/devices-42dafda7.js"
   ],
   "node_modules/.pnpm/solid-icons@1.0.4_solid-js@1.6.13/node_modules/solid-icons/vs/index.js": [
   ],
@@ -275,27 +275,27 @@
   "node_modules/.pnpm/solid-start@0.2.23_fv6s4lplqmt5sv6rfg4iqxh3k4/node_modules/solid-start/server/ServerContext.tsx": [
   ],
   "node_modules/.pnpm/solid-start@0.2.23_fv6s4lplqmt5sv6rfg4iqxh3k4/node_modules/solid-start/server/components/HttpStatusCode.tsx": [
-    "/assets/_...404_-84e321c1.js"
+    "/assets/_...404_-3a9d0241.js"
   ],
   "node_modules/.pnpm/solid-start@0.2.23_fv6s4lplqmt5sv6rfg4iqxh3k4/node_modules/solid-start/server/responses.ts": [
   ],
   "node_modules/.pnpm/solid-start@0.2.23_fv6s4lplqmt5sv6rfg4iqxh3k4/node_modules/solid-start/server/types.tsx": [
   ],
   "node_modules/.pnpm/tslib@2.5.0/node_modules/tslib/tslib.es6.js": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "node_modules/.pnpm/zod@3.21.4/node_modules/zod/lib/index.mjs": [
   ],
   "src/components/ActionContainer.tsx": [
-    "/assets/ActionContainer-219b5aec.js"
+    "/assets/ActionContainer-cd58ffd9.js"
   ],
   "src/components/BackgroundLogo.tsx": [
-    "/assets/devices-894a2c4e.js"
+    "/assets/devices-42dafda7.js"
   ],
   "src/components/CacaophonyLogo.tsx": [
   ],
   "src/components/CircleButton.tsx": [
-    "/assets/CircleButton-c8642661.js"
+    "/assets/CircleButton-d65a0a7b.js"
   ],
   "src/components/Header.tsx": [
   ],
@@ -332,24 +332,24 @@
   "src/root.tsx": [
   ],
   "src/routes/[...404].tsx": [
-    "/assets/_...404_-84e321c1.js"
+    "/assets/_...404_-3a9d0241.js"
   ],
   "src/routes/devices.tsx": [
-    "/assets/devices-894a2c4e.js"
+    "/assets/devices-42dafda7.js"
   ],
   "src/routes/index.tsx": [
-    "/assets/index-d35cd4a9.js"
+    "/assets/index-006084de.js"
   ],
   "src/routes/settings/index.tsx": [
-    "/assets/index-a4decf98.js"
+    "/assets/index-ea64b8a9.js"
   ],
   "src/routes/settings/user.tsx": [
-    "/assets/user-2787fea8.js"
+    "/assets/user-d126e6a7.js"
   ],
   "src/routes/storage/index.tsx": [
-    "/assets/index-6d799871.js"
+    "/assets/index-c23da7e4.js"
   ],
   "src/routes/storage/recordings.tsx": [
-    "/assets/recordings-8b1ed7ef.js"
+    "/assets/recordings-01805b64.js"
   ]
 }

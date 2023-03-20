@@ -1,25 +1,25 @@
-import { CapacitorConfig } from '@capacitor/cli';
+import { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'nz.org.cacophony.sidekick',
-  appName: 'Sidekick',
-  webDir: 'dist/public',
+  appId: "nz.org.cacophony.sidekick",
+  appName: "Sidekick",
+  webDir: "dist/public",
   bundledWebRuntime: false,
   android: {
-    path: 'sidekick',
-    useLegacyBridge: false
+    path: "sidekick",
+    useLegacyBridge: false,
   },
   ios: {
-    path: 'sidekick'
+    path: "sidekick",
   },
   plugins: {
     CapacitorHttp: {
-      enabled: true
+      enabled: true,
     },
     CapacitorSQLite: {
-      "iosDatabaseLocation": "Library/CapacitorDatabase"
+      iosDatabaseLocation: "Library/CapacitorDatabase",
     },
-  }
+  },
 };
 
 export default config;

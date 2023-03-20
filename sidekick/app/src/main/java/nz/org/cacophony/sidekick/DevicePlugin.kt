@@ -14,8 +14,10 @@ import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.device.DeviceInterface
 
+@CapacitorPlugin(name = "Device")
 class DevicePlugin(context: Context) : Plugin() {
     private val type = "_cacophonator-management._tcp."
     private val domain = "local."

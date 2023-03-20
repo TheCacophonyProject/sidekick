@@ -98,6 +98,6 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             }
         }.right()
     }
-        .mapLeft { ParsingError("Unable to connect to host: ${it}")}
         .map { return validateResponse(it) }
+        .mapLeft { ParsingError("Unable to connect to host: $it")}
 }

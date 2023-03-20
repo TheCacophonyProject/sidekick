@@ -20,6 +20,7 @@
     "cordova-res": "0.15.4",
     "eslint": "^8.34.0",
     "eslint-plugin-solid": "0.10.0",
+    "eslint-config-prettier": "^8.6.0",
     "postcss": "^8.4.21",
     "prettier": "^2.8.4",
     "prettier-plugin-tailwindcss": "^0.2.3",

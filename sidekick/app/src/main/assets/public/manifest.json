@@ -22,33 +22,33 @@
       "node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite/dist/esm/web.js",
       "node_modules/.pnpm/@capacitor-community+keep-awake@3.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/keep-awake/dist/esm/web.js"
     ],
-    "file": "assets/index-b4794d68.js",
+    "file": "assets/index-15257e16.js",
     "isEntry": true,
     "src": ".solid/index.html"
   },
-  "_ActionContainer-219b5aec.js": {
-    "file": "assets/ActionContainer-219b5aec.js",
+  "_ActionContainer-cd58ffd9.js": {
+    "file": "assets/ActionContainer-cd58ffd9.js",
     "imports": [
       ".solid/index.html"
     ]
   },
-  "_CircleButton-c8642661.js": {
-    "file": "assets/CircleButton-c8642661.js",
+  "_CircleButton-d65a0a7b.js": {
+    "file": "assets/CircleButton-d65a0a7b.js",
     "imports": [
       ".solid/index.html"
     ]
   },
-  "_index-2252c3d7.js": {
+  "_index-fd205907.js": {
     "dynamicImports": [
       "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog/dist/esm/web.js"
     ],
-    "file": "assets/index-2252c3d7.js",
+    "file": "assets/index-fd205907.js",
     "imports": [
       ".solid/index.html"
     ]
   },
   "node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser/dist/esm/web.js": {
-    "file": "assets/web-d5183d3b.js",
+    "file": "assets/web-0295c258.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -56,7 +56,7 @@
     "src": "node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser/dist/esm/web.js"
   },
   "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog/dist/esm/web.js": {
-    "file": "assets/web-c40aea95.js",
+    "file": "assets/web-a0fdc715.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -64,7 +64,7 @@
     "src": "node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog/dist/esm/web.js"
   },
   "node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem/dist/esm/web.js": {
-    "file": "assets/web-5b0325a3.js",
+    "file": "assets/web-ab6bb950.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -72,7 +72,7 @@
     "src": "node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem/dist/esm/web.js"
   },
   "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation/dist/esm/web.js": {
-    "file": "assets/web-6ebb8191.js",
+    "file": "assets/web-fb75844e.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -80,7 +80,7 @@
     "src": "node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation/dist/esm/web.js"
   },
   "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences/dist/esm/web.js": {
-    "file": "assets/web-e97a2a28.js",
+    "file": "assets/web-0aca909c.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -88,7 +88,7 @@
     "src": "node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences/dist/esm/web.js"
   },
   "node_modules/.pnpm/@capacitor-community+keep-awake@3.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/keep-awake/dist/esm/web.js": {
-    "file": "assets/web-747e61e9.js",
+    "file": "assets/web-17bee10c.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -96,7 +96,7 @@
     "src": "node_modules/.pnpm/@capacitor-community+keep-awake@3.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/keep-awake/dist/esm/web.js"
   },
   "node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite/dist/esm/web.js": {
-    "file": "assets/web-d886ebff.js",
+    "file": "assets/web-2cb57f9e.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -104,7 +104,7 @@
     "src": "node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite/dist/esm/web.js"
   },
   "src/routes/[...404].tsx": {
-    "file": "assets/_...404_-84e321c1.js",
+    "file": "assets/_...404_-3a9d0241.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -112,18 +112,18 @@
     "src": "src/routes/[...404].tsx"
   },
   "src/routes/devices.tsx": {
-    "file": "assets/devices-894a2c4e.js",
+    "file": "assets/devices-42dafda7.js",
     "imports": [
       ".solid/index.html",
-      "_ActionContainer-219b5aec.js",
-      "_index-2252c3d7.js",
-      "_CircleButton-c8642661.js"
+      "_ActionContainer-cd58ffd9.js",
+      "_index-fd205907.js",
+      "_CircleButton-d65a0a7b.js"
     ],
     "isDynamicEntry": true,
     "src": "src/routes/devices.tsx"
   },
   "src/routes/index.tsx": {
-    "file": "assets/index-d35cd4a9.js",
+    "file": "assets/index-006084de.js",
     "imports": [
       ".solid/index.html"
     ],
@@ -131,41 +131,41 @@
     "src": "src/routes/index.tsx"
   },
   "src/routes/settings/index.tsx": {
-    "file": "assets/index-a4decf98.js",
+    "file": "assets/index-ea64b8a9.js",
     "imports": [
       ".solid/index.html",
-      "_ActionContainer-219b5aec.js",
-      "_index-2252c3d7.js"
+      "_ActionContainer-cd58ffd9.js",
+      "_index-fd205907.js"
     ],
     "isDynamicEntry": true,
     "src": "src/routes/settings/index.tsx"
   },
   "src/routes/settings/user.tsx": {
-    "file": "assets/user-2787fea8.js",
+    "file": "assets/user-d126e6a7.js",
     "imports": [
       ".solid/index.html",
-      "_index-2252c3d7.js",
-      "_ActionContainer-219b5aec.js"
+      "_index-fd205907.js",
+      "_ActionContainer-cd58ffd9.js"
     ],
     "isDynamicEntry": true,
     "src": "src/routes/settings/user.tsx"
   },
   "src/routes/storage/index.tsx": {
-    "file": "assets/index-6d799871.js",
+    "file": "assets/index-c23da7e4.js",
     "imports": [
       ".solid/index.html",
-      "_ActionContainer-219b5aec.js",
-      "_CircleButton-c8642661.js",
-      "_index-2252c3d7.js"
+      "_ActionContainer-cd58ffd9.js",
+      "_CircleButton-d65a0a7b.js",
+      "_index-fd205907.js"
     ],
     "isDynamicEntry": true,
     "src": "src/routes/storage/index.tsx"
   },
   "src/routes/storage/recordings.tsx": {
-    "file": "assets/recordings-8b1ed7ef.js",
+    "file": "assets/recordings-01805b64.js",
     "imports": [
       ".solid/index.html",
-      "_ActionContainer-219b5aec.js"
+      "_ActionContainer-cd58ffd9.js"
     ],
     "isDynamicEntry": true,
     "src": "src/routes/storage/recordings.tsx"

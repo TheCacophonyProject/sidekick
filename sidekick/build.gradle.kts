@@ -1,4 +1,8 @@
 buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
     dependencies {
         classpath("com.android.tools.build:gradle:7.3.1")
     }
@@ -15,12 +19,9 @@ plugins {
 tasks.register("clean", Delete::class) {
     delete(rootProject.buildDir)
 }
-repositories {
-    google()
-    mavenCentral()
-}
 allprojects {
     repositories {
+        google()
         mavenCentral()
     }
 }
