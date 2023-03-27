@@ -16,5 +16,8 @@
 		"CapacitorSQLite": {
 			"iosDatabaseLocation": "Library/CapacitorDatabase"
 		}
+	},
+	"server": {
+		"url": "http://192.168.86.21:5173"
 	}
 }

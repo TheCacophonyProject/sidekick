@@ -1,9 +1,0 @@
-version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
-options: "88004b8df01aef7a821c1a10127da4386ec481a1dfb3ac075093a399d4b8aaa5"
-build_start_time: [1678250638, 616026878]
-build_end_time: [1678250642, 737340927]
-inputs:
-  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.6.3/node_modules/@capacitor/filesystem/ios/Plugin/Filesystem.swift"
-  : [1677104990, 156575202]
-  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.6.3/node_modules/@capacitor/filesystem/ios/Plugin/FilesystemPlugin.swift"
-  : [1677104990, 156295776]

@@ -27,3 +27,4 @@ resources/ios/**/*
 sidekick/app/src/main/assets/public/**/*
 sidekick/App/App/public/assets/**/*
 sidekick/App/App/public/assets
+/build

@@ -1,9 +1,0 @@
-version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
-options: "1f69a98dce6f7dc7badcc0cec9694bdd219778e2464c0ab124d5802d4124a5a7"
-build_start_time: [1678250640, 721167087]
-build_end_time: [1678250640, 743621826]
-inputs:
-  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.6.3/node_modules/@capacitor/clipboard/ios/Plugin/Clipboard.swift"
-  : !private [1673489580, 438084125]
-  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.6.3/node_modules/@capacitor/clipboard/ios/Plugin/ClipboardPlugin.swift"
-  : !private [1673489580, 438213348]

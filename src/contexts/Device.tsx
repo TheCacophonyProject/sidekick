@@ -171,7 +171,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         }
       }
     });
-    console.log(id);
     setCallbackID(id);
   };
 

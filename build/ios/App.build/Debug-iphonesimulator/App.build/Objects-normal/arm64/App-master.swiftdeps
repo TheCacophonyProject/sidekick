@@ -1,9 +1,0 @@
-version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
-options: "7a119abf26e846b5ff4708b2c09cf7d317c212c9d9f83614b06494f724c68b60"
-build_start_time: [1678250668, 654484987]
-build_end_time: [1678250676, 927942991]
-inputs:
-  "/Users/patrickbaxter/code/sidekick/sidekick/App/App/AppDelegate.swift": [1673909728, 27889728]
-  "/Users/patrickbaxter/code/sidekick/sidekick/App/App/Plugins/CacophonyPlugin.swift": [1677647379, 789554595]
-  "/Users/patrickbaxter/code/sidekick/sidekick/App/App/Plugins/DevicePlugin.swift": [1678070576, 452411890]
-  "/Users/patrickbaxter/code/sidekick/sidekick/App/App/Plugins/PluginCall.swift": [1674694620, 994329452]

@@ -1,7 +1,0 @@
-version: "Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)"
-options: "82ad8adc712531821bb3be5ccbe30935dd8db0fd633acd82bf9f5909e9a7d165"
-build_start_time: [1678250638, 589859008]
-build_end_time: [1678250642, 719832897]
-inputs:
-  ? "/Users/patrickbaxter/code/sidekick/node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.6.3/node_modules/@capacitor/geolocation/ios/Plugin/GeolocationPlugin.swift"
-  : [1673314616, 646858215]
