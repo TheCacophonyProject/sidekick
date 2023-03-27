@@ -1,19 +1,15 @@
 import { BsCameraVideoFill } from "solid-icons/bs";
 import { ImNotification } from "solid-icons/im";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
-import { Show, createEffect, createSignal, onMount } from "solid-js";
-import { A } from "solid-start";
+import { Show, onMount } from "solid-js";
+import { A } from "@solidjs/router";
 import ActionContainer from "~/components/ActionContainer";
 import CircleButton from "~/components/CircleButton";
 import { headerMap } from "~/components/Header";
-import { Recording, useStorage } from "~/contexts/Storage";
+import { useStorage } from "~/contexts/Storage";
 import { FaRegularTrashCan } from "solid-icons/fa";
 import { Dialog } from "@capacitor/dialog";
 import { useUserContext } from "~/contexts/User";
-
-interface StorageProps {
-  // add props here
-}
 
 export default function Storage() {
   const storage = useStorage();

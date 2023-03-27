@@ -3,8 +3,7 @@
 // and will be used to manage the state of the notifications
 // such as error messages, success messages, and loading messages
 
-import { Accessor, JSX, createContext, createSignal } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createSignal } from "solid-js";
 
 type NotifcationType = "error" | "success" | "loading";
 type NotificationID = string;

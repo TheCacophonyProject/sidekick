@@ -1,16 +1,12 @@
-import { JSX, Show, useContext } from "solid-js";
+import { Show } from "solid-js";
 import { useUserContext } from "~/contexts/User";
-import { IoLogInOutline } from "solid-icons/io";
 import { BsPersonFill } from "solid-icons/bs";
 import { ImCog, ImMobile } from "solid-icons/im";
-import { BiRegularLogIn, BiRegularLogOut } from "solid-icons/bi";
-import { IconTypes } from "solid-icons";
 import ActionContainer from "~/components/ActionContainer";
-import { logSuccess } from "~/contexts/Notification";
-import { DevicePlugin, useDevice } from "~/contexts/Device";
-import { A } from "solid-start";
+import { A } from "@solidjs/router";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { Dialog } from "@capacitor/dialog";
+import { BiRegularLogOut } from "solid-icons/bi";
 
 function Settings() {
   const userContext = useUserContext();

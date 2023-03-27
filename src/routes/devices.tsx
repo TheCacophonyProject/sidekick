@@ -9,25 +9,25 @@ import {
   onMount,
   Show,
   untrack,
-  useContext,
 } from "solid-js";
-import ActionContainer from "~/components/ActionContainer";
-import { Device, DevicePlugin, useDevice } from "~/contexts/Device";
+import ActionContainer from "../components/ActionContainer";
+import { Device, DevicePlugin, useDevice } from "../contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
 import { Dialog } from "@capacitor/dialog";
 import { FaSolidSpinner } from "solid-icons/fa";
-import CircleButton from "~/components/CircleButton";
+import CircleButton from "../components/CircleButton";
 import { Geolocation, Position } from "@capacitor/geolocation";
 import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
-import { Recording, Event, useStorage } from "~/contexts/Storage";
+import { useStorage } from "../contexts/Storage";
 import { ReactiveSet } from "@solid-primitives/set";
 import { ImCog, ImNotification } from "solid-icons/im";
-import { headerMap } from "~/components/Header";
+import { headerMap } from "../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
-import CacaophonyLogo from "~/components/CacaophonyLogo";
-import BackgroundLogo from "~/components/BackgroundLogo";
+import BackgroundLogo from "../components/BackgroundLogo";
+import { Recording } from "~/database/Entities/Recording";
+import { Event } from "~/database/Entities/Event";
 
 interface DeviceDetailsProps {
   device: Device;
@@ -229,8 +229,7 @@ function Devices() {
   });
 
   createEffect(() => {
-    const devices = context.devices.values();
-    untrack(async () => {
+    on(context.devices.values, async (devices) => {
       for (const device of devices) {
         if (!device.isConnected) return;
         const locationRes = await context.getLocation(device);
@@ -255,8 +254,7 @@ function Devices() {
   createEffect(() => {
     const isDiscovering = context.isDiscovering();
     if (isDiscovering) return;
-    const devices = deviceLocToUpdate.values();
-    untrack(async () => {
+    on(deviceLocToUpdate.values, async (devices) => {
       const devicesToUpdate = [...devices].filter(
         (val) => !context.locationBeingSet.has(val)
       );

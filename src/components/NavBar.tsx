@@ -1,10 +1,4 @@
-import { A } from "solid-start";
-import {
-  DashboardNav,
-  DevicesNav,
-  StorageNav,
-  SettingsNav,
-} from "./NavButtons";
+import { DevicesNav, StorageNav, SettingsNav } from "./NavButtons";
 
 function NavBar() {
   return (

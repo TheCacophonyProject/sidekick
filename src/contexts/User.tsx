@@ -5,7 +5,7 @@ import { logError, logSuccess } from "./Notification";
 import { Result } from ".";
 import { z } from "zod";
 import { CacophonyPlugin } from "./CacophonyApi";
-import { useNavigate } from "solid-start";
+import { useNavigate } from "@solidjs/router";
 const UserSchema = z.object({
   token: z.string(),
   id: z.string(),
@@ -184,6 +184,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   };
 });
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const defineUserContext = () => useUserContext()!;
 
 export { UserProvider, defineUserContext as useUserContext };

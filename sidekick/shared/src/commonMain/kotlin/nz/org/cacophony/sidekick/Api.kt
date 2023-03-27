@@ -38,8 +38,8 @@ data class FormError(val message: String, val path: String) : InvalidRequest()
 
 @optics
 sealed class InvalidResponse : ApiError
-object AuthError : InvalidResponse()
 object NoContent: InvalidResponse()
+data class AuthError(val message: String) : InvalidResponse()
 data class BadRequest(val message: String) : InvalidResponse()
 data class ParsingError(val message: String) : InvalidResponse()
 data class UnknownError(val message: String) : InvalidResponse()
@@ -139,7 +139,7 @@ suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<
         }.mapLeft {
             ParsingError("Error validating response ${it.cause?.message}: ${it.message}")
         }
-        HttpStatusCode.Forbidden -> AuthError
+        HttpStatusCode.Forbidden -> AuthError("Forbidden: ${response.status} ${response.body<String>()}")
             .left()
         HttpStatusCode.BadRequest -> BadRequest("Bad request: ${response.status} ${response.body<String>()}")
             .left()

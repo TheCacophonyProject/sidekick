@@ -3,7 +3,7 @@ import {
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createMemo, createResource, createSignal, onMount } from "solid-js";
+import { createMemo, createSignal, onMount } from "solid-js";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { DeviceDetails, DeviceId } from "./Device";
 import { useUserContext } from "./User";
@@ -17,8 +17,8 @@ import {
   deleteEvents as deleteEventsFromDb,
   deleteEvent as deleteEventFromDb,
   updateEvent,
-} from "~/database/Entities/Event";
-import type { Event } from "~/database/Entities/Event";
+} from "../database/Entities/Event";
+import type { Event } from "../database/Entities/Event";
 import {
   createRecordingSchema,
   getRecordings,
@@ -26,10 +26,11 @@ import {
   deleteRecordings as deleteRecordingsFromDb,
   updateRecording as updateRecordingInDb,
   insertRecording,
-} from "~/database/Entities/Recording";
-import type { Recording } from "~/database/Entities/Recording";
+  UploadedRecording,
+} from "../database/Entities/Recording";
+import type { Recording } from "../database/Entities/Recording";
 import { KeepAwake } from "@capacitor-community/keep-awake";
-import { openConnection } from "~/database";
+import { openConnection } from "../database";
 
 type RecordingFile = {
   filename: string;
@@ -43,11 +44,9 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const driver = new SQLiteConnection(CapacitorSQLite);
   const [db, setDb] = createSignal<SQLiteDBConnection>();
   const [SavedRecordings, setSavedRecordings] = createSignal<Recording[]>([]);
-  const [devicesDownloading, setDevicesDownloading] = createSignal<DeviceId[]>(
-    []
-  );
-  const UploadedRecordings = createMemo(() =>
-    SavedRecordings().filter((rec) => rec.isUploaded)
+  const UploadedRecordings = createMemo(
+    () =>
+      SavedRecordings().filter((rec) => rec.isUploaded) as UploadedRecording[]
   );
   const UnuploadedRecordings = createMemo(() =>
     SavedRecordings().filter((rec) => !rec.isUploaded)
@@ -138,7 +137,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     device?: string;
     uploaded?: boolean;
   }): Promise<Recording[]> => {
-    const currdb = await db();
+    const currdb = db();
     if (!currdb) return [];
     return getRecordings(currdb)(options);
   };
@@ -146,7 +145,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const saveEvent = async (options: {
     key: number;
     type: string;
-    details: Object;
+    details: string;
     timestamp: string;
     device: DeviceId;
     isProd: boolean;
@@ -217,14 +216,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 
   const deleteEvent = async (event: Event) => {
-    try {
-      const currdb = await db();
-      if (!currdb) return;
-      await deleteEventFromDb(currdb)(event);
-      setSavedEvents(SavedEvents().filter((e) => e.key !== event.key));
-    } catch (e) {
-      throw e;
-    }
+    const currdb = db();
+    if (!currdb) return;
+    await deleteEventFromDb(currdb)(event);
+    setSavedEvents(SavedEvents().filter((e) => e.key !== event.key));
   };
 
   const deleteEvents = async (options?: {
@@ -232,7 +227,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     events?: Event[];
   }) => {
     try {
-      const currdb = await db();
+      const currdb = db();
       if (!currdb) return;
       const events = options?.events
         ? options.events
@@ -252,42 +247,50 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 
   const deleteRecording = async (recording: Recording) => {
+    const currdb = db();
+    if (!currdb) return;
+    const name = recording.name;
     try {
-      const currdb = await db();
-      if (!currdb) return;
-      const name = recording.name;
       await Filesystem.deleteFile({
         path: `recordings/${name}`,
         directory: Directory.Documents,
       });
-
-      await deleteRecordingFromDb(currdb)(recording);
-      await setSavedRecordings((prev) => prev.filter((r) => r.name !== name));
     } catch (e) {
-      throw e;
+      if (e instanceof Error) {
+        if (e.message !== "File does not exist") {
+          return;
+        }
+      }
     }
+
+    await deleteRecordingFromDb(currdb)(recording);
+    setSavedRecordings((prev) => prev.filter((r) => r.name !== name));
   };
 
   const deleteRecordings = async () => {
+    const currdb = db();
+    if (!currdb) return;
     try {
-      const currdb = await db();
-      if (!currdb) return;
       await Filesystem.deleteFile({
         path: "recordings",
         directory: Directory.Documents,
       });
-      // Delete all recordings from the database apart from uploaded ones
-      // as the device may not have internet access
-      const savedRecordings = SavedRecordings().filter((r) => !r.isUploaded);
-      await deleteRecordingsFromDb(currdb)(savedRecordings);
-      setSavedRecordings(SavedRecordings().filter((r) => r.isUploaded));
     } catch (e) {
-      throw e;
+      if (e instanceof Error) {
+        if (e.message !== "File does not exist") {
+          return;
+        }
+      }
     }
+    // Delete all recordings from the database apart from uploaded ones
+    // as the device may not have internet access
+    const savedRecordings = SavedRecordings().filter((r) => !r.isUploaded);
+    await deleteRecordingsFromDb(currdb)(savedRecordings);
+    setSavedRecordings(SavedRecordings().filter((r) => r.isUploaded));
   };
 
   const uploadRecordings = async () => {
-    const currdb = await db();
+    const currdb = db();
     if (!currdb) return;
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
@@ -363,4 +366,4 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 });
 const definiteUseStorage = () => useStorage()!;
-export { Recording, Event, StorageProvider, definiteUseStorage as useStorage };
+export { StorageProvider, definiteUseStorage as useStorage };

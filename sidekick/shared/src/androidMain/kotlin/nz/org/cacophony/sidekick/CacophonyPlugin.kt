@@ -8,8 +8,12 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.cacophony.CacophonyInterface
 
 @CapacitorPlugin(name = "Cacophony")
-class CacophonyPlugin(context: Context) : Plugin() {
-    val cacophony = CacophonyInterface(context.filesDir.absolutePath)
+class CacophonyPlugin: Plugin() {
+    lateinit var cacophony: CacophonyInterface;
+
+    override fun load() {
+       cacophony = CacophonyInterface(context.filesDir.absolutePath);
+    }
 
     @PluginMethod
     fun authenticateUser(call: PluginCall) {

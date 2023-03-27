@@ -1,19 +1,17 @@
-import { createSignal, Show, useContext } from "solid-js";
-import { A, createRouteAction, Navigate } from "solid-start";
+import { createSignal, Show } from "solid-js";
 import { Browser } from "@capacitor/browser";
 import { z } from "zod";
 import CacaophonyLogo from "./components/CacaophonyLogo";
-import { logSuccess } from "./contexts/Notification";
 import { useUserContext } from "./contexts/User";
 import { ImCog } from "solid-icons/im";
-type LoginInput = Partial<{
+type LoginInput = {
   type: string;
-  placeholder: string;
+  placeholder?: string;
   name: string;
   label: string;
   invalid: boolean;
   onInput: (event: Event) => void;
-}>;
+};
 
 const LoginInput = (props: LoginInput) => {
   return (
@@ -30,7 +28,7 @@ const LoginInput = (props: LoginInput) => {
         type={props.type}
         placeholder={props.placeholder}
         name={props.name}
-        onInput={props.onInput}
+        onInput={(e) => props.onInput(e)}
       />
     </div>
   );
@@ -43,11 +41,15 @@ const passwordSchema = z
 
 function Login() {
   const user = useUserContext();
+  let form: HTMLFormElement;
   const [emailError, setEmailError] = createSignal("");
   const [passwordError, setPasswordError] = createSignal("");
+
   const [error, setError] = createSignal("");
   const [loggingIn, setLoggingIn] = createSignal(false);
-  const [_form, { Form }] = createRouteAction(async (formData: FormData) => {
+  const onSubmit = async (e: SubmitEvent) => {
+    e.preventDefault();
+    const formData = new FormData(form);
     setLoggingIn(true);
     setEmailError("");
     setPasswordError("");
@@ -64,13 +66,14 @@ function Login() {
       setError("Invalid Email or Password");
     }
     if (email.success && password.success) {
-      await user?.login(email.data, password.data).catch((error) => {
+      await user?.login(email.data, password.data).catch(() => {
         setError("Invalid Email or Password");
       });
     }
     setLoggingIn(false);
-  });
+  };
   const onInput = (event: Event) => {
+    event.preventDefault();
     const target = event.target as HTMLInputElement;
     if (target.name === "email") {
       setEmailError("");
@@ -96,7 +99,11 @@ function Login() {
   };
 
   return (
-    <Form class="flex h-screen w-screen flex-col justify-center gap-y-4 bg-white px-8 text-lg">
+    <form
+      ref={form}
+      class="flex h-screen w-screen flex-col justify-center gap-y-4 bg-white px-8 text-lg"
+      onSubmit={onSubmit}
+    >
       <Show when={!user?.isProd()}>
         <div class="pt-safe absolute top-0 mt-8 flex items-center pr-8 font-bold text-neutral-700">
           <ImCog size={32} />
@@ -126,7 +133,7 @@ function Login() {
         onInput={onInput}
       />
       <Show when={error} fallback={<div class="h-8" />}>
-        <p class="h-8 text-red-500">{error}</p>
+        <p class="h-8 text-red-500">{error()}</p>
       </Show>
       <button
         class="mb-8 rounded-md bg-blue-500 py-4 font-semibold text-white"
@@ -149,7 +156,7 @@ function Login() {
       >
         Skip Login
       </button>
-    </Form>
+    </form>
   );
 }
 

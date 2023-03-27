@@ -1,7 +1,7 @@
-import { JSXElement, createEffect, createSignal, on } from "solid-js";
-import { A, useLocation } from "solid-start";
+import { JSXElement, createEffect, createSignal } from "solid-js";
 import { RiSystemArrowLeftSLine } from "solid-icons/ri";
 import { ReactiveMap } from "@solid-primitives/map";
+import { useLocation, A } from "@solidjs/router";
 
 type Header = string;
 type HeaderButton = JSXElement;

@@ -1,7 +1,4 @@
 import { Dialog } from "@capacitor/dialog";
-import { BiRegularLogOut } from "solid-icons/bi";
-import { BsPersonFill } from "solid-icons/bs";
-import { Show, useContext } from "solid-js";
 import ActionContainer from "~/components/ActionContainer";
 import { useUserContext } from "~/contexts/User";
 

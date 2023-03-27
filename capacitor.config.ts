@@ -3,11 +3,10 @@ import { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "nz.org.cacophony.sidekick",
   appName: "Sidekick",
-  webDir: "dist/public",
+  webDir: "dist",
   bundledWebRuntime: false,
   android: {
     path: "sidekick",
-    useLegacyBridge: false,
   },
   ios: {
     path: "sidekick",

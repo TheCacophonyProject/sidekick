@@ -1,12 +1,12 @@
 {
   "name": "sidekick-app",
   "scripts": {
-    "start": "solid-start dev --host",
-    "build": "solid-start build",
-    "serve": "solid-start start",
-    "sync": "npx cap sync",
-    "android": "npx cap open android",
-    "ios": "npx cap open ios",
+    "start": "vite dev --host",
+    "build": "vite build",
+    "serve": "vite start",
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios",
     "ionic:build": "npm run build",
     "ionic:serve": "npm run start"
   },
@@ -19,16 +19,16 @@
     "autoprefixer": "^10.4.13",
     "cordova-res": "0.15.4",
     "eslint": "^8.34.0",
-    "eslint-plugin-solid": "0.10.0",
     "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-solid": "0.10.0",
     "postcss": "^8.4.21",
     "prettier": "^2.8.4",
     "prettier-plugin-tailwindcss": "^0.2.3",
-    "solid-start-node": "^0.2.21",
     "tailwindcss": "^3.2.7",
     "terser": "^5.16.6",
     "typescript": "^4.9.5",
-    "vite": "^4.1.4"
+    "vite": "^4.1.4",
+    "vite-plugin-solid": "^2.6.1"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^3.0.0",
@@ -51,8 +51,7 @@
     "kysely": "^0.23.5",
     "motion": "^10.15.5",
     "solid-icons": "^1.0.4",
-    "solid-js": "^1.6.11",
-    "solid-start": "^0.2.21",
+    "solid-js": "^1.6.15",
     "sql.js": "^1.8.0",
     "undici": "^5.20.0",
     "zod": "^3.20.6"

@@ -1,10 +1,10 @@
 {
 	"appId": "nz.org.cacophony.sidekick",
 	"appName": "Sidekick",
-	"webDir": "dist/public",
+	"webDir": "dist",
 	"bundledWebRuntime": false,
 	"android": {
-		"useLegacyBridge": false
+		"path": "sidekick"
 	},
 	"ios": {
 		"path": "sidekick"

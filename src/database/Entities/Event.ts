@@ -60,7 +60,7 @@ const EventsSchema = z.array(EventSchema);
 export const getEvents =
   (db: SQLiteDBConnection) =>
   async (options?: { uploaded?: boolean; device?: string }) => {
-    let sql = `SELECT * FROM ${DBName}`;
+    const sql = `SELECT * FROM ${DBName}`;
     const where = [];
     if (options?.uploaded !== undefined) {
       where.push(`isUploaded = ${options.uploaded ? 1 : 0}`);

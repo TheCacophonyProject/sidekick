@@ -7,7 +7,6 @@ import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
 import { useStorage } from "./Storage";
 import { ReactiveMap } from "@solid-primitives/map";
-import { useUserContext } from "./User";
 import { createContextProvider } from "@solid-primitives/context";
 import { ReactiveSet } from "@solid-primitives/set";
 import { z } from "zod";
@@ -83,7 +82,6 @@ export type DeviceInfo = {
 
 const [DeviceProvider, useDevice] = createContextProvider(() => {
   const storage = useStorage();
-  const userContext = useUserContext();
   const devices = new ReactiveMap<DeviceId, Device>();
   const [isDiscovering, setIsDiscovering] = createSignal(false);
   const locationBeingSet = new ReactiveSet<string>();
@@ -121,7 +119,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     endpoint: string
   ): Promise<ConnectedDevice | undefined> => {
     const [host] = endpoint.split(".");
-    const [name, group] = host.split("-");
+    const [, group] = host.split("-");
     const url = getDeviceInterfaceUrl(host);
     const info = await DevicePlugin.getDeviceInfo({ url });
     const id: DeviceId = info.success ? info.data.deviceID.toString() : host;
@@ -163,6 +161,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
 
     const id = await DevicePlugin.discoverDevices(async (newDevice) => {
+      console.log(newDevice);
       if (!newDevice) return;
       for (let i = 0; i < 3; i++) {
         const connectedDevice = await endpointToDevice(newDevice.endpoint);
@@ -172,6 +171,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         }
       }
     });
+    console.log(id);
     setCallbackID(id);
   };
 
@@ -181,18 +181,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       await DevicePlugin.stopDiscoverDevices({ id });
       setCallbackID();
       setIsDiscovering(false);
-    }
-  };
-
-  const getDeviceConfig = (device: ConnectedDevice) => {
-    try {
-      const { url } = device;
-      return DevicePlugin.getDeviceConfig({ url });
-    } catch (error) {
-      if (error instanceof Error) {
-        logError("Could not get device config", error.message);
-      }
-      throw error;
     }
   };
 

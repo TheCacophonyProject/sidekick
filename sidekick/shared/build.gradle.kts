@@ -55,6 +55,8 @@ kotlin {
         val androidMain by getting  {
             dependsOn(commonMain)
             dependencies {
+                implementation("androidx.activity:activity-compose:1.4.0")
+                implementation(project(mapOf("path" to ":capacitor-android")))
                 implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
             }
         }

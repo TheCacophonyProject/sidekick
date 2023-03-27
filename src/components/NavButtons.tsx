@@ -1,9 +1,9 @@
-import { A } from "solid-start";
+import { A } from "@solidjs/router";
 import LabelledIcon, { LabelledIconProps } from "./LabelledIcon";
 import { BiSolidDashboard } from "solid-icons/bi";
 import { BsCameraVideoFill, BsHddStackFill } from "solid-icons/bs";
 import { IoSettingsSharp } from "solid-icons/io";
-import { JSX, createEffect, mergeProps } from "solid-js";
+import { mergeProps } from "solid-js";
 
 interface NavButtonProps extends LabelledIconProps {
   href?: string;
@@ -21,7 +21,7 @@ const NavButton = (props: NavButtonProps) => {
     <A
       href={mergedProps.href}
       class="flex h-12 w-16 flex-col  items-center pt-4 outline-none transition-colors"
-      style="-webkit-tap-highlight-color: transparent;"
+      style={{ "-webkit-tap-highlight-color": "transparent" }}
       activeClass="text-blue-500"
       inactiveClass="text-slate-300"
     >

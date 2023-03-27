@@ -1,32 +1,20 @@
 import { Browser } from "@capacitor/browser";
-import {
-  BsCameraVideoFill,
-  BsCaretDown,
-  BsCaretDownFill,
-} from "solid-icons/bs";
+import { BsCameraVideoFill } from "solid-icons/bs";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { FaSolidAngleDown } from "solid-icons/fa";
-import {
-  For,
-  Show,
-  createMemo,
-  createSignal,
-  mergeProps,
-  onMount,
-} from "solid-js";
+import { For, Show, createMemo, createSignal, mergeProps } from "solid-js";
 import ActionContainer from "~/components/ActionContainer";
-import { useDevice } from "~/contexts/Device";
-import { Recording, useStorage } from "~/contexts/Storage";
-import { useUserContext } from "~/contexts/User";
+import { useStorage } from "~/contexts/Storage";
+import { UploadedRecording } from "~/database/Entities/Recording";
 interface DeviceRecordingsProps {
   deviceId: string;
-  recordings: Recording[];
-  open?: boolean;
+  recordings: UploadedRecording[];
+  initialOpen?: boolean;
 }
 
 function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
   const merged = mergeProps({ open: false }, props);
-  const [toggle, setToggle] = createSignal(merged.open);
+  const [toggle, setToggle] = createSignal(merged.initialOpen);
   const openRecording = (id: string, isProd: boolean) => {
     Browser.open({
       url: `https://browse${
@@ -55,7 +43,7 @@ function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
                 <button
                   class="text-blue-500"
                   onClick={() =>
-                    openRecording(recording.uploadId!, recording.isProd)
+                    openRecording(recording.uploadId, recording.isProd)
                   }
                 >
                   <RiSystemArrowRightSLine size={32} />
@@ -89,7 +77,7 @@ function Recordings() {
             recordings={storage
               .UploadedRecordings()
               .filter((rec) => rec.deviceName === device)}
-            {...(Devices().length === 1 && { open: true })}
+            {...(Devices().length === 1 && { initialOpen: true })}
           />
         )}
       </For>

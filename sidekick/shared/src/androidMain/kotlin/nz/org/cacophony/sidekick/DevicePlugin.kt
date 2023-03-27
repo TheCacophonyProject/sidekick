@@ -18,15 +18,18 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.device.DeviceInterface
 
 @CapacitorPlugin(name = "Device")
-class DevicePlugin(context: Context) : Plugin() {
-    private val type = "_cacophonator-management._tcp."
-    private val domain = "local."
+class DevicePlugin: Plugin() {
+    private val type = "_cacophonator-management._tcp"
 
     private lateinit var nsdManager: NsdManager
     private lateinit var discoveryListener: NsdManager.DiscoveryListener
     private var callQueue: MutableMap<String, CallType> = mutableMapOf()
 
-    private val device = DeviceInterface(context.filesDir.absolutePath)
+    private lateinit var device: DeviceInterface;
+
+    override fun load() {
+       device = DeviceInterface(context.filesDir.absolutePath)
+    }
 
     enum class CallType {
         PERMISSIONS,
@@ -34,42 +37,49 @@ class DevicePlugin(context: Context) : Plugin() {
         DISCOVER
     }
 
-    @PluginMethod
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
     fun discoverDevices(call: PluginCall) {
-        call.setKeepAlive(true)
-        callQueue[call.callbackId] = CallType.DISCOVER
+        try {
+            call.setKeepAlive(true)
+            callQueue[call.callbackId] = CallType.DISCOVER
 
-        nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-        discoveryListener = object : NsdManager.DiscoveryListener {
-            override fun onDiscoveryStarted(regType: String) {}
+            nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+            discoveryListener = object : NsdManager.DiscoveryListener {
+                override fun onDiscoveryStarted(regType: String) {
+                    println("Service discovery started")
+                }
 
-            override fun onServiceFound(serviceInfo: NsdServiceInfo) {
-                nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
-                    override fun onServiceResolved(info: NsdServiceInfo) {
-                        val endpoint = "${info.serviceName}.${info.serviceType}@${info.host}:${info.port}"
-                        val result = JSObject()
-                        result.put("endpoint", endpoint)
-                        call.resolve(result)
-                    }
+                override fun onServiceFound(serviceInfo: NsdServiceInfo) {
+                    nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
+                        override fun onServiceResolved(info: NsdServiceInfo) {
+                            val endpoint = "${info.serviceName}.local"
+                            val result = JSObject()
+                            result.put("endpoint", endpoint)
+                            call.resolve(result)
+                        }
 
-                    override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                        call.reject("Resolve failed with error code: $errorCode")
-                    }
-                })
+                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                            call.reject("Resolve failed with error code: $errorCode")
+                        }
+                    })
+                }
+
+                override fun onServiceLost(serviceInfo: NsdServiceInfo) {}
+
+                override fun onDiscoveryStopped(serviceType: String) {}
+
+                override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
+                    call.reject("Discovery failed with error code: $errorCode")
+                }
+
+                override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {}
             }
 
-            override fun onServiceLost(serviceInfo: NsdServiceInfo) {}
+            nsdManager.discoverServices(type, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
 
-            override fun onDiscoveryStopped(serviceType: String) {}
-
-            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                call.reject("Discovery failed with error code: $errorCode")
-            }
-
-            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {}
+        } catch (e: Exception) {
+            call.reject(e.message)
         }
-
-        nsdManager.discoverServices(type, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
     @PluginMethod
@@ -175,6 +185,12 @@ class DevicePlugin(context: Context) : Plugin() {
     fun getRecordings(call: PluginCall) {
         device.getRecordings(pluginCall(call))
     }
+
+    @PluginMethod
+    fun getEventKeys(call: PluginCall) {
+        device.getEventKeys(pluginCall(call))
+    }
+
     @PluginMethod
     fun getEvents(call: PluginCall) {
         device.getEvents(pluginCall(call))

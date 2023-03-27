@@ -13,6 +13,10 @@ export type Recording = {
   size: string;
   isProd: boolean;
 };
+export type UploadedRecording = Recording & {
+  isUploaded: true;
+  uploadId: string;
+};
 // sqllite
 export const createRecordingSchema = `
 CREATE TABLE IF NOT EXISTS ${DBName}(
@@ -83,7 +87,6 @@ export const getRecordings =
 export const insertRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
     const sql = `INSERT INTO ${DBName} (name, path, groupName, device, deviceName, size, isProd) VALUES (?, ?, ?, ?, ?, ?, ?);`;
-    debugger;
     const values = [
       recording.name,
       recording.path,
