@@ -110,7 +110,7 @@ function NotificationBar(props: NotificationBarProps) {
 
 function NotificationPopup() {
   return (
-    <div class="mt-safe absolute top-0 z-10 w-full space-y-2 px-4">
+    <div class="mt-safe absolute top-0 z-30 w-full space-y-2 px-4">
       <For each={notifications()}>
         {(notification) => <NotificationBar notification={notification} />}
       </For>

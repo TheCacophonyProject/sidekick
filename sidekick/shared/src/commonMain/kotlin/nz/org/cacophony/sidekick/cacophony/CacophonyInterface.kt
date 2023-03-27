@@ -68,7 +68,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
                 recordingApi.uploadRecording(
                     filePath.toPath().resolve("recordings/${recording.filename}"), recording.filename, recording.device, recording.token, recording.type)
                     .fold(
-                        { error -> call.reject(error.toString()) },
+                        { error -> call.failure(error.toString()) },
                         { call.success(mapOf("recordingId" to it.recordingId, "messages" to it.messages)) }
                     )
         }
@@ -80,12 +80,24 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
         call.validateCall<UploadEventCall>("token", "device", "eventId", "type", "details", "timeStamp").map { event ->
             recordingApi.uploadEvent( event.device,event.token, listOf(event.timeStamp), event.type, event.details)
                 .fold(
-                    { error -> call.reject(error.toString()) },
+                    { error -> call.failure(error.toString()) },
                     { call.success(mapOf(
                        "eventDetailId" to it.eventDetailId,
                         "eventsAdded" to it.eventsAdded,
                         "messages" to it.messages
                     )) }
+                )
+        }
+    }
+
+    @Serializable
+    data class GetDeviceByIdCall(val token: String, val id: String)
+    fun getDeviceById(call: PluginCall) = runCatch(call) {
+        call.validateCall<GetDeviceByIdCall>("token", "id").map { device ->
+            recordingApi.getDeviceById(device.id, device.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
                 )
         }
     }

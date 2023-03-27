@@ -60,7 +60,6 @@ const hideNotification = (id: NotificationID, delay = defaultDuration) => {
 
 const keepNotification = (id: NotificationID) => {
   if (timeoutIDs.has(id)) {
-    console.log("clearing timeout", timeoutIDs.get(id));
     clearTimeout(timeoutIDs.get(id));
   }
 };

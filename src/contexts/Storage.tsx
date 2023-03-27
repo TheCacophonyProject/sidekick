@@ -70,14 +70,12 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         "no-encryption",
         2
       );
-      console.log("Opened database");
       await db.execute(createRecordingSchema);
       await db.execute(createEventSchema);
 
       setDb(db);
       const recs = await getSavedRecordings();
       const events = await getSavedEvents();
-      console.log(events);
       setSavedRecordings(recs);
       setSavedEvents(events);
     } catch (e) {
@@ -127,7 +125,6 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       return savedRecording;
     } catch (e) {
       if (e instanceof Error) {
-        console.error(e);
         logError("Failed to save recording", e.message);
       }
     }
@@ -189,10 +186,26 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
-    for (const event of UnuploadedEvents().filter(
+    const eventsByDevice = UnuploadedEvents().filter(
       (e) => e.isProd === userContext.isProd()
-    )) {
-      try {
+    ).reduce((acc, curr) => {
+      if (!acc.has(curr.device)) {
+        acc.set(curr.device, []);
+      }
+      acc.get(curr.device)?.push(curr);
+      return acc;
+    }, new Map<string, Event[]>());
+
+    for (const [device, events] of eventsByDevice) {
+      const deviceDetials = await CacophonyPlugin.getDeviceById({
+        token: user.token,
+        id: device,
+      });
+      if (!deviceDetials.success) {
+        logError("Failed upload events for device", deviceDetials.message);
+        continue;
+      }
+      for (const event of events) {
         const res = await CacophonyPlugin.uploadEvent({
           token: user.token,
           device: event.device,
@@ -201,16 +214,15 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
           details: event.details,
           timeStamp: event.timestamp,
         });
-        console.log(res);
         if (res.success) {
           event.isUploaded = true;
           await updateEvent(currdb)(event);
           setSavedEvents((prev) => {
             return [...prev.filter((e) => e.key !== event.key), event];
           });
+        } else {
+          console.error(res.message);
         }
-      } catch (e) {
-        console.error(e);
       }
     }
   };
@@ -232,10 +244,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       const events = options?.events
         ? options.events
         : await getSavedEvents(
-            options?.uploaded !== undefined
-              ? { uploaded: options.uploaded }
-              : {}
-          );
+          options?.uploaded !== undefined
+            ? { uploaded: options.uploaded }
+            : {}
+        );
       await deleteEventsFromDb(currdb)(events);
       const currEvents = await getSavedEvents();
       setSavedEvents(currEvents);
@@ -294,11 +306,26 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
-    const recordings = UnuploadedRecordings().filter(
+    const recordingsByDevice = UnuploadedRecordings().filter(
       (rec) => rec.isProd === userContext.isProd()
-    );
-    for (const recording of recordings) {
-      try {
+    ).reduce((acc, curr) => {
+      if (!acc.has(curr.device)) {
+        acc.set(curr.device, []);
+      }
+      acc.get(curr.device)?.push(curr);
+      return acc;
+    }, new Map<DeviceId, Recording[]>());
+
+    for (const [device, recordings] of recordingsByDevice) {
+      const deviceDetials = await CacophonyPlugin.getDeviceById({
+        token: user.token,
+        id: device,
+      });
+      if (!deviceDetials.success) {
+        logError(`Failed to upload recording on device: ${recordings[0].deviceName}`, deviceDetials.message);
+        continue;
+      }
+      for (const recording of recordings) {
         const res = await CacophonyPlugin.uploadRecording({
           token: user.token,
           type: "thermalRaw",
@@ -322,10 +349,8 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
             path,
             directory: Directory.Documents,
           });
-        }
-      } catch (e) {
-        if (e instanceof Error) {
-          logError(`Unable to upload ${recording.name}`, e?.message);
+        } else {
+          console.error(res.message);
         }
       }
     }

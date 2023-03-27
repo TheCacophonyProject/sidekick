@@ -1,6 +1,5 @@
 package nz.org.cacophony.sidekick
 
-import android.content.Context
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
@@ -9,10 +8,10 @@ import nz.org.cacophony.sidekick.cacophony.CacophonyInterface
 
 @CapacitorPlugin(name = "Cacophony")
 class CacophonyPlugin: Plugin() {
-    lateinit var cacophony: CacophonyInterface;
+    lateinit var cacophony: CacophonyInterface
 
     override fun load() {
-       cacophony = CacophonyInterface(context.filesDir.absolutePath);
+       cacophony = CacophonyInterface(context.filesDir.absolutePath)
     }
 
     @PluginMethod
@@ -42,5 +41,9 @@ class CacophonyPlugin: Plugin() {
     @PluginMethod
     fun uploadEvent(call: PluginCall) {
         cacophony.uploadEvent(pluginCall(call))
+    }
+    @PluginMethod
+    fun getDeviceById(call: PluginCall) {
+        cacophony.getDeviceById(pluginCall(call))
     }
 }

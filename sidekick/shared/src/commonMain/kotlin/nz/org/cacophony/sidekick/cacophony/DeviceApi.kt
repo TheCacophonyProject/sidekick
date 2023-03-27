@@ -40,9 +40,9 @@ class DeviceApi(private val api: Api) {
     @Serializable
     data class RecordingData(val type: String, val fileHash: String)
 
-    suspend fun uploadRecording(file: Path, filename: String, device: String, token: Token, type: String): Either<ApiError,UploadRecordingResponse> =
-        getRecordingData(file).flatMap { file ->
-            getSha1FileHash(file).flatMap {
+    suspend fun uploadRecording(filePath: Path, filename: String, device: String, token: Token, type: String): Either<ApiError,UploadRecordingResponse> =
+        getRecordingData(filePath).flatMap { file ->
+            getSha1FileHash(file).flatMap { hash ->
                 api.post(
                     "recordings/device/${device}"
                 ) {
@@ -61,7 +61,7 @@ class DeviceApi(private val api: Api) {
                                 })
                                 append(
                                     "data",
-                                    Json.encodeToString(RecordingData(type, it)),
+                                    Json.encodeToString(RecordingData(type, hash)),
                                     Headers.build {
                                         append(HttpHeaders.ContentType, "application/json")
                                     })
@@ -72,7 +72,7 @@ class DeviceApi(private val api: Api) {
                     )
                 }
                     .map {
-                        println("Upload response: $it ${token}")
+                        println("Upload response: $it $token")
                         return validateResponse(it)
                     }.mapLeft {
                         FormError(
@@ -111,6 +111,29 @@ class DeviceApi(private val api: Api) {
             FormError(
                 "Unable to upload event for ${eventReq}: ${it.message}",
                 "device/${device}"
+            )
+        }
+    }
+
+    @Serializable
+    data class Device(val deviceName: String, val groupName: String, val groupId: Int, val deviceId: Int, val saltId: Int, val active: Boolean, val admin: Boolean, val type: String, val public: Boolean, val lastConnectionTime: String, val lastRecordingTime: String, val location: Location, val users: List<User>)
+    @Serializable
+    data class Location(val lat: Double, val lng: Double)
+    @Serializable
+    data class User(val userName: String, val userId: Int, val admin: Boolean)
+    @Serializable
+    data class DeviceResponse(val device: Device, val success: Boolean, val messages: List<String>)
+    suspend fun getDeviceById(deviceId: String, token: String): Either<ApiError, DeviceResponse> {
+        return api.get("devices/${deviceId}") {
+            headers {
+                append(Authorization, token)
+            }
+        }.map {
+            return validateResponse(it)
+        }.mapLeft {
+            FormError(
+                "Unable to get device ${deviceId}: ${it.message}",
+                "device/${deviceId}"
             )
         }
     }

@@ -36,6 +36,28 @@ export interface CacophonyPlugin {
     details: string;
     timeStamp: string;
   }): Result<{ recordingId: string; messages: string }>;
+  getDeviceById(options: { token: string; id: string }): Result<{
+    deviceName: string;
+    groupName: string;
+    groupId: number;
+    deviceId: number;
+    saltId: number;
+    active: boolean;
+    admin: boolean;
+    type: string;
+    public: boolean;
+    lastConnectionTime: string;
+    lastRecordingTime: string;
+    location: {
+      lat: number;
+      lng: number;
+    };
+    users: {
+      userName: string;
+      userId: number;
+      admin: boolean;
+    }[];
+  }>;
   setToProductionServer(): Result;
   setToTestServer(): Result;
 }
