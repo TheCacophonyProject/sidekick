@@ -1,22 +1,29 @@
-import { CapacitorConfig } from "@capacitor/cli";
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: "nz.org.cacophony.sidekick",
-  appName: "Sidekick",
-  webDir: "dist",
+  appId: 'nz.org.cacophony.sidekick',
+  appName: 'Sidekick',
+  webDir: 'dist',
   bundledWebRuntime: false,
+  backgroundColor: '#f9fafb',
   android: {
-    path: "sidekick",
+    path: 'sidekick',
   },
   ios: {
-    path: "sidekick",
+    path: 'sidekick',
   },
   plugins: {
     CapacitorHttp: {
       enabled: true,
     },
     CapacitorSQLite: {
-      iosDatabaseLocation: "Library/CapacitorDatabase",
+      iosDatabaseLocation: 'Library/CapacitorDatabase',
+      androidIsEncryption: false,
+      androidBiometric: {
+        biometricAuth: false,
+        biometricTitle: 'Biometric login for capacitor sqlite',
+        biometricSubTitle: 'Log in using your biometric',
+      },
     },
   },
 };

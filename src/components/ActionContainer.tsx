@@ -8,14 +8,14 @@ const ActionContainer = (props: {
   action?: JSX.Element;
 }) => {
   return (
-    <div class="h-min-2 z-10 mt-2 flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
+    <div class="relative h-min-2 mt-2 flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
       <div class="flex w-full flex-row items-center gap-x-4">
         {props.icon && (
           <div class="text-gray-700">
             <props.icon size={38} class="text-4xl" />
           </div>
         )}
-        <div class=" w-full">
+        <div class="w-full">
           <Show when={props.header}>
             <h1 class="text-base font-semibold text-gray-500">
               {props.header}

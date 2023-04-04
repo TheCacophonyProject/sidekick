@@ -4,11 +4,9 @@ import arrow.core.*
 import io.ktor.client.plugins.*
 import io.ktor.util.reflect.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 
 // Zipper class for interface between Capacitor(iOS and Android) and Kotlin to allow direct passing
 // of data between the two
@@ -44,5 +42,9 @@ inline fun <reified T> PluginCall.validateCall(vararg keys: String): Either<Capa
                 .rightIfNotNull { CapacitorInterfaceError.EmptyKey(key) }
                 .map { key to it }
         }.map{ pairs -> pairs.associate { it.first to it.second }}.map {
-               return Json.decodeFromString<T>(Json.encodeToString(it)).right()
+               return try {
+                   Json.decodeFromString<T>(Json.encodeToString(it)).right()
+               } catch (e: Exception) {
+                   CapacitorInterfaceError.EmptyKey("Error decoding json").left()
+               }
         }.mapLeft { CapacitorInterfaceError.EmptyKey(it.key) }

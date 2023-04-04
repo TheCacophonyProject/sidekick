@@ -11,7 +11,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     private val userApi = UserApi(api)
     private val recordingApi = DeviceApi(api)
 
-    @kotlinx.serialization.Serializable
+    @Serializable
     data class User(val email: String, val password: String)
     fun authenticateUser(call: PluginCall) = runCatch(call) {
         call.validateCall<User>("email", "password").map { (email, password) ->
@@ -62,9 +62,10 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     }
 
     @Serializable
-    data class Recording(val token: String, val device: String,val file: String, val type: String, val filename: String)
+    data class Recording(val token: String, val device: String, val type: String, val filename: String)
     fun uploadRecording(call: PluginCall) = runCatch(call) {
-        call.validateCall<Recording>("token", "device", "file", "type", "filename").map { recording ->
+        call.validateCall<Recording>("token", "device","type", "filename").map { recording ->
+                println("$recording")
                 recordingApi.uploadRecording(
                     filePath.toPath().resolve("recordings/${recording.filename}"), recording.filename, recording.device, recording.token, recording.type)
                     .fold(

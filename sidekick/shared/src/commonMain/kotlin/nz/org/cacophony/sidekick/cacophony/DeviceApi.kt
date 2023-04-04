@@ -20,6 +20,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
+import okio.IOException
 
 @Serializable
 data class UploadRecordingResponse(val recordingId: Int, val success: Boolean,val messages: List<String>)
@@ -34,14 +35,12 @@ class DeviceApi(private val api: Api) {
         ParsingError("Unable to encode file $file to base64: ${it.message}")
     }
 
-    private fun getRecordingData(filename: Path): Either<ApiError, ByteArray> = getFile(filename)
-        .rightIfNotNull { ParsingError("Unable to get file $filename") }
 
     @Serializable
     data class RecordingData(val type: String, val fileHash: String)
 
     suspend fun uploadRecording(filePath: Path, filename: String, device: String, token: Token, type: String): Either<ApiError,UploadRecordingResponse> =
-        getRecordingData(filePath).flatMap { file ->
+        getFile(filePath).flatMap { file ->
             getSha1FileHash(file).flatMap { hash ->
                 api.post(
                     "recordings/device/${device}"
@@ -81,7 +80,7 @@ class DeviceApi(private val api: Api) {
                         )
                     }
             }
-        }
+        }.mapLeft { FormError("Unable to upload recording for ${filename}: $it", "device/${device}") }
     object JsonAsStringSerializer: JsonTransformingSerializer<String>(tSerializer = String.serializer()) {
         override fun transformDeserialize(element: JsonElement): JsonElement {
             return JsonPrimitive(value = element.toString())

@@ -88,6 +88,7 @@ kotlin {
 android {
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = 33
+    sourceSets["main"].manifest.srcFile("src/main/AndroidManifest.xml")
     defaultConfig {
         minSdk = 21
         targetSdk = 33

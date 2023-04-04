@@ -31,6 +31,13 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
     override val currentPath: String = "/api"
     val token = "Basic YWRtaW46ZmVhdGhlcnM="
 
+    suspend fun getDevicePage(): Either<ApiError, String> =
+        get(basePath) {
+            headers {
+                append(HttpHeaders.Authorization, token)
+            }
+        }.flatMap { validateResponse(it) }
+
     suspend fun getDeviceInfo(): Either<ApiError, DeviceInfo> =
         getRequest("device-info").flatMap { res ->
             validateResponse<String>(res)
@@ -91,13 +98,16 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             .flatMap { validateResponse(it) }
 
     suspend fun connectToHost(
-    ): Either<ApiError, HttpResponse> = Either.catch {
-        return client.get(device.url) {
-            headers {
-                append(HttpHeaders.Authorization, token)
+    ): Either<ApiError, HttpResponse> {
+        return try {
+            val res = client.get(device.url) {
+                headers {
+                    append(HttpHeaders.Authorization, token)
+                }
             }
-        }.right()
+            return validateResponse(res)
+        } catch (e: Exception) {
+            ParsingError("Unable to connect to host: $e").left()
+        }
     }
-        .map { return validateResponse(it) }
-        .mapLeft { ParsingError("Unable to connect to host: $it")}
 }

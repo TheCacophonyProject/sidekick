@@ -1,21 +1,26 @@
 package nz.org.cacophony.sidekick
+import android.app.Activity.RESULT_OK
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
+import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
-import android.net.wifi.WifiNetworkSpecifier
+import android.net.wifi.WifiNetworkSuggestion
 import android.os.Build
-import androidx.annotation.RequiresApi
+import android.os.Bundle
+import android.provider.Settings
+import android.provider.Settings.ACTION_WIFI_ADD_NETWORKS
+import android.provider.Settings.EXTRA_WIFI_NETWORK_LIST
+import androidx.activity.result.ActivityResult
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.device.DeviceInterface
+import java.net.URL
 
 @CapacitorPlugin(name = "Device")
 class DevicePlugin: Plugin() {
@@ -28,7 +33,7 @@ class DevicePlugin: Plugin() {
     private lateinit var device: DeviceInterface;
 
     override fun load() {
-       device = DeviceInterface(context.filesDir.absolutePath)
+       device = DeviceInterface(context.applicationContext.filesDir.absolutePath)
     }
 
     enum class CallType {
@@ -55,6 +60,7 @@ class DevicePlugin: Plugin() {
                             val endpoint = "${info.serviceName}.local"
                             val result = JSObject()
                             result.put("endpoint", endpoint)
+                            result.put("host", info.host.hostAddress)
                             call.resolve(result)
                         }
 
@@ -99,45 +105,63 @@ class DevicePlugin: Plugin() {
         device.checkDeviceConnection(pluginCall(call))
     }
 
+
     @PluginMethod
     fun connectToDeviceAP(call: PluginCall) {
-        val ssid = "bushnet"
-        val password = "feathers"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            connectToWifi(ssid, password) {
-                call.resolve(JSObject("{\"success\": true}"))
+        try {
+            val ssid = "bushnet"
+            val password = "feathers"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+               // ask for permission
+                val intent = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+                    val wifiNetworkSuggestion = WifiNetworkSuggestion.Builder()
+                        .setSsid(ssid)
+                        .setWpa2Passphrase(password)
+                        .setIsAppInteractionRequired(true)
+                        .build()
+                    val wifiNetworkSuggestions = arrayListOf(wifiNetworkSuggestion)
+                    val bundle = Bundle()
+                    bundle.putParcelableArrayList(EXTRA_WIFI_NETWORK_LIST, wifiNetworkSuggestions)
+                    val intent = Intent(ACTION_WIFI_ADD_NETWORKS)
+                    intent.putExtras(bundle)
+                    intent
+                } else {
+                    Intent(Settings.ACTION_WIFI_SETTINGS)
+                }
+                startActivityForResult(call, intent, "connectToWifi")
+            } else {
+                connectToWifiLegacy(ssid, password, {
+                    val result = JSObject()
+                    result.put("success", true)
+                    call.resolve(result)
+                }, {
+                    val result = JSObject()
+                    result.put("success", false)
+                    result.put("message", "Failed to connect to device AP")
+                    call.resolve(result)
+                })
             }
-        } else {
-            connectToWifiLegacy(ssid, password, {
-                call.resolve(JSObject("{\"success\": true}"))
-            }, {
-                call.reject("Failed to connect to device AP")
-            })
+        } catch (e: Exception) {
+            val result = JSObject()
+            result.put("success", false)
+            result.put("message", e.message)
+            call.resolve(result)
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    fun connectToWifi(ssid: String, password: String, onConnect: () -> Unit) {
-        val wifiNetworkSpecifier = WifiNetworkSpecifier.Builder()
-            .setSsid(ssid)
-            .setWpa2Passphrase(password)
-            .build()
-
-        val networkRequest = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .setNetworkSpecifier(wifiNetworkSpecifier)
-            .build()
-
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: android.net.Network) {
-                super.onAvailable(network)
-                // You can now use the Wi-Fi network
-                onConnect()
-            }
+    @ActivityCallback
+    fun connectToWifi(call: PluginCall, result: ActivityResult) {
+        if (result.resultCode == RESULT_OK) {
+        val result = JSObject()
+        result.put("success", true)
+        result.put("data", "Connected to device AP")
+        call.resolve(result)
+        } else {
+            val result = JSObject()
+            result.put("success", false)
+            result.put("message", "Failed to connect to device AP")
+            call.resolve(result)
         }
-
-        connectivityManager.requestNetwork(networkRequest, networkCallback)
     }
 
     @Suppress("DEPRECATION")
@@ -202,5 +226,14 @@ class DevicePlugin: Plugin() {
     @PluginMethod
     fun downloadRecording(call: PluginCall) {
         device.downloadRecording(pluginCall(call))
+    }
+    @PluginMethod
+    fun deleteRecordings(call: PluginCall) {
+        device.deleteRecordings(pluginCall(call))
+    }
+
+    @PluginMethod
+    fun deleteRecording(call: PluginCall) {
+        device.deleteRecording(pluginCall(call))
     }
 }

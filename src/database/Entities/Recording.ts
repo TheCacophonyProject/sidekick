@@ -48,41 +48,41 @@ const RecordingsSchema = z.array(RecordingSchema);
 
 export const getRecordings =
   (db: SQLiteDBConnection) =>
-  async (options?: {
-    name?: string;
-    uploaded?: boolean;
-    device?: string;
-  }): Promise<Recording[]> => {
-    try {
-      const sql = `SELECT * FROM ${DBName}`;
-      const where = [];
-      if (options?.name) {
-        where.push(`name = '${options.name}'`);
+    async (options?: {
+      name?: string;
+      uploaded?: boolean;
+      device?: string;
+    }): Promise<Recording[]> => {
+      try {
+        const sql = `SELECT * FROM ${DBName}`;
+        const where = [];
+        if (options?.name) {
+          where.push(`name = '${options.name}'`);
+        }
+        if (options?.uploaded) {
+          where.push(`isUploaded = ${options.uploaded ? 1 : 0}`);
+        }
+        if (options?.device) {
+          where.push(`device = '${options.device}'`);
+        }
+        const whereClause =
+          where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
+        const query = `${sql}${whereClause};`;
+        const result = await db.query(query);
+        const recordings = RecordingsSchema.safeParse(
+          result.values?.map((v) => ({
+            ...v,
+            isUploaded: !!v.isUploaded,
+            isProd: !!v.isProd,
+          })) ?? []
+        );
+        if (!recordings.success) return [];
+        return recordings.data;
+      } catch (error) {
+        console.log(error);
+        return [];
       }
-      if (options?.uploaded) {
-        where.push(`isUploaded = ${options.uploaded ? 1 : 0}`);
-      }
-      if (options?.device) {
-        where.push(`device = '${options.device}'`);
-      }
-      const whereClause =
-        where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
-      const query = `${sql}${whereClause};`;
-      const result = await db.query(query);
-      const recordings = RecordingsSchema.safeParse(
-        result.values?.map((v) => ({
-          ...v,
-          isUploaded: !!v.isUploaded,
-          isProd: !!v.isProd,
-        })) ?? []
-      );
-      if (!recordings.success) return [];
-      return recordings.data;
-    } catch (error) {
-      console.log(error);
-      return [];
-    }
-  };
+    };
 
 export const insertRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
@@ -96,24 +96,21 @@ export const insertRecording =
       recording.size,
       recording.isProd,
     ];
-    return await db.query(sql, values);
+    return db.query(sql, values);
   };
 
 export const updateRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
     if (!recording.isUploaded || !recording.uploadId) return;
-    const sql = `UPDATE ${DBName} SET isUploaded = ${
-      recording.isUploaded ? 1 : 0
-    }, uploadId = '${recording.uploadId}' WHERE name = '${recording.name}';`;
-    console.log(sql);
-    const values = [recording.isUploaded, recording.uploadId, recording.name];
-    return await db.query(sql, values);
+    const sql = `UPDATE ${DBName} SET isUploaded = ${recording.isUploaded ? 1 : 0
+      }, uploadId = '${recording.uploadId}' WHERE name = '${recording.name}';`;
+    return db.query(sql);
   };
 
 export const deleteRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
     const sql = `DELETE FROM ${DBName} WHERE name = '${recording.name}';`;
-    return await db.query(sql);
+    return db.query(sql);
   };
 
 export const deleteRecordings =
@@ -121,5 +118,5 @@ export const deleteRecordings =
     const sql = `DELETE FROM ${DBName} WHERE name IN (${recordings
       .map((r) => `'${r.name}'`)
       .join(",")});`;
-    return await db.query(sql);
+    return db.query(sql);
   };

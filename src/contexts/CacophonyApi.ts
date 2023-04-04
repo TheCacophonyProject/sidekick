@@ -1,5 +1,5 @@
-import { registerPlugin } from "@capacitor/core";
-import { Result } from ".";
+import { registerPlugin } from '@capacitor/core';
+import { Result } from '.';
 
 type AuthToken = {
   token: string;
@@ -23,8 +23,7 @@ export interface CacophonyPlugin {
   validateToken(token: AuthToken): Result<AuthToken>;
   uploadRecording(options: {
     token: string;
-    file: string;
-    type: "thermalRaw" | "audio";
+    type: 'thermalRaw' | 'audio';
     device: string;
     filename: string;
   }): Result<{ recordingId: string; messages: string }>;
@@ -60,6 +59,7 @@ export interface CacophonyPlugin {
   }>;
   setToProductionServer(): Result;
   setToTestServer(): Result;
+  getAppVersion(): Result<string>;
 }
 
-export const CacophonyPlugin = registerPlugin<CacophonyPlugin>("Cacophony");
+export const CacophonyPlugin = registerPlugin<CacophonyPlugin>('Cacophony');

@@ -16,6 +16,8 @@ data class pluginCall(val call: com.getcapacitor.PluginCall): PluginCall {
         return call.getString(key)
     }
 
+
+
     override fun reject(message: String) {
         call.reject(message)
     }

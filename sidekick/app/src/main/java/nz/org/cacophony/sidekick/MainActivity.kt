@@ -9,4 +9,5 @@ class MainActivity : BridgeActivity() {
         registerPlugin(CacophonyPlugin::class.java)
         super.onCreate(savedInstanceState)
     }
+
 }

@@ -14,7 +14,7 @@ function CircleButton(props: CircleButtonProps) {
     <div class="mx-2 flex flex-col items-center">
       <button
         disabled={props.disabled}
-        class="shadow-mda mb-2 rounded-full bg-white p-4"
+        class="shadow-md mb-2 rounded-full bg-white p-4"
         onClick={props.onClick}
       >
         <Presence exitBeforeEnter>

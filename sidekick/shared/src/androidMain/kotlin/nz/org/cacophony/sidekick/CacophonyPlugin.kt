@@ -1,5 +1,7 @@
 package nz.org.cacophony.sidekick
 
+import android.content.pm.PackageManager
+import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
@@ -11,7 +13,7 @@ class CacophonyPlugin: Plugin() {
     lateinit var cacophony: CacophonyInterface
 
     override fun load() {
-       cacophony = CacophonyInterface(context.filesDir.absolutePath)
+       cacophony = CacophonyInterface(context.applicationContext.filesDir.absolutePath)
     }
 
     @PluginMethod
@@ -45,5 +47,24 @@ class CacophonyPlugin: Plugin() {
     @PluginMethod
     fun getDeviceById(call: PluginCall) {
         cacophony.getDeviceById(pluginCall(call))
+    }
+    @PluginMethod
+    fun getAppVersion(call: PluginCall) {
+        // Get version name
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val version = pInfo.versionName
+            val data = JSObject()
+            data.put("data", version)
+            data.put("success", true)
+            call.resolve(data)
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+            val data = JSObject()
+            data.put("success", false)
+            data.put("message", "Could not get app version")
+            call.resolve(data)
+        }
+
     }
 }

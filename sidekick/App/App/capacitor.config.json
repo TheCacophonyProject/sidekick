@@ -3,6 +3,7 @@
 	"appName": "Sidekick",
 	"webDir": "dist",
 	"bundledWebRuntime": false,
+	"backgroundColor": "#f9fafb",
 	"android": {
 		"path": "sidekick"
 	},
@@ -14,7 +15,13 @@
 			"enabled": true
 		},
 		"CapacitorSQLite": {
-			"iosDatabaseLocation": "Library/CapacitorDatabase"
+			"iosDatabaseLocation": "Library/CapacitorDatabase",
+			"androidIsEncryption": false,
+			"androidBiometric": {
+				"biometricAuth": false,
+				"biometricTitle": "Biometric login for capacitor sqlite",
+				"biometricSubTitle": "Log in using your biometric"
+			}
 		}
 	}
 }

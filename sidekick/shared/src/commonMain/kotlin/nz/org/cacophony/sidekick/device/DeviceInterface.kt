@@ -1,6 +1,7 @@
 package nz.org.cacophony.sidekick.device
 
 import arrow.core.flatMap
+import arrow.core.maybe
 import arrow.core.right
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -140,13 +141,33 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                 .map { rec ->
                     deviceApi.downloadFile(rec.recordingPath)
                         .flatMap { file ->
-                            writeToFile(filePath.toPath().resolve("recordings/${rec.recordingPath}"), file).right()
+                            writeToFile(filePath.toPath().resolve("recordings/${rec.recordingPath}"), file)
                                 .map { call.success(mapOf("path" to it.toString(), "size" to file.size)) }
+                                .mapLeft { call.failure("Unable to write file: $it") }
                         }
                         .mapLeft { call.failure("Unable to download file: $it") }
                 }
 
         }
+    }
+
+    fun deleteRecordings(call: PluginCall) =
+            deleteDirectory(filePath.toPath().resolve("recordings")).fold(
+                { call.failure("Unable to delete recordings: $it") },
+                { call.success() }
+            )
+
+    @Serializable
+    data class RecordingToDelete(val recordingPath: String)
+    fun deleteRecording(call: PluginCall) = runCatch(call) {
+        call.validateCall<RecordingToDelete>("recordingPath")
+            .map { rec ->
+                deleteFile(filePath.toPath().resolve("recordings/${rec.recordingPath}"))
+                    .fold(
+                        { call.failure("Unable to delete recording: $it") },
+                        { call.success() }
+                    )
+            }
     }
 
     fun getTestText(call: PluginCall) = runCatch(call) {
@@ -161,6 +182,19 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                         { error -> call.failure(error.toString()) },
                         {
                             call.success()
+                        }
+                    )
+            }
+    }
+
+    fun getDevicePage(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call)
+            .map { deviceApi ->
+                deviceApi.getDevicePage()
+                    .fold(
+                        { error -> call.failure(error.toString()) },
+                        {
+                            call.success(it)
                         }
                     )
             }

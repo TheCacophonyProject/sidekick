@@ -1,9 +1,7 @@
 import {
-  CapacitorSQLite,
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { Recording } from "./Entities/Recording";
 
 /**
  *
@@ -20,9 +18,9 @@ export const openConnection = async (
   let db: SQLiteDBConnection;
   try {
     const retCC = (await sqlite.checkConnectionsConsistency()).result;
-    let isConn = (await sqlite.isConnection(dbName, false)).result;
+    const isConn = (await sqlite.isConnection(dbName, false)).result;
     if (retCC && isConn) {
-      db = await sqlite.retrieveConnection(dbName, false);
+      return await sqlite.retrieveConnection(dbName, false);
     } else {
       db = await sqlite.createConnection(
         dbName,
@@ -41,3 +39,4 @@ export const openConnection = async (
 export const removeEscapedQuotes = (str: string) => {
   return str.replace(/\\\"/g, '"').replace(/^"(.*)"$/, "$1");
 };
+

@@ -1,12 +1,13 @@
-import { Show } from "solid-js";
-import { useUserContext } from "~/contexts/User";
-import { BsPersonFill } from "solid-icons/bs";
-import { ImCog, ImMobile } from "solid-icons/im";
-import ActionContainer from "~/components/ActionContainer";
-import { A } from "@solidjs/router";
-import { RiSystemArrowRightSLine } from "solid-icons/ri";
-import { Dialog } from "@capacitor/dialog";
-import { BiRegularLogOut } from "solid-icons/bi";
+import { createResource, Show } from 'solid-js';
+import { useUserContext } from '~/contexts/User';
+import { BsPersonFill } from 'solid-icons/bs';
+import { ImCog, ImMobile } from 'solid-icons/im';
+import ActionContainer from '~/components/ActionContainer';
+import { A } from '@solidjs/router';
+import { RiSystemArrowRightSLine } from 'solid-icons/ri';
+import { Dialog } from '@capacitor/dialog';
+import { BiRegularLogOut } from 'solid-icons/bi';
+import { CacophonyPlugin } from '~/contexts/CacophonyApi';
 
 function Settings() {
   const userContext = useUserContext();
@@ -21,15 +22,23 @@ function Settings() {
   );
   const logoutAccount = async () => {
     const { value } = await Dialog.confirm({
-      title: "Confirm",
+      title: 'Confirm',
       message: `Are you sure you want to ${
-        userContext.data() ? "logout" : "return to login screen"
+        userContext.data() ? 'logout' : 'return to login screen'
       }?`,
     });
     if (value) {
       userContext.logout();
     }
   };
+  const [version] = createResource(async () => {
+    const res = await CacophonyPlugin.getAppVersion();
+    if (res.success) {
+      return res.data;
+    } else {
+      return '1.0.0';
+    }
+  });
 
   return (
     <section class="pt-bar h-full space-y-2 bg-gray-200 px-2">
@@ -51,7 +60,7 @@ function Settings() {
               class="flex w-full items-center justify-center space-x-2 text-2xl text-blue-500"
               onClick={logoutAccount}
             >
-              {userContext.data() ? "Logout" : "Return to Login"}
+              {userContext.data() ? 'Logout' : 'Return to Login'}
               <BiRegularLogOut size={24} />
             </button>
           </>
@@ -61,7 +70,9 @@ function Settings() {
         <h1 class="ml-2 text-xl text-neutral-500">Application</h1>
         <ActionContainer icon={ImMobile} header="App Version">
           <>
-            <h1>1.1</h1>
+            <Show when={!version.loading} fallback={<h1>...</h1>}>
+              <h1>{version()}</h1>
+            </Show>
           </>
         </ActionContainer>
         <Show when={!userContext.isProd()}>

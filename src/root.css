@@ -23,7 +23,7 @@
     padding-top: calc(5rem + env(safe-area-inset-top));
   }
   .pb-bar {
-    padding-bottom: calc(5rem);
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
   .mt-safe {
     margin-top: env(safe-area-inset-top);

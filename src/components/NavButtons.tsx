@@ -3,7 +3,7 @@ import LabelledIcon, { LabelledIconProps } from "./LabelledIcon";
 import { BiSolidDashboard } from "solid-icons/bi";
 import { BsCameraVideoFill, BsHddStackFill } from "solid-icons/bs";
 import { IoSettingsSharp } from "solid-icons/io";
-import { mergeProps } from "solid-js";
+import { createEffect, mergeProps } from "solid-js";
 
 interface NavButtonProps extends LabelledIconProps {
   href?: string;
@@ -17,6 +17,9 @@ const formatLink = (link: string) =>
 
 const NavButton = (props: NavButtonProps) => {
   const mergedProps = mergeProps({ href: formatLink(props.label) }, props);
+  createEffect(() => {
+    console.log(mergedProps.href);
+  });
   return (
     <A
       href={mergedProps.href}
