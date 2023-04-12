@@ -45,6 +45,7 @@ before_install:
   - bundle install
   # Capacitor.js dependencies
   - wget -qO- https://get.pnpm.io/install.sh | sh -
+  - source /home/travis/.bashrc
   - pnpm config set store-dir ~/.pnpm-store
 
 script:
