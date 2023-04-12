@@ -65,6 +65,8 @@ export interface DevicePlugin {
   getEventKeys(options: DeviceUrl): Result<number[]>;
   getEvents(options: DeviceUrl & { keys: string }): Result<string>;
   deleteEvents(options: DeviceUrl & { keys: string }): Result;
+  deleteRecording(options: { recordingPath: string }): Result;
+  deleteRecordings(): Result;
   downloadRecording(
     options: DeviceUrl & { recordingPath: string }
   ): Result<{ path: string; size: number }>;
@@ -125,11 +127,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     const [, group] = deviceName.split('-');
     const url = getDeviceInterfaceUrl(deviceName);
     const info = await DevicePlugin.getDeviceInfo({ url });
-    const id: DeviceId = info.success
-      ? info.data.deviceID.toString()
-      : deviceName;
     const connection = await DevicePlugin.checkDeviceConnection({ url });
     if (connection.success && info.success) {
+      const id: DeviceId = info.data.deviceID.toString();
       const deviceDetails: DeviceDetails = {
         id,
         host: deviceName,
@@ -152,6 +152,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       const connection = await DevicePlugin.checkDeviceConnection({ url });
       const info = await DevicePlugin.getDeviceInfo({ url });
       if (connection.success && info.success) {
+        const id: DeviceId = info.data.deviceID.toString();
         const deviceDetails: DeviceDetails = {
           id,
           host: deviceName,
@@ -170,7 +171,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         clearUploaded(device);
         return device;
       } else {
-        logError('Failed to connect to device: ' + endpoint);
         console.log(connection, info, host);
       }
     }
@@ -179,6 +179,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   const startDiscovery = async () => {
     if (isDiscovering()) return;
     setIsDiscovering(true);
+    const connectedDevices: ConnectedDevice[] = [];
     for (const device of devices.values()) {
       if (!device.isConnected) continue;
       const connection = await DevicePlugin.checkDeviceConnection({
@@ -186,14 +187,21 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       });
       if (connection.success && device.isConnected) {
         clearUploaded(device);
+        connectedDevices.push(device);
       } else {
         devices.delete(device.id);
       }
     }
 
     const id = await DevicePlugin.discoverDevices(async (newDevice) => {
-      console.log(newDevice);
-      if (!newDevice) return;
+      if (
+        !newDevice ||
+        connectedDevices.some(
+          (d) => d.endpoint.split('-')[0] === newDevice.endpoint
+        )
+      )
+        return;
+
       for (let i = 0; i < 3; i++) {
         const connectedDevice = await endpointToDevice(
           newDevice.endpoint,
@@ -201,9 +209,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         );
         if (connectedDevice) {
           devices.set(connectedDevice.id, connectedDevice);
-          break;
+          return;
         }
       }
+      logError(
+        `Unable to connect to discovered device`,
+        JSON.stringify(newDevice)
+      );
     });
     setCallbackID(id);
   };
@@ -243,7 +255,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (error instanceof Error) {
         logError('Could not get recordings', error.message);
       }
-      throw error;
+      return []
     }
   };
 
@@ -452,7 +464,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       });
       const location = locationSchema.safeParse({ ...coords, timestamp });
       if (!location.success) {
-        throw new Error('Invalid location');
+        logError('Could not set device location', location.error.message);
+        return 
       }
       const options = {
         url,
@@ -471,7 +484,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         logError('Could not set device location', error.message);
       }
       locationBeingSet.delete(device.id);
-      throw error;
     }
   };
 
@@ -514,9 +526,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       }
     } catch (error) {
       if (error instanceof Error) {
-        logError('Could not get device location', error.message);
+        logError('Could not get location', error.message);
       }
-      throw error;
+      return {
+        success: false,
+        message: 'Could not get location',
+      };
     }
   };
 

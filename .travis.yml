@@ -3,6 +3,12 @@ jdk:
   - oraclejdk11
 dist: trusty
 
+cache:
+  npm: false
+  directories:
+    - "~/.pnpm-store"
+before_install:
+
 android:
   licenses:
     - 'android-sdk-preview-license-.+'    
@@ -11,7 +17,7 @@ android:
   components:
     - tools    
     - build-tools-30.0.2
-    - android-30
+    - android-33
     - extra-google-google_play_services
     - extra-google-m2repository
     - extra-android-m2repository
@@ -23,29 +29,43 @@ env:
     - ANDROID_HOME=~/android-sdk
 
 before_install:
+  # Android dependencies
   - touch $HOME/.android/repositories.cfg
   - wget "https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip" -O commandlinetools.zip
   - unzip commandlinetools.zip -d $ANDROID_HOME/
   - yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "platforms;android-${TARGET_VERSION}" --sdk_root=$ANDROID_HOME
   - yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" --sdk_root=$ANDROID_HOME
+  # Fastlane dependencies
   - chmod +x gradlew
   - gem update --system
   - gem install bundler
   - bundle install
+  # Capacitor.js dependencies
+  - corepack enable
+  - corepack prepare pnpm@latest-8 --activate
+  - pnpm config set store-dir ~/.pnpm-store
 
 script:
-- "./gradlew clean assembleDebug"
+  - "./gradlew clean assembleDebug"
+
+install: 
+  - pnpm install
+  - pnpm build
+  - pnpm sync
+
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
   -in signing.tar.enc -out signing.tar -d
 - tar xvf signing.tar
+- cd sidekick/app
 - fastlane alpha
+
 deploy:
   provider: releases
   api_key:
     secure: U21XKaO+J4JoPiOgdNLyxTFCnM635lMO4rRlt3rPT/AJ5AA8Uev+g2mu3nyXhl3AEOe8KkJrdAFCgJG66cV0UT+fyNkhm/K/ABpeMcV0ZBPBh/L/liM2Icky/cCbYsrll444CBZBEe4dr0qXP/MYpB3NduaXn8x3pgqg2WP6EimO/ei/nzwBU9vaIjJOdk5vmCwKF5duNVtDrG5P1DqF2ic/rT5NCK15LjnSW2kGNynK1DuS1lWK6IsuPtUbtUPVBbgPmclU9C48SjTp1pDyNSWkONxT/SOmwHgiSzfWfaWUAvQEDLyhzQAVRXb/Y65dJCeXjMwYJeoTgF+r9ptqXR+a9BxEhAcXloKtfNyxOFFtqII0VaJWrfqdYGu8XJxjsxOvvnIBppzm556A42TEeWaXVJAidCPm7BAk+zjEh+9LhTv9pgzmpYde7cH8JKiTOzNksZ1YJhZFQe68KNh8rVcPYjn7LGtNHtQMMhZG+oxXpUWQRUr/pg4UHHH50clWzYeR7Oe5XYlyl0TFuaz9h8m5GJgrlLdSw8hKRK6Kx13Vq7U0pUMc+Q4EXVGxv7gkezm/dDxXWe9fAn4KcOTxP8verT9dXHdPOZgKsyGBYNThpawjV/tWQ53Zvepzq2IgA70mN672MKhfrmAocwK1uMXCfWC9+GIDOEMJVZbI8Gw=
   file_glob: true
-  file: "app/build/outputs/bundle/release/*.aab"
+  file: "sidekick/app/build/outputs/bundle/release/*.aab"
   skip_cleanup: true
   on:
     repo: TheCacophonyProject/sidekick

@@ -90,14 +90,20 @@ class DevicePlugin: Plugin() {
 
     @PluginMethod
     fun stopDiscoverDevices(call: PluginCall) {
-        val id = call.getString("id") ?: return call.reject("No Id Found")
-        bridge.releaseCall(id)
-        nsdManager.stopServiceDiscovery(discoveryListener)
-
         val result = JSObject()
-        result.put("success", true)
-        result.put("id", id)
-        call.resolve(result)
+        try {
+            val id = call.getString("id") ?: return call.reject("No Id Found")
+            bridge.releaseCall(id)
+            nsdManager.stopServiceDiscovery(discoveryListener)
+
+            result.put("success", true)
+            result.put("id", id)
+            call.resolve(result)
+        } catch (e: Exception) {
+            result.put("success", false)
+            result.put("message", e.message)
+            call.resolve(result)
+        }
     }
 
     @PluginMethod

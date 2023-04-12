@@ -3,15 +3,6 @@ import { z } from "zod";
 import { removeEscapedQuotes } from "..";
 
 const DBName = "events";
-export type Event = {
-  key: string;
-  timestamp: string;
-  type: string;
-  device: string;
-  details: string;
-  isProd: boolean;
-  isUploaded: boolean;
-};
 
 // sqlite schem
 export const createEventSchema = `
@@ -35,6 +26,8 @@ const EventSchema = z.object({
   isUploaded: z.boolean(),
   isProd: z.boolean(),
 });
+
+export type Event = z.infer<typeof EventSchema>;
 
 export const insertEvent = (db: SQLiteDBConnection) => async (event: Event) => {
   // check if event exists

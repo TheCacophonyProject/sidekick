@@ -1,26 +1,18 @@
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
 
-const DBName = "RecordingTable";
-export type Recording = {
-  name: string;
-  path: string;
-  groupName: string;
-  device: string;
-  deviceName: string;
-  isUploaded: boolean;
-  uploadId?: string | null;
-  size: string;
-  isProd: boolean;
-};
+const DBName = "RecordingTableV1";
+
 export type UploadedRecording = Recording & {
   isUploaded: true;
   uploadId: string;
 };
+
 // sqllite
 export const createRecordingSchema = `
 CREATE TABLE IF NOT EXISTS ${DBName}(
-  name TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
   path TEXT NOT NULL,
   groupName TEXT NOT NULL,
   device TEXT NOT NULL,
@@ -33,6 +25,7 @@ CREATE TABLE IF NOT EXISTS ${DBName}(
 `;
 
 const RecordingSchema = z.object({
+  id: z.string(),
   name: z.string(),
   path: z.string(),
   groupName: z.string(),
@@ -43,6 +36,8 @@ const RecordingSchema = z.object({
   size: z.string(),
   isProd: z.boolean(),
 });
+
+export type Recording = z.infer<typeof RecordingSchema>;
 
 const RecordingsSchema = z.array(RecordingSchema);
 
@@ -85,9 +80,10 @@ export const getRecordings =
     };
 
 export const insertRecording =
-  (db: SQLiteDBConnection) => async (recording: Recording) => {
-    const sql = `INSERT INTO ${DBName} (name, path, groupName, device, deviceName, size, isProd) VALUES (?, ?, ?, ?, ?, ?, ?);`;
+  (db: SQLiteDBConnection) => async (recording: Omit<Recording, "id">) => {
+    const sql = `INSERT INTO ${DBName} (id, name, path, groupName, device, deviceName, size, isProd) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
     const values = [
+      `${recording.device}-${recording.name}`,
       recording.name,
       recording.path,
       recording.groupName,
@@ -103,7 +99,7 @@ export const updateRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
     if (!recording.isUploaded || !recording.uploadId) return;
     const sql = `UPDATE ${DBName} SET isUploaded = ${recording.isUploaded ? 1 : 0
-      }, uploadId = '${recording.uploadId}' WHERE name = '${recording.name}';`;
+      }, uploadId = '${recording.uploadId}' WHERE name = '${recording.id}';`;
     return db.query(sql);
   };
 

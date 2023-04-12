@@ -16,6 +16,7 @@ import { Device, DevicePlugin, useDevice } from '../contexts/Device';
 import { RiSystemArrowRightSLine } from 'solid-icons/ri';
 import { BiRegularCurrentLocation } from 'solid-icons/bi';
 import { Dialog } from '@capacitor/dialog';
+import { debounce, leading } from '@solid-primitives/scheduled';
 import { FaSolidSpinner } from 'solid-icons/fa';
 import CircleButton from '../components/CircleButton';
 import { Geolocation } from '@capacitor/geolocation';
@@ -43,6 +44,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const [eventKeys, setEventKeys] = createSignal<number[]>([]);
 
   const [disabledDownload, setDisabledDownload] = createSignal(false);
+
   createEffect(() => {
     const hasRecsToDownload =
       deviceRecs().length > 0 && deviceRecs().length !== savedRecs().length;
@@ -70,11 +72,15 @@ function DeviceDetails(props: DeviceDetailsProps) {
     setDeviceRecs(device);
   });
 
-  const openDeviceInterface = (device: Device) => {
-    if (device.isConnected) {
-      Browser.open({ url: device.url });
-    }
-  };
+  const openDeviceInterface = leading(
+    debounce,
+    (device: Device) => {
+      if (device.isConnected) {
+        Browser.open({ url: device.url });
+      }
+    },
+    800
+  );
 
   const setLocationForDevice = async (device: Device) => {
     const { value } = await Dialog.confirm({
@@ -226,7 +232,6 @@ function Devices() {
   });
 
   onMount(async () => {
-    console.log('MOUNTED');
     searchDevice();
     const search = setInterval(() => {
       searchDevice();
@@ -312,10 +317,6 @@ function Devices() {
       updated !== undefined ? updated.includes(device.id) : undefined;
     return shouldUpdateLocation;
   };
-
-  createEffect(() => {
-    console.log(devicesLocToUpdate());
-  });
 
   return (
     <>

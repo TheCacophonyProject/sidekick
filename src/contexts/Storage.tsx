@@ -103,7 +103,6 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     isProd,
   }: DeviceDetails & RecordingFile) => {
     try {
-      debugger;
       const currdb = db();
       if (!currdb) return;
       const existingRecording = await findRecording(filename);
@@ -190,6 +189,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     const events = UnuploadedEvents().filter(
       (e) => e.isProd === userContext.isProd()
     );
+    const errors = [];
     for (const event of events) {
       const res = await CacophonyPlugin.uploadEvent({
         token: user.token,
@@ -207,7 +207,11 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         });
       } else {
         console.error(res.message);
+        errors.push(res.message);
       }
+    }
+    if (errors.length > 0) {
+      logError('Failed to upload events', errors.join(', '));
     }
   };
 

@@ -1,11 +1,11 @@
-import { createEffect, createResource, createSignal, on } from "solid-js";
-import { createContextProvider } from "@solid-primitives/context";
-import { Preferences } from "@capacitor/preferences";
-import { logError, logSuccess } from "./Notification";
-import { Result } from ".";
-import { z } from "zod";
-import { CacophonyPlugin } from "./CacophonyApi";
-import { useNavigate } from "@solidjs/router";
+import { createEffect, createResource, createSignal } from 'solid-js';
+import { createContextProvider } from '@solid-primitives/context';
+import { Preferences } from '@capacitor/preferences';
+import { logError, logSuccess } from './Notification';
+import { Result } from '.';
+import { z } from 'zod';
+import { CacophonyPlugin } from './CacophonyApi';
+import { useNavigate } from '@solidjs/router';
 const UserSchema = z.object({
   token: z.string(),
   id: z.string(),
@@ -17,11 +17,9 @@ const UserSchema = z.object({
 
 const [UserProvider, useUserContext] = createContextProvider(() => {
   const nav = useNavigate();
-  const [isProd, setIsProd] = createSignal(true);
-  const [isAuthorized, setIsAuthorized] = createSignal(false);
   const [data, { mutate: mutateUser, refetch }] = createResource(async () => {
     try {
-      const storedUser = await Preferences.get({ key: "user" });
+      const storedUser = await Preferences.get({ key: 'user' });
       if (storedUser.value) {
         const json = JSON.parse(storedUser.value);
         // check json is not an empty object
@@ -29,13 +27,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
           return null;
         }
         const user = UserSchema.parse(JSON.parse(storedUser.value));
-        if (user.prod) {
-          await CacophonyPlugin.setToProductionServer();
-          setIsProd(true);
-        } else {
-          await CacophonyPlugin.setToTestServer();
-          setIsProd(false);
-        }
         return user;
       }
     } catch (error) {
@@ -43,8 +34,9 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       return null;
     }
   });
+
   const [skippedLogin, { mutate: mutateSkip }] = createResource(async () => {
-    const skippedLogin = await Preferences.get({ key: "skippedLogin" });
+    const skippedLogin = await Preferences.get({ key: 'skippedLogin' });
     if (skippedLogin.value) {
       const json = JSON.parse(skippedLogin.value);
       if (json) {
@@ -55,30 +47,13 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   });
 
   createEffect(() => {
-    on(data, async () => {
-      if (!data.loading) {
-        await validateCurrToken();
-      }
-    });
-  });
-
-  createEffect(() => {
-    const user = data();
-    if (user) {
-      setIsAuthorized(true);
-    } else {
-      setIsAuthorized(false);
-    }
-  });
-
-  createEffect(() => {
     try {
       const user = data();
       if (!user) return;
       const currUser = UserSchema.parse(user);
       const { token, id, email, refreshToken, prod } = currUser;
       Preferences.set({
-        key: "user",
+        key: 'user',
         value: JSON.stringify({
           token,
           id,
@@ -92,14 +67,34 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       console.log(error);
     }
   });
+
   async function logout() {
-    await Preferences.set({ key: "user", value: "" });
-    await Preferences.set({ key: "skippedLogin", value: "false" });
+    await Preferences.set({ key: 'user', value: '' });
+    await Preferences.set({ key: 'skippedLogin', value: 'false' });
     mutateSkip(false);
     await refetch();
   }
 
-  const validateCurrToken = async () => {
+  const [server, setServer] = createSignal<'test' | 'prod'>('prod');
+  const isProd = () => server() === 'prod';
+
+  const [changeServer] = createResource(server, async (server) => {
+    if (server === 'prod') {
+      const res = await CacophonyPlugin.setToProductionServer();
+      if (!res.success) {
+        logError('Failed to change server', res.message);
+      }
+    } else {
+      const res = await CacophonyPlugin.setToTestServer();
+      if (res.success) {
+        logSuccess('Server changed to test');
+      } else {
+        logError('Failed to change server', res.message);
+      }
+    }
+  });
+
+  async function validateCurrToken() {
     const user = data();
     if (user) {
       const { token, refreshToken, expiry, email, id } = user;
@@ -112,12 +107,16 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       if (result.success) {
         const { token, refreshToken, expiry } = result.data;
         mutateUser({ id, email, token, refreshToken, expiry, prod: isProd() });
+        console.log('Token refreshed');
       } else {
-        logError("Invalid Authentication", result.message);
-        setIsAuthorized(false);
+        logError(
+          'Please check your internet connection, or try relogging.',
+          result.message
+        );
       }
     }
-  };
+  }
+  const isAuthorized = () => data() && data() !== null;
 
   return {
     data,
@@ -131,11 +130,11 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         password,
       });
       if (!authUser.success) {
-        logError("Could not login");
+        logError('Could not login');
         return;
       }
       const { token, id, refreshToken } = authUser.data;
-      Preferences.set({ key: "skippedLogin", value: "false" });
+      Preferences.set({ key: 'skippedLogin', value: 'false' });
       mutateUser({
         token,
         id,
@@ -148,37 +147,26 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     },
     logout,
     skip() {
-      Preferences.set({ key: "skippedLogin", value: "true" });
-      nav("/devices");
+      Preferences.set({ key: 'skippedLogin', value: 'true' });
+      nav('/devices');
       mutateSkip(true);
     },
     async requestDeletion(): Result<string> {
       const usr = data();
-      if (!usr) return Promise.reject("No user to delete");
+      if (!usr) return Promise.reject('No user to delete');
       await validateCurrToken();
       const value = await CacophonyPlugin.requestDeletion({
         token: usr.token,
       });
-      logSuccess("Deletion request sent");
+      logSuccess('Deletion request sent');
       return value;
     },
-    async toggleServer() {
+    toggleServer() {
+      if (changeServer.loading) return;
       if (isProd()) {
-        const res = await CacophonyPlugin.setToTestServer();
-        if (!res.success) {
-          logError("Could not set to test server");
-          return;
-        }
-        setIsProd(false);
-        logSuccess("Set to test server");
+        setServer('test');
       } else {
-        const res = await CacophonyPlugin.setToProductionServer();
-        if (!res.success) {
-          logError("Could not set to production server");
-          return;
-        }
-        setIsProd(true);
-        logSuccess("Set to production server");
+        setServer('prod');
       }
     },
   };
