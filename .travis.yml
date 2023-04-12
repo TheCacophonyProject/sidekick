@@ -7,7 +7,6 @@ cache:
   npm: false
   directories:
     - "~/.pnpm-store"
-before_install:
 
 android:
   licenses:
@@ -42,12 +41,10 @@ before_install:
   - chmod +x ./sidekick/gradlew
   - rvm install 2.6.0
   - rvm use 2.6.0
-  - gem update --system
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
-  - corepack enable
-  - corepack prepare pnpm@latest-8 --activate
+  - npm install -g pnpm
   - pnpm config set store-dir ~/.pnpm-store
 
 script:
