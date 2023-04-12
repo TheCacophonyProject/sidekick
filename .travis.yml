@@ -29,8 +29,6 @@ env:
 
 rvm:
     - 2.6
-node_js:
-  - node
 
 before_install:
   # Android dependencies
@@ -46,6 +44,8 @@ before_install:
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
+  - nvm install stable
+  - nvm use stable
   - wget -qO- https://get.pnpm.io/install.sh | sh -
   - source /home/travis/.bashrc
   - pnpm config set store-dir ~/.pnpm-store
