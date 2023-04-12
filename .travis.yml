@@ -51,7 +51,8 @@ before_install:
   - pnpm config set store-dir ~/.pnpm-store
 
 script:
-  - "./sidekick/gradlew clean assembleDebug"
+  - "cd ./sidekick"
+  - "./gradlew clean assembleDebug"
 
 install: 
   - pnpm install
