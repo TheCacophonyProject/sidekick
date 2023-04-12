@@ -29,6 +29,8 @@ env:
 
 rvm:
     - 2.6
+node_js:
+  - node
 
 before_install:
   # Android dependencies
