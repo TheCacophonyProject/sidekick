@@ -44,8 +44,8 @@ before_install:
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
-  - nvm install 18
-  - nvm use 18
+  - nvm install 16
+  - nvm use 16
   - wget -qO- https://get.pnpm.io/install.sh | sh -
   - source /home/travis/.bashrc
   - pnpm config set store-dir ~/.pnpm-store
