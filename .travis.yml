@@ -44,7 +44,7 @@ before_install:
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
-  - npm install -g pnpm
+  - wget -qO- https://get.pnpm.io/install.sh | sh -
   - pnpm config set store-dir ~/.pnpm-store
 
 script:
