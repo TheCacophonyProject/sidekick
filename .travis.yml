@@ -51,7 +51,6 @@ before_install:
   - pnpm config set store-dir ~/.pnpm-store
 
 script:
-  - "export JAVA_HOME=
   - "cd ./sidekick"
   - "./gradlew clean assembleDebug"
 
