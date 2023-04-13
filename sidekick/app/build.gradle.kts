@@ -1,11 +1,27 @@
+import java.util.Properties
+import java.io.FileInputStream
 plugins {
     id("com.android.application")
     kotlin("android")
 }
-
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val performSigning = keystorePropertiesFile.exists()
+if (performSigning) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
 android {
     namespace = "nz.org.cacophony.sidekick.shared"
     compileSdk = 33
+    if (performSigning) {
+        signingConfigs {
+            create("config") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")            }
+        }
+    }
     defaultConfig {
         applicationId = "nz.org.cacophony.sidekick.shared"
         minSdk = 22
