@@ -50,15 +50,13 @@ before_install:
   - source /home/travis/.bashrc
 
 install: 
-  - cd ./sidekick
-  - echo $JAVA_HOME
-  - export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-  - echo $JAVA_HOME
-  - ./gradlew --version
-  - ./gradlew clean assembleDebug
   - pnpm install
   - pnpm build
   - pnpm sync
+  - cd ./sidekick
+  - export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+  - ./gradlew --version
+  - ./gradlew clean assembleDebug
 
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
