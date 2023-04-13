@@ -4,10 +4,10 @@ plugins {
 }
 
 android {
-    namespace = "nz.org.cacophony.sidekick"
+    namespace = "nz.org.cacophony.sidekick.shared"
     compileSdk = 33
     defaultConfig {
-        applicationId = "nz.org.cacophony.sidekick"
+        applicationId = "nz.org.cacophony.sidekick.shared"
         minSdk = 22
         targetSdk = 33
         versionCode = 1
@@ -29,14 +29,14 @@ android {
             isMinifyEnabled = false
         }
     }
+    sourceSets.getByName("main") {
+        java.srcDir("../capacitor-cordova-android-plugins/src/main/libs")
+    }
 }
 
 repositories {
-    flatDir {
-        dirs("../capacitor-cordova-android-plugins/src/main/libs", "libs")
-    }
-    google()
     mavenCentral()
+    google()
 }
 
 dependencies {

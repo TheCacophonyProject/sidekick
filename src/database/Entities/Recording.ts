@@ -3,11 +3,6 @@ import { z } from "zod";
 
 const DBName = "RecordingTableV1";
 
-export type UploadedRecording = Recording & {
-  isUploaded: true;
-  uploadId: string;
-};
-
 // sqllite
 export const createRecordingSchema = `
 CREATE TABLE IF NOT EXISTS ${DBName}(
@@ -38,12 +33,21 @@ const RecordingSchema = z.object({
 });
 
 export type Recording = z.infer<typeof RecordingSchema>;
+export type UploadedRecording = Recording & {
+  isUploaded: true;
+  uploadId: string;
+};
+export type DownloadedRecording = Recording & {
+  isUploaded: false;
+  uploadId: null;
+};
 
 const RecordingsSchema = z.array(RecordingSchema);
 
 export const getRecordings =
   (db: SQLiteDBConnection) =>
     async (options?: {
+      id?: string;
       name?: string;
       uploaded?: boolean;
       device?: string;
@@ -51,6 +55,9 @@ export const getRecordings =
       try {
         const sql = `SELECT * FROM ${DBName}`;
         const where = [];
+        if (options?.id) {
+          where.push(`id = '${options.id}'`);
+        }
         if (options?.name) {
           where.push(`name = '${options.name}'`);
         }
@@ -80,7 +87,7 @@ export const getRecordings =
     };
 
 export const insertRecording =
-  (db: SQLiteDBConnection) => async (recording: Omit<Recording, "id">) => {
+  (db: SQLiteDBConnection) => async (recording: Omit<DownloadedRecording, "id"|"isUploaded"|"uploadId">) => {
     const sql = `INSERT INTO ${DBName} (id, name, path, groupName, device, deviceName, size, isProd) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
     const values = [
       `${recording.device}-${recording.name}`,
@@ -99,20 +106,20 @@ export const updateRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
     if (!recording.isUploaded || !recording.uploadId) return;
     const sql = `UPDATE ${DBName} SET isUploaded = ${recording.isUploaded ? 1 : 0
-      }, uploadId = '${recording.uploadId}' WHERE name = '${recording.id}';`;
+      }, uploadId = '${recording.uploadId}' WHERE id = '${recording.id}';`;
     return db.query(sql);
   };
 
 export const deleteRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
-    const sql = `DELETE FROM ${DBName} WHERE name = '${recording.name}';`;
+    const sql = `DELETE FROM ${DBName} WHERE id = '${recording.id}';`;
     return db.query(sql);
   };
 
 export const deleteRecordings =
   (db: SQLiteDBConnection) => async (recordings: Recording[]) => {
-    const sql = `DELETE FROM ${DBName} WHERE name IN (${recordings
-      .map((r) => `'${r.name}'`)
+    const sql = `DELETE FROM ${DBName} WHERE id IN (${recordings
+      .map((r) => `'${r.id}'`)
       .join(",")});`;
     return db.query(sql);
   };

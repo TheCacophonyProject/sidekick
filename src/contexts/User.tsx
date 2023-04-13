@@ -49,8 +49,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   createEffect(() => {
     try {
       const user = data();
+      console.log('Saving user', user);
       if (!user) return;
       const currUser = UserSchema.parse(user);
+      setServer(currUser.prod ? 'prod' : 'test');
       const { token, id, email, refreshToken, prod } = currUser;
       Preferences.set({
         key: 'user',

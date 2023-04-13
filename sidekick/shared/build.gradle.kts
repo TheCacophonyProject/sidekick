@@ -8,10 +8,23 @@ plugins {
 }
 
 kotlin {
-    android()
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    android {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "1.8"
+            }
+        }
+    }
+
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "shared"
+        }
+    }
 
 
 
@@ -88,13 +101,8 @@ kotlin {
 android {
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = 33
-    sourceSets["main"].manifest.srcFile("src/main/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 21
+        minSdk = 22
         targetSdk = 33
     }
-}
-repositories {
-    google()
-    mavenCentral()
 }
