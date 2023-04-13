@@ -26,7 +26,6 @@ env:
     - TARGET_VERSION=33
     - ANDROID_BUILD_TOOLS_VERSION=33.0.2
     - ANDROID_HOME=~/android-sdk
-    - JAVA_HOME=
 
 rvm:
     - 2.6
@@ -51,21 +50,20 @@ before_install:
   - source /home/travis/.bashrc
   - pnpm config set store-dir ~/.pnpm-store
 
-script:
-  - "jdk_switcher use openjdk11"
-  - "cd ./sidekick"
-  - "./gradlew clean assembleDebug"
-
 install: 
   - pnpm install
   - pnpm build
   - pnpm sync
+  - cd ./sidekick
+
+script:
+  - "./gradlew --version"
+  - "./gradlew clean assembleDebug"
 
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
   -in signing.tar.enc -out signing.tar -d
 - tar xvf signing.tar
-- cd sidekick/app
 - fastlane alpha
 
 deploy:
