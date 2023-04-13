@@ -6,7 +6,7 @@ dist: trusty
 cache:
   npm: false
   directories:
-    - "~/.pnpm-store"
+    - "./node_modules"
 
 android:
   licenses:
@@ -48,7 +48,6 @@ before_install:
   - nvm use 16
   - wget -qO- https://get.pnpm.io/install.sh | sh -
   - source /home/travis/.bashrc
-  - pnpm config set store-dir ~/.pnpm-store
 
 install: 
   - cd ./sidekick
