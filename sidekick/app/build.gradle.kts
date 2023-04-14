@@ -7,6 +7,12 @@ plugins {
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 val performSigning = keystorePropertiesFile.exists()
+println("performSigning: $performSigning")
+// list all files in root directory
+val files = rootProject.rootDir.listFiles()
+for (file in files) {
+    println("file: $file")
+}
 if (performSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }

@@ -60,7 +60,7 @@ install:
 
 before_deploy:
 - openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
-  -in ../signing.tar.enc -out ./signing.tar -d
+  -in signing.tar.enc -out signing.tar -d
 - tar xvf signing.tar
 - fastlane alpha
 
