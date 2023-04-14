@@ -7,18 +7,17 @@ plugins {
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 val performSigning = keystorePropertiesFile.exists()
-println("performSigning: $performSigning")
-// list all files in root directory
-val files = rootProject.rootDir.listFiles()
-for (file in files) {
-    println("file: $file")
-}
 if (performSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val sdk = 33
+val minSdkVersion = 22
+val majorVersion = 3
+val minorVersion = 0
+val patchVersion = 0
 android {
     namespace = "nz.org.cacophony.sidekick.shared"
-    compileSdk = 33
+    compileSdk = sdk
     if (performSigning) {
         signingConfigs {
             create("config") {
@@ -30,10 +29,10 @@ android {
     }
     defaultConfig {
         applicationId = "nz.org.cacophony.sidekick.shared"
-        minSdk = 22
-        targetSdk = 33
-        versionCode = 1
-        versionName = "3.0"
+        minSdk = minSdkVersion
+        targetSdk = sdk
+        versionCode =  minSdkVersion * 10000000 + majorVersion * 10000 + minorVersion * 100 + patchVersion
+        versionName = "$majorVersion.$minorVersion.$patchVersion"
     }
     buildFeatures {
         compose = true
