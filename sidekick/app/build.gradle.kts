@@ -28,7 +28,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId = "nz.org.cacophony.sidekick.shared"
+        applicationId = "nz.org.cacophony.sidekick"
         minSdk = minSdkVersion
         targetSdk = sdk
         versionCode =  minSdkVersion * 10000000 + majorVersion * 10000 + minorVersion * 100 + patchVersion
