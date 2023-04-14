@@ -16,7 +16,7 @@ val majorVersion = 3
 val minorVersion = 0
 val patchVersion = 0
 android {
-    namespace = "nz.org.cacophony.sidekick.shared"
+    namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
     if (performSigning) {
         signingConfigs {
