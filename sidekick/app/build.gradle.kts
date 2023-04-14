@@ -47,6 +47,12 @@ android {
         }
     }
     buildTypes {
+        getByName("release")  {
+            isMinifyEnabled = false
+            if (performSigning) {
+                signingConfig = signingConfigs.getByName("config")
+            }
+        }
         getByName("release") {
             isMinifyEnabled = false
         }
