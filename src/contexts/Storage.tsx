@@ -126,6 +126,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         throw new Error('Failed to find recording');
       }
       setSavedRecordings((prev) => [...prev,savedRecording]);
+      return savedRecording;
     } catch (e) {
       if (e instanceof Error) {
         logError('Failed to save recording', e.message);
@@ -318,6 +319,8 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
           logError("Your account does not have access to upload recordings for this device", res.message);
           const otherRecordings = recordings.filter((r) => r.device !== recording.device);
           recordings = otherRecordings;
+        } else {
+          logError('Failed to upload recording', res.message);
         }
       }
     }

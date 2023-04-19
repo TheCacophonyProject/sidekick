@@ -103,10 +103,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   });
 
-  const getDeviceInterfaceUrl = (name: string): string => {
-    return `http://${name}.local`;
-  };
-
   const clearUploaded = async (device: ConnectedDevice) => {
     const setCurrRec = async (device: ConnectedDevice) =>
       deviceRecordings.set(device.id, await getRecordings(device));
@@ -125,7 +121,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   ): Promise<ConnectedDevice | undefined> => {
     const [deviceName] = endpoint.split('.');
     const [, group] = deviceName.split('-');
-    const url = getDeviceInterfaceUrl(deviceName);
+    const url = `http://${deviceName}.local`;
     const info = await DevicePlugin.getDeviceInfo({ url });
     const connection = await DevicePlugin.checkDeviceConnection({ url });
     if (connection.success && info.success) {
@@ -148,6 +144,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       clearUploaded(device);
       return device;
     } else {
+      // Use host ipv4 address if device is not found
       const url = `http://${host}`;
       const connection = await DevicePlugin.checkDeviceConnection({ url });
       const info = await DevicePlugin.getDeviceInfo({ url });
@@ -465,7 +462,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       const location = locationSchema.safeParse({ ...coords, timestamp });
       if (!location.success) {
         logError('Could not set device location', location.error.message);
-        return 
+        return
       }
       const options = {
         url,
@@ -544,7 +541,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     deviceEventKeys,
     startDiscovery,
     stopDiscovery,
-    getDeviceInterfaceUrl,
     setDeviceToCurrLocation,
     deleteUploadedRecordings,
     getEvents,
