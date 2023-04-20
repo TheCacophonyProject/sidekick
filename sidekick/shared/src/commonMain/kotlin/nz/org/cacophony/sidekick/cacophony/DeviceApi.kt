@@ -29,10 +29,10 @@ class DeviceApi(private val api: Api) {
     private fun getSha1FileHash(file: ByteArray): Either<ApiError, String> = Either.catch {
         val byteStr = file.toByteString()
         return byteStr.sha1().hex().right()
-    }.mapLeft { ParsingError("Unable to get SHA1 hash for file $file: ${it.message}") }
+    }.mapLeft { InvalidResponse.ParsingError("Unable to get SHA1 hash for file $file: ${it.message}") }
 
     private fun encodeBase64(file: String): Either<ApiError, String> = Either.catch { return file.encodeBase64().right()}.mapLeft {
-        ParsingError("Unable to encode file $file to base64: ${it.message}")
+        InvalidResponse.ParsingError("Unable to encode file $file to base64: ${it.message}")
     }
 
 
@@ -69,18 +69,11 @@ class DeviceApi(private val api: Api) {
 
                         )
                     )
-                }
-                    .map {
-                        println("Upload response: $it $token")
+                }.map {
                         return validateResponse(it)
-                    }.mapLeft {
-                        FormError(
-                            "Unable to upload recording for ${filename}: ${it.message}",
-                            "device/${device}"
-                        )
-                    }
+                }
             }
-        }.mapLeft { FormError("Unable to upload recording for ${filename}: $it", "device/${device}") }
+        }.mapLeft { InvalidResponse.UnknownError("Unable to upload recording for $filename") }
     object JsonAsStringSerializer: JsonTransformingSerializer<String>(tSerializer = String.serializer()) {
         override fun transformDeserialize(element: JsonElement): JsonElement {
             return JsonPrimitive(value = element.toString())
@@ -106,11 +99,6 @@ class DeviceApi(private val api: Api) {
             setBody(body)
         }.map {
             return validateResponse(it)
-        }.mapLeft {
-            FormError(
-                "Unable to upload event for ${eventReq}: ${it.message}",
-                "device/${device}"
-            )
         }
     }
 
@@ -129,11 +117,6 @@ class DeviceApi(private val api: Api) {
             }
         }.map {
             return validateResponse(it)
-        }.mapLeft {
-            FormError(
-                "Unable to get device ${deviceId}: ${it.message}",
-                "device/${deviceId}"
-            )
         }
     }
 }

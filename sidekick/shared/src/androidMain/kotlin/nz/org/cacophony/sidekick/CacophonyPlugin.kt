@@ -48,6 +48,12 @@ class CacophonyPlugin: Plugin() {
     fun getDeviceById(call: PluginCall) {
         cacophony.getDeviceById(pluginCall(call))
     }
+
+    @PluginMethod
+    fun getStationsForUser(call: PluginCall) {
+        cacophony.getStationsForUser(pluginCall(call))
+    }
+
     @PluginMethod
     fun getAppVersion(call: PluginCall) {
         // Get version name
@@ -68,3 +74,4 @@ class CacophonyPlugin: Plugin() {
 
     }
 }
+

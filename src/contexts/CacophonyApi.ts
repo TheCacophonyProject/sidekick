@@ -12,6 +12,30 @@ export type UserDetails = AuthToken & {
   email: string;
 };
 
+export type Settings = {
+  referenceImages: string[];
+}
+
+export type Station = {
+  id: number;
+  name: string;
+  location: Location;
+  lastUpdatedById: number;
+  createdAt: string;
+  activeAt: string;
+  retiredAt: string;
+  lastThermalRecordingTime: string;
+  lastAudioRecordingTime: string;
+  lastActiveThermalTime: string;
+  lastActiveAudioTime: string;
+  automatic: boolean;
+  settings: Settings;
+  needsRename: boolean;
+  updatedAt: string;
+  groupId: number;
+  groupName: string;
+};
+
 export interface CacophonyPlugin {
   authenticateUser(user: { email: string; password: string }): Result<{
     token: string;
@@ -57,6 +81,7 @@ export interface CacophonyPlugin {
       admin: boolean;
     }[];
   }>;
+  getStationsForUser(options: { token: string }): Result<Station[]>;
   setToProductionServer(): Result;
   setToTestServer(): Result;
   getAppVersion(): Result<string>;

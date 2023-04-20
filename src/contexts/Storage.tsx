@@ -9,7 +9,7 @@ import { useUserContext } from './User';
 import { createContextProvider } from '@solid-primitives/context';
 import { CacophonyPlugin } from './CacophonyApi';
 import { DevicePlugin } from './Device';
-import { logError } from './Notification';
+import { logError, logSuccess } from './Notification';
 import {
   createEventSchema,
   getEvents,
@@ -75,6 +75,15 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       setDb(db);
       const recs = await getSavedRecordings();
       const events = await getSavedEvents();
+      const token = userContext.data()?.token;
+      if (token) {
+        const stations = await CacophonyPlugin.getStationsForUser({ token });
+        if (stations.success) {
+          logSuccess(`Found ${stations.data.length} stations`, JSON.stringify(stations));
+        } else {
+          logError('Failed to get stations', stations.message);
+        }
+      }
       setSavedRecordings(recs);
       setSavedEvents(events);
     } catch (e) {
@@ -104,7 +113,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     try {
       const currdb = db();
       if (!currdb) return;
-      const existingRecording = await findRecording({id});
+      const existingRecording = await findRecording({ id });
       if (existingRecording) {
         return existingRecording;
       }
@@ -120,12 +129,12 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       };
 
       await insertRecording(currdb)(recording);
-      const savedRecording = await findRecording({name: filename, device: id});
+      const savedRecording = await findRecording({ name: filename, device: id });
 
       if (!savedRecording) {
         throw new Error('Failed to find recording');
       }
-      setSavedRecordings((prev) => [...prev,savedRecording]);
+      setSavedRecordings((prev) => [...prev, savedRecording]);
       return savedRecording;
     } catch (e) {
       if (e instanceof Error) {
@@ -241,10 +250,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       const events = options?.events
         ? options.events
         : await getSavedEvents(
-            options?.uploaded !== undefined
-              ? { uploaded: options.uploaded }
-              : {}
-          );
+          options?.uploaded !== undefined
+            ? { uploaded: options.uploaded }
+            : {}
+        );
       await deleteEventsFromDb(currdb)(events);
       const currEvents = await getSavedEvents();
       setSavedEvents(currEvents);

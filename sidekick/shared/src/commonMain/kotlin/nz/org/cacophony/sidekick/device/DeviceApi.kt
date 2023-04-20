@@ -59,7 +59,7 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             append("altitude", location.altitude)
             append("timestamp", location.timestamp)
             append("accuracy", location.accuracy)
-            }).flatMap {validateResponse(it)}
+            }).map {return validateResponse(it)}
 
     suspend fun getRecordings(): Either<ApiError, List<String?>> =
         getRequest("recordings", token)
@@ -107,7 +107,7 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             }
             return validateResponse(res)
         } catch (e: Exception) {
-            ParsingError("Unable to connect to host: $e").left()
+            InvalidResponse.ParsingError("Unable to connect to host: $e").left()
         }
     }
 }

@@ -74,8 +74,8 @@ class UserApi(val api: Api) {
 
     private fun checkExpiry(token: AuthToken): Either<TokenError, AuthToken>  =
     Duration.parseIsoStringOrNull(token.expiry!!)
-        .rightIfNotNull { InvalidIso8601Date }
-        .flatMap { if (it.inWholeMilliseconds < getTimeMillis()) token.right() else ExpiredToken.left() }
+        .rightIfNotNull { InvalidIso8601Date() }
+        .flatMap { if (it.inWholeMilliseconds < getTimeMillis()) token.right() else ExpiredToken().left() }
 
     suspend fun validateToken(token: AuthToken): Either<ApiError, AuthToken> =
         checkExpiry(token)

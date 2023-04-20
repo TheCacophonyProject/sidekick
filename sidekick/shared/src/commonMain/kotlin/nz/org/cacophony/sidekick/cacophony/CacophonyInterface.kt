@@ -10,6 +10,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     val api = CacophonyApi()
     private val userApi = UserApi(api)
     private val recordingApi = DeviceApi(api)
+    private val stationApi = StationApi(api)
 
     @Serializable
     data class User(val email: String, val password: String)
@@ -103,6 +104,17 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
         }
     }
 
+    @Serializable
+    data class GetStationsForUserCall(val token: String)
+    fun getStationsForUser(call: PluginCall) = runCatch(call) {
+        call.validateCall<GetStationsForUserCall>("token").map { stations ->
+            stationApi.getStations(stations.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
+                )
+        }
+    }
     fun setToTestServer(call: PluginCall) = runCatch(call) {
         api.setToTest();
         call.success()

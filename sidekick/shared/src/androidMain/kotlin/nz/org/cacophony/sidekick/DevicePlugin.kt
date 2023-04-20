@@ -158,15 +158,15 @@ class DevicePlugin: Plugin() {
     @ActivityCallback
     fun connectToWifi(call: PluginCall, result: ActivityResult) {
         if (result.resultCode == RESULT_OK) {
-        val result = JSObject()
-        result.put("success", true)
-        result.put("data", "Connected to device AP")
-        call.resolve(result)
+            val res= JSObject()
+            res.put("success", true)
+            res.put("data", "Connected to device AP")
+            call.resolve(res)
         } else {
-            val result = JSObject()
-            result.put("success", false)
-            result.put("message", "Failed to connect to device AP")
-            call.resolve(result)
+            val res = JSObject()
+            res.put("success", false)
+            res.put("message", "Failed to connect to device AP")
+            call.resolve(res)
         }
     }
 
