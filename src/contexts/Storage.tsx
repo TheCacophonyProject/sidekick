@@ -2,14 +2,14 @@ import {
   CapacitorSQLite,
   SQLiteConnection,
   SQLiteDBConnection,
-} from '@capacitor-community/sqlite';
-import { createMemo, createSignal, onMount } from 'solid-js';
-import { DeviceDetails, DeviceId } from './Device';
-import { useUserContext } from './User';
-import { createContextProvider } from '@solid-primitives/context';
-import { CacophonyPlugin } from './CacophonyApi';
-import { DevicePlugin } from './Device';
-import { logError, logSuccess } from './Notification';
+} from "@capacitor-community/sqlite";
+import { createMemo, createSignal, onMount } from "solid-js";
+import { DeviceDetails, DeviceId } from "./Device";
+import { useUserContext } from "./User";
+import { createContextProvider } from "@solid-primitives/context";
+import { CacophonyPlugin } from "./CacophonyApi";
+import { DevicePlugin } from "./Device";
+import { logError, logSuccess, logWarning } from "./Notification";
 import {
   createEventSchema,
   getEvents,
@@ -17,8 +17,8 @@ import {
   deleteEvents as deleteEventsFromDb,
   deleteEvent as deleteEventFromDb,
   updateEvent,
-} from '../database/Entities/Event';
-import type { Event } from '../database/Entities/Event';
+} from "../database/Entities/Event";
+import type { Event } from "../database/Entities/Event";
 import {
   createRecordingSchema,
   getRecordings,
@@ -26,10 +26,13 @@ import {
   deleteRecordings as deleteRecordingsFromDb,
   updateRecording as updateRecordingInDb,
   insertRecording,
-} from '../database/Entities/Recording';
-import type { Recording, UploadedRecording } from '../database/Entities/Recording';
-import { KeepAwake } from '@capacitor-community/keep-awake';
-import { openConnection } from '../database';
+} from "../database/Entities/Recording";
+import type {
+  Recording,
+  UploadedRecording,
+} from "../database/Entities/Recording";
+import { KeepAwake } from "@capacitor-community/keep-awake";
+import { openConnection } from "../database";
 
 type RecordingFile = {
   filename: string;
@@ -59,14 +62,14 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   );
   const [isUploading, setIsUploading] = createSignal(false);
 
-  const DatabaseName = 'Cacophony';
+  const DatabaseName = "Cacophony";
   onMount(async () => {
     try {
       const db = await openConnection(
         driver,
         DatabaseName,
         false,
-        'no-encryption',
+        "no-encryption",
         2
       );
       await db.execute(createRecordingSchema);
@@ -79,9 +82,15 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       if (token) {
         const stations = await CacophonyPlugin.getStationsForUser({ token });
         if (stations.success) {
-          logSuccess(`Found ${stations.data.length} stations`, JSON.stringify(stations));
+          logSuccess({
+            message: `Found ${stations.data.length} stations`,
+            details: JSON.stringify(stations.data),
+          });
         } else {
-          logError('Failed to get stations', stations.message);
+          logWarning({
+            message: "Failed to get stations",
+            details: JSON.stringify(stations.message),
+          });
         }
       }
       setSavedRecordings(recs);
@@ -92,7 +101,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   });
 
   const findRecording = async (
-    options: { id: string } | { name: string, device: string }
+    options: { id: string } | { name: string; device: string }
   ): Promise<Recording | undefined> => {
     const currdb = db();
     if (!currdb) return;
@@ -129,16 +138,23 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       };
 
       await insertRecording(currdb)(recording);
-      const savedRecording = await findRecording({ name: filename, device: id });
+      const savedRecording = await findRecording({
+        name: filename,
+        device: id,
+      });
 
       if (!savedRecording) {
-        throw new Error('Failed to find recording');
+        throw new Error("Failed to find recording");
       }
       setSavedRecordings((prev) => [...prev, savedRecording]);
       return savedRecording;
     } catch (e) {
       if (e instanceof Error) {
-        logError('Failed to save recording', e.message);
+        logError({
+          message: "Failed to save recording",
+          details: e.message,
+          error: e,
+        });
       }
     }
   };
@@ -164,7 +180,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const { key, type, details, timestamp, device, isProd } = options;
     // add backlash to backslashes
-    const detailString = details.replace(/\\/g, '\\\\');
+    const detailString = details.replace(/\\/g, "\\\\");
     const event: Event = {
       key: key.toString(),
       type,
@@ -220,8 +236,11 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
           return [...prev.filter((e) => e.key !== event.key), event];
         });
       } else {
-        if (res.message.includes('AuthError')) {
-          logError("Your account does not have access to upload events for this device", res.message)
+        if (res.message.includes("AuthError")) {
+          logWarning({
+            message: "Your account does not have access to upload events",
+            details: res.message,
+          });
           events = events.filter((e) => e.device !== event.device);
         } else {
           errors.push(res.message);
@@ -229,7 +248,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       }
     }
     if (errors.length > 0) {
-      logError('Failed to upload events', errors.join(', '));
+      logWarning({
+        message: "Failed to upload events",
+        details: errors.join(", "),
+      });
     }
   };
 
@@ -250,16 +272,25 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       const events = options?.events
         ? options.events
         : await getSavedEvents(
-          options?.uploaded !== undefined
-            ? { uploaded: options.uploaded }
-            : {}
-        );
+            options?.uploaded !== undefined
+              ? { uploaded: options.uploaded }
+              : {}
+          );
       await deleteEventsFromDb(currdb)(events);
       const currEvents = await getSavedEvents();
       setSavedEvents(currEvents);
     } catch (e) {
       if (e instanceof Error) {
-        logError(e.message, e.stack);
+        logError({
+          message: "Failed to delete events",
+          details: e.message,
+          error: e,
+        });
+      } else {
+        logError({
+          message: "Failed to delete events",
+          details: JSON.stringify(e),
+        });
       }
     }
   };
@@ -271,7 +302,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       recordingPath: recording.name,
     });
     if (!res.success) {
-      console.error(res.message);
+      logWarning({
+        message: "Failed to delete recording",
+        details: res.message,
+      });
       return;
     }
     await deleteRecordingFromDb(currdb)(recording);
@@ -283,7 +317,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const res = await DevicePlugin.deleteRecordings();
     if (!res.success) {
-      console.error(res.message);
+      logWarning({
+        message: "Failed to delete recordings",
+        details: res.message,
+      });
       return;
     }
     // Delete all recordings from the database apart from uploaded ones
@@ -305,7 +342,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       const recording = recordings[i];
       const res = await CacophonyPlugin.uploadRecording({
         token: user.token,
-        type: 'thermalRaw',
+        type: "thermalRaw",
         device: recording.device,
         filename: recording.name,
       });
@@ -324,12 +361,20 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
           console.error(deletion.message);
         }
       } else {
-        if (res.message.includes('AuthError')) {
-          logError("Your account does not have access to upload recordings for this device", res.message);
-          const otherRecordings = recordings.filter((r) => r.device !== recording.device);
+        if (res.message.includes("AuthError")) {
+          logWarning({
+            message: "Your account does not have access to upload recordings",
+            details: res.message,
+          });
+          const otherRecordings = recordings.filter(
+            (r) => r.device !== recording.device
+          );
           recordings = otherRecordings;
         } else {
-          logError('Failed to upload recording', res.message);
+          logWarning({
+            message: "Failed to upload recording",
+            details: res.message,
+          });
         }
       }
     }

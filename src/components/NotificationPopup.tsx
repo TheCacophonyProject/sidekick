@@ -1,18 +1,18 @@
 // Create solid.js component that uses NotificationProvider
 // to display any notifications that are passed to it
 
-import { createSignal, createEffect, For, Show, Switch, Match } from 'solid-js';
+import { createSignal, createEffect, For, Show, Switch, Match } from "solid-js";
 import {
   notifications,
   Notification,
   keepNotification,
   hideNotification,
-} from '../contexts/Notification';
-import { BiSolidError } from 'solid-icons/bi';
-import { FaSolidThumbsUp, FaSolidSpinner } from 'solid-icons/fa';
-import { BiSolidCopyAlt } from 'solid-icons/bi';
-import { VsChevronDown } from 'solid-icons/vs';
-import { Clipboard } from '@capacitor/clipboard';
+} from "../contexts/Notification";
+import { BiSolidError } from "solid-icons/bi";
+import { FaSolidThumbsUp, FaSolidSpinner } from "solid-icons/fa";
+import { BiSolidCopyAlt } from "solid-icons/bi";
+import { VsChevronDown } from "solid-icons/vs";
+import { Clipboard } from "@capacitor/clipboard";
 
 interface NotificationBarProps {
   notification: Notification;
@@ -21,14 +21,16 @@ interface NotificationBarProps {
 function NotificationBar(props: NotificationBarProps) {
   const color = () => {
     switch (props.notification.type) {
-      case 'error':
-        return 'border-yellow-400';
-      case 'success':
-        return 'border-green-400';
-      case 'loading':
-        return 'border-blue-400';
+      case "error":
+        return "border-red-400";
+      case "warning":
+        return "border-yellow-400";
+      case "success":
+        return "border-green-400";
+      case "loading":
+        return "border-blue-400";
       default:
-        return 'border-gray-400';
+        return "border-gray-400";
     }
   };
   const [showDetails, setShowDetails] = createSignal(false);
@@ -53,17 +55,22 @@ function NotificationBar(props: NotificationBarProps) {
       <div class="mx-4 flex items-center justify-between py-1">
         <div class={` flex w-full items-center text-${color()}`}>
           <Switch>
-            <Match when={props.notification.type === 'error'}>
+            <Match when={props.notification.type === "error"}>
+              <div class="text-red-400">
+                <BiSolidError size={24} />
+              </div>
+            </Match>
+            <Match when={props.notification.type === "warning"}>
               <div class="text-yellow-400">
                 <BiSolidError size={24} />
               </div>
             </Match>
-            <Match when={props.notification.type === 'success'}>
+            <Match when={props.notification.type === "success"}>
               <div class="text-green-400">
                 <FaSolidThumbsUp size={24} />
               </div>
             </Match>
-            <Match when={props.notification.type === 'loading'}>
+            <Match when={props.notification.type === "loading"}>
               <div class="animate-spin text-blue-400">
                 <FaSolidSpinner size={24} />
               </div>
@@ -76,8 +83,8 @@ function NotificationBar(props: NotificationBarProps) {
             class="flex items-center rounded-lg py-1 px-4 text-gray-700 shadow-md"
             onClick={writeToClipboard}
           >
-            {' '}
-            {copied() ? 'Copied!' : 'Copy'}{' '}
+            {" "}
+            {copied() ? "Copied!" : "Copy"}{" "}
             <BiSolidCopyAlt size={18} class="ml-1" />
           </button>
           <button
@@ -89,7 +96,7 @@ function NotificationBar(props: NotificationBarProps) {
             <VsChevronDown
               size={24}
               style={{
-                transform: showDetails() ? 'rotate(180deg)' : 'rotate(0deg)',
+                transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
               }}
             />
           </button>

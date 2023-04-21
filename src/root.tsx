@@ -1,39 +1,39 @@
 // @refresh reload
-import { createEffect, ErrorBoundary, lazy, Show, Suspense } from 'solid-js';
-import { Router, useNavigate, useRoutes } from '@solidjs/router';
-import { Clipboard } from '@capacitor/clipboard';
-import NavBar from './components/NavBar';
-import { UserProvider, useUserContext } from './contexts/User';
-import './root.css';
-import Login from './login';
-import Header from './components/Header';
-import { DeviceProvider } from './contexts/Device';
-import { StorageProvider } from './contexts/Storage';
-import NotificationPopup from './components/NotificationPopup';
-import { BiSolidCopyAlt } from 'solid-icons/bi';
+import { createEffect, ErrorBoundary, lazy, Show, Suspense } from "solid-js";
+import { Router, useNavigate, useRoutes } from "@solidjs/router";
+import { Clipboard } from "@capacitor/clipboard";
+import NavBar from "./components/NavBar";
+import { UserProvider, useUserContext } from "./contexts/User";
+import "./root.css";
+import Login from "./login";
+import Header from "./components/Header";
+import { DeviceProvider } from "./contexts/Device";
+import { StorageProvider } from "./contexts/Storage";
+import NotificationPopup from "./components/NotificationPopup";
+import { BiSolidCopyAlt } from "solid-icons/bi";
 
 const routes = [
   {
-    path: '/devices',
-    component: lazy(() => import('./routes/devices')),
+    path: "/devices",
+    component: lazy(() => import("./routes/devices")),
   },
   {
-    path: '/storage',
+    path: "/storage",
     children: [
-      { path: '/', component: lazy(() => import('./routes/storage')) },
+      { path: "/", component: lazy(() => import("./routes/storage")) },
       {
-        path: '/recordings',
-        component: lazy(() => import('./routes/storage/recordings')),
+        path: "/recordings",
+        component: lazy(() => import("./routes/storage/recordings")),
       },
     ],
   },
   {
-    path: '/settings',
+    path: "/settings",
     children: [
-      { path: '/', component: lazy(() => import('./routes/settings')) },
+      { path: "/", component: lazy(() => import("./routes/settings")) },
       {
-        path: '/user',
-        component: lazy(() => import('./routes/settings/user')),
+        path: "/user",
+        component: lazy(() => import("./routes/settings/user")),
       },
     ],
   },
@@ -42,7 +42,7 @@ const routes = [
 const AppRoutes = () => {
   const navigate = useNavigate();
   createEffect(() => {
-    navigate('/devices', { replace: true });
+    navigate("/devices", { replace: true });
   });
   const context = useUserContext();
   const Routes = useRoutes(routes);
@@ -57,7 +57,8 @@ const AppRoutes = () => {
     </Show>
   );
 };
-const writeToClipboard = async (err: any) => {
+
+const writeToClipboard = async (err: unknown) => {
   await Clipboard.write({
     string: JSON.stringify(err),
   });
@@ -79,10 +80,16 @@ export default function Root() {
                     {err.message ?? "Couldn't get error message"}
                     <button
                       class="flex items-center rounded-lg py-1 px-4 text-gray-700 shadow-md"
-                      onClick={writeToClipboard}
+                      onClick={() => writeToClipboard(err)}
                     >
-                      {' '}
-                      {'Copy'} <BiSolidCopyAlt size={18} class="ml-1" />
+                      <span>Copy</span>
+                      <BiSolidCopyAlt size={18} class="ml-1" />
+                    </button>
+                    <button
+                      class="flex items-center rounded-lg py-1 px-4 text-gray-700 shadow-md"
+                      onClick={() => window.location.reload()}
+                    >
+                      Reload
                     </button>
                   </p>
                 </div>

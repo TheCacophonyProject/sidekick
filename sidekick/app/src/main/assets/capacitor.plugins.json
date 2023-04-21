@@ -1,5 +1,9 @@
 [
 	{
+		"pkg": "@capacitor-community/firebase-crashlytics",
+		"classpath": "com.getcapacitor.community.firebasecrashlytics.FirebaseCrashlyticsPlugin"
+	},
+	{
 		"pkg": "@capacitor-community/keep-awake",
 		"classpath": "com.getcapacitor.community.keepawake.KeepAwakePlugin"
 	},

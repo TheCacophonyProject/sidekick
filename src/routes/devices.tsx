@@ -1,5 +1,5 @@
-import { Browser } from '@capacitor/browser';
-import { BsCameraVideoFill } from 'solid-icons/bs';
+import { Browser } from "@capacitor/browser";
+import { BsCameraVideoFill } from "solid-icons/bs";
 import {
   createEffect,
   createResource,
@@ -10,25 +10,25 @@ import {
   onMount,
   Show,
   Switch,
-} from 'solid-js';
-import ActionContainer from '../components/ActionContainer';
-import { Device, DevicePlugin, useDevice } from '../contexts/Device';
-import { RiSystemArrowRightSLine } from 'solid-icons/ri';
-import { BiRegularCurrentLocation } from 'solid-icons/bi';
-import { Dialog } from '@capacitor/dialog';
-import { debounce, leading } from '@solid-primitives/scheduled';
-import { FaSolidSpinner } from 'solid-icons/fa';
-import CircleButton from '../components/CircleButton';
-import { Geolocation } from '@capacitor/geolocation';
-import { TbCurrentLocation } from 'solid-icons/tb';
-import { FiDownload } from 'solid-icons/fi';
-import { useStorage } from '../contexts/Storage';
-import { ImCog, ImNotification } from 'solid-icons/im';
-import { headerMap } from '../components/Header';
-import { FaSolidWifi } from 'solid-icons/fa';
-import BackgroundLogo from '../components/BackgroundLogo';
-import { Recording } from '~/database/Entities/Recording';
-import { Event } from '~/database/Entities/Event';
+} from "solid-js";
+import ActionContainer from "../components/ActionContainer";
+import { Device, DevicePlugin, useDevice } from "../contexts/Device";
+import { RiSystemArrowRightSLine } from "solid-icons/ri";
+import { BiRegularCurrentLocation } from "solid-icons/bi";
+import { Dialog } from "@capacitor/dialog";
+import { debounce, leading } from "@solid-primitives/scheduled";
+import { FaSolidSpinner } from "solid-icons/fa";
+import CircleButton from "../components/CircleButton";
+import { Geolocation } from "@capacitor/geolocation";
+import { TbCurrentLocation } from "solid-icons/tb";
+import { FiDownload } from "solid-icons/fi";
+import { useStorage } from "../contexts/Storage";
+import { ImCog, ImNotification } from "solid-icons/im";
+import { headerMap } from "../components/Header";
+import { FaSolidWifi } from "solid-icons/fa";
+import BackgroundLogo from "../components/BackgroundLogo";
+import { Recording } from "~/database/Entities/Recording";
+import { Event } from "~/database/Entities/Event";
 
 interface DeviceDetailsProps {
   device: Device;
@@ -84,7 +84,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   const setLocationForDevice = async (device: Device) => {
     const { value } = await Dialog.confirm({
-      title: 'Confirm',
+      title: "Confirm",
       message: `Are you sure you want to set device ${device.name} to your current location?`,
     });
 
@@ -95,7 +95,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   const download = async (device: Device) => {
     const { value } = await Dialog.confirm({
-      title: 'Confirm',
+      title: "Confirm",
       message: `Are you sure you want to download all recordings and events from ${device.name}?`,
     });
     if (!value) return;
@@ -125,19 +125,19 @@ function DeviceDetails(props: DeviceDetailsProps) {
           <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
             <BsCameraVideoFill size={20} />
             <p class="text-sm">
-              Recordings Saved: {savedRecs().length}/{deviceRecs().length}{' '}
+              Recordings Saved: {savedRecs().length}/{deviceRecs().length}{" "}
             </p>
           </div>
           <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
             <ImNotification size={20} />
             <p class="text-sm">
-              Events Saved:{' '}
+              Events Saved:{" "}
               {
                 storage
                   .SavedEvents()
                   .filter((val) => val.device === props.device.id).length
               }
-              /{context.deviceEventKeys.get(props.device.id)?.length ?? 0}{' '}
+              /{context.deviceEventKeys.get(props.device.id)?.length ?? 0}{" "}
             </p>
           </div>
         </div>
@@ -148,7 +148,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
           >
             <button
               class={`${
-                disabledDownload() ? 'text-slate-300' : 'text-blue-500'
+                disabledDownload() ? "text-slate-300" : "text-blue-500"
               }`}
               disabled={disabledDownload()}
               onClick={() => download(props.device)}
@@ -192,7 +192,7 @@ function Devices() {
 
   const connectToBushnet = async () => {
     const { value } = await Dialog.confirm({
-      title: 'Connecting to Device',
+      title: "Connecting to Device",
       message: `Please turn on the device and wait at least 2 minutes for the device to setup its Wi-Fi then press "OK".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
     });
 
@@ -209,10 +209,10 @@ function Devices() {
 
   onMount(() => {
     // Add delete button to header
-    const header = headerMap.get('/devices');
+    const header = headerMap.get("/devices");
     if (!header) return;
 
-    headerMap.set('/devices', [
+    headerMap.set("/devices", [
       header[0],
       <button onClick={connectToBushnet} class="text-blue-500">
         <FaSolidWifi size={28} />
@@ -225,13 +225,7 @@ function Devices() {
     })
   );
 
-  createEffect(() => {
-    if (!pos.loading) {
-      console.log('POS', pos());
-    }
-  });
-
-  onMount(async () => {
+  onMount(() => {
     searchDevice();
     const search = setInterval(() => {
       searchDevice();
@@ -291,11 +285,11 @@ function Devices() {
           : `${devicesToUpdate
               .map((val) => context.devices.get(val)?.name)
               .join(
-                ', '
+                ", "
               )} have different location stored. Would you like to update them to the current location?`;
 
       const { value } = await Dialog.confirm({
-        title: 'Update Location',
+        title: "Update Location",
         message,
       });
       if (value) {
@@ -350,10 +344,10 @@ function Devices() {
               <p class="mt-4 max-w-sm px-4 text-center text-neutral-600">
                 No devices detected.
                 <br /> To access a device please turn it on, wait for 2 minutes,
-                then press{' '}
+                then press{" "}
                 <span class="inline-block">
                   <FaSolidWifi />
-                </span>{' '}
+                </span>{" "}
                 to connect to the device's Wi-Fi
               </p>
             </Show>

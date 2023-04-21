@@ -1,11 +1,12 @@
-import { createEffect, createResource, createSignal } from 'solid-js';
-import { createContextProvider } from '@solid-primitives/context';
-import { Preferences } from '@capacitor/preferences';
-import { logError, logSuccess } from './Notification';
-import { Result } from '.';
-import { z } from 'zod';
-import { CacophonyPlugin } from './CacophonyApi';
-import { useNavigate } from '@solidjs/router';
+import { createEffect, createResource, createSignal, on } from "solid-js";
+import { createContextProvider } from "@solid-primitives/context";
+import { Preferences } from "@capacitor/preferences";
+import { logSuccess, logWarning } from "./Notification";
+import { Result } from ".";
+import { z } from "zod";
+import { CacophonyPlugin } from "./CacophonyApi";
+import { useNavigate } from "@solidjs/router";
+import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
 const UserSchema = z.object({
   token: z.string(),
   id: z.string(),
@@ -19,7 +20,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   const nav = useNavigate();
   const [data, { mutate: mutateUser, refetch }] = createResource(async () => {
     try {
-      const storedUser = await Preferences.get({ key: 'user' });
+      const storedUser = await Preferences.get({ key: "user" });
       if (storedUser.value) {
         const json = JSON.parse(storedUser.value);
         // check json is not an empty object
@@ -36,7 +37,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   });
 
   const [skippedLogin, { mutate: mutateSkip }] = createResource(async () => {
-    const skippedLogin = await Preferences.get({ key: 'skippedLogin' });
+    const skippedLogin = await Preferences.get({ key: "skippedLogin" });
     if (skippedLogin.value) {
       const json = JSON.parse(skippedLogin.value);
       if (json) {
@@ -47,15 +48,24 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   });
 
   createEffect(() => {
+    on(data, async (data) => {
+      if (data) {
+        await FirebaseCrashlytics.setUserId({ userId: data.id });
+      } else {
+        await FirebaseCrashlytics.setUserId({ userId: "" });
+      }
+    });
+  });
+
+  createEffect(() => {
     try {
       const user = data();
-      console.log('Saving user', user);
       if (!user) return;
       const currUser = UserSchema.parse(user);
-      setServer(currUser.prod ? 'prod' : 'test');
+      setServer(currUser.prod ? "prod" : "test");
       const { token, id, email, refreshToken, prod } = currUser;
       Preferences.set({
-        key: 'user',
+        key: "user",
         value: JSON.stringify({
           token,
           id,
@@ -71,27 +81,33 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   });
 
   async function logout() {
-    await Preferences.set({ key: 'user', value: '' });
-    await Preferences.set({ key: 'skippedLogin', value: 'false' });
+    await Preferences.set({ key: "user", value: "" });
+    await Preferences.set({ key: "skippedLogin", value: "false" });
     mutateSkip(false);
     await refetch();
   }
 
-  const [server, setServer] = createSignal<'test' | 'prod'>('prod');
-  const isProd = () => server() === 'prod';
+  const [server, setServer] = createSignal<"test" | "prod">("prod");
+  const isProd = () => server() === "prod";
 
   const [changeServer] = createResource(server, async (server) => {
-    if (server === 'prod') {
+    if (server === "prod") {
       const res = await CacophonyPlugin.setToProductionServer();
       if (!res.success) {
-        logError('Failed to change server', res.message);
+        logWarning({
+          message: "Failed to change server",
+          details: res.message,
+        });
       }
     } else {
       const res = await CacophonyPlugin.setToTestServer();
       if (res.success) {
-        logSuccess('Server changed to test');
+        logSuccess({ message: "Server changed to test" });
       } else {
-        logError('Failed to change server', res.message);
+        logWarning({
+          message: "Failed to change server",
+          details: res.message,
+        });
       }
     }
   });
@@ -109,12 +125,12 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       if (result.success) {
         const { token, refreshToken, expiry } = result.data;
         mutateUser({ id, email, token, refreshToken, expiry, prod: isProd() });
-        console.log('Token refreshed');
+        console.log("Token refreshed");
       } else {
-        logError(
-          'Please check your internet connection, or try relogging.',
-          result.message
-        );
+        logWarning({
+          message: "Please check your internet connection, or try relogging.",
+          details: result.message,
+        });
       }
     }
   }
@@ -132,11 +148,14 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         password,
       });
       if (!authUser.success) {
-        logError('Could not login');
+        logWarning({
+          message: "Login failed",
+          details: authUser.message,
+        });
         return;
       }
       const { token, id, refreshToken } = authUser.data;
-      Preferences.set({ key: 'skippedLogin', value: 'false' });
+      Preferences.set({ key: "skippedLogin", value: "false" });
       mutateUser({
         token,
         id,
@@ -149,26 +168,28 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     },
     logout,
     skip() {
-      Preferences.set({ key: 'skippedLogin', value: 'true' });
-      nav('/devices');
+      Preferences.set({ key: "skippedLogin", value: "true" });
+      nav("/devices");
       mutateSkip(true);
     },
     async requestDeletion(): Result<string> {
       const usr = data();
-      if (!usr) return Promise.reject('No user to delete');
+      if (!usr) return Promise.reject("No user to delete");
       await validateCurrToken();
       const value = await CacophonyPlugin.requestDeletion({
         token: usr.token,
       });
-      logSuccess('Deletion request sent');
+      logSuccess({
+        message: "Account deletion requested.",
+      });
       return value;
     },
     toggleServer() {
       if (changeServer.loading) return;
       if (isProd()) {
-        setServer('test');
+        setServer("test");
       } else {
-        setServer('prod');
+        setServer("prod");
       }
     },
   };

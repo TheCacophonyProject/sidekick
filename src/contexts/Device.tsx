@@ -1,21 +1,21 @@
-import { HttpResponse, registerPlugin } from '@capacitor/core';
-import { createEffect, createSignal } from 'solid-js';
-import { Geolocation } from '@capacitor/geolocation';
-import { logError } from './Notification';
-import { CallbackId, Result, URL } from '.';
-import { CapacitorHttp } from '@capacitor/core';
-import { Filesystem } from '@capacitor/filesystem';
-import { useStorage } from './Storage';
-import { ReactiveMap } from '@solid-primitives/map';
-import { createContextProvider } from '@solid-primitives/context';
-import { ReactiveSet } from '@solid-primitives/set';
-import { z } from 'zod';
-import { KeepAwake } from '@capacitor-community/keep-awake';
+import { HttpResponse, registerPlugin } from "@capacitor/core";
+import { createEffect, createSignal } from "solid-js";
+import { Geolocation } from "@capacitor/geolocation";
+import { logError, logWarning } from "./Notification";
+import { CallbackId, Result, URL } from ".";
+import { CapacitorHttp } from "@capacitor/core";
+import { Filesystem } from "@capacitor/filesystem";
+import { useStorage } from "./Storage";
+import { ReactiveMap } from "@solid-primitives/map";
+import { createContextProvider } from "@solid-primitives/context";
+import { ReactiveSet } from "@solid-primitives/set";
+import { z } from "zod";
+import { KeepAwake } from "@capacitor-community/keep-awake";
 
 export type DeviceId = string;
 export type DeviceName = string;
 export type DeviceHost = string;
-export type DeviceType = 'thermal' | 'audio';
+export type DeviceType = "thermal" | "audio";
 export type DeviceUrl = { url: URL };
 export type RecordingName = string;
 
@@ -74,7 +74,7 @@ export interface DevicePlugin {
   getTestText(): Promise<{ text: string }>;
 }
 
-export const DevicePlugin = registerPlugin<DevicePlugin>('Device');
+export const DevicePlugin = registerPlugin<DevicePlugin>("Device");
 
 // Device Action Outputs
 export type DeviceInfo = {
@@ -119,8 +119,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     endpoint: string,
     host: string
   ): Promise<ConnectedDevice | undefined> => {
-    const [deviceName] = endpoint.split('.');
-    const [, group] = deviceName.split('-');
+    const [deviceName] = endpoint.split(".");
+    const [, group] = deviceName.split("-");
     const url = `http://${deviceName}.local`;
     const info = await DevicePlugin.getDeviceInfo({ url });
     const connection = await DevicePlugin.checkDeviceConnection({ url });
@@ -131,9 +131,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         host: deviceName,
         name: info.data.deviceName,
         group,
-        type: 'thermal',
+        type: "thermal",
         endpoint,
-        isProd: !info.data.serverURL.includes('test'),
+        isProd: !info.data.serverURL.includes("test"),
       };
       const device: ConnectedDevice = {
         ...deviceDetails,
@@ -155,9 +155,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           host: deviceName,
           name: info.data.deviceName,
           group,
-          type: 'thermal',
+          type: "thermal",
           endpoint,
-          isProd: !info.data.serverURL.includes('test'),
+          isProd: !info.data.serverURL.includes("test"),
         };
         const device: ConnectedDevice = {
           ...deviceDetails,
@@ -194,7 +194,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (
         !newDevice ||
         connectedDevices.some(
-          (d) => d.endpoint.split('-')[0] === newDevice.endpoint
+          (d) => d.endpoint.split("-")[0] === newDevice.endpoint
         )
       )
         return;
@@ -209,10 +209,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           return;
         }
       }
-      logError(
-        `Unable to connect to discovered device`,
-        JSON.stringify(newDevice)
-      );
+      logError({
+        message: `Unable to connect to discovered device`,
+        details: JSON.stringify(newDevice),
+      });
     });
     setCallbackID(id);
   };
@@ -226,14 +226,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
-  const Authorization = 'Basic YWRtaW46ZmVhdGhlcnM=';
+  const Authorization = "Basic YWRtaW46ZmVhdGhlcnM=";
   const headers = { Authorization: Authorization };
 
   const getRecordings = async (device: ConnectedDevice): Promise<string[]> => {
     try {
-      if ((await Filesystem.checkPermissions()).publicStorage === 'denied') {
+      if ((await Filesystem.checkPermissions()).publicStorage === "denied") {
         const permission = await Filesystem.requestPermissions();
-        if (permission.publicStorage === 'denied') {
+        if (permission.publicStorage === "denied") {
           return [];
         }
       }
@@ -242,7 +242,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         url: `${url}/api/recordings`,
         headers,
         webFetchExtra: {
-          credentials: 'include',
+          credentials: "include",
         },
       });
       if (res.status !== 200) return [];
@@ -250,9 +250,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       return recordings;
     } catch (error) {
       if (error instanceof Error) {
-        logError('Could not get recordings', error.message);
+        logError({
+          message: "Could not get recordings",
+          details: error.message,
+        });
       }
-      return []
+      return [];
     }
   };
 
@@ -270,7 +273,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
               url: `${url}/api/recording/${rec.name}`,
               headers,
               webFetchExtra: {
-                credentials: 'include',
+                credentials: "include",
               },
             });
             if (res.status !== 200) return;
@@ -281,12 +284,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         await storage.deleteRecording(rec);
       }
     } catch (error) {
-      logError(
-        'Could not delete recordings',
-        error instanceof Error
-          ? error.message
-          : 'Unknown error: during recording delete'
-      );
+      if (error instanceof Error) {
+        logError({
+          message: "Could not delete recordings",
+          error: error,
+        });
+      } else {
+        logError({
+          message: "Could not delete recordings",
+          details: JSON.stringify(error),
+        });
+      }
     }
   };
 
@@ -323,7 +331,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       return events;
     } catch (error) {
       if (error instanceof Error) {
-        logError('Could not get events', error.message);
+        logError({
+          message: "Could not get events",
+          details: error.message,
+          error,
+        });
       }
       return [];
     }
@@ -356,12 +368,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       ];
       await storage.deleteEvents({ events: deletedEvents });
     } catch (error) {
-      logError(
-        'Could not delete events',
-        error instanceof Error
-          ? error.message
-          : 'Unknown error: during event delete'
-      );
+      if (error instanceof Error) {
+        logError({
+          message: "Could not delete events",
+          error: error,
+        });
+      } else {
+        logError({
+          message: "Could not delete events",
+          details: JSON.stringify(error),
+        });
+      }
     }
   };
 
@@ -402,7 +419,16 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       return eventsWithDevice;
     } catch (error) {
       if (error instanceof Error) {
-        logError('Could not get events', error.message);
+        logError({
+          message: "Could not get events",
+          details: error.message,
+          error,
+        });
+      } else {
+        logError({
+          message: "Could not get events",
+          details: JSON.stringify(error),
+        });
       }
       return [];
     }
@@ -461,8 +487,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       });
       const location = locationSchema.safeParse({ ...coords, timestamp });
       if (!location.success) {
-        logError('Could not set device location', location.error.message);
-        return
+        logWarning({
+          message: "Could not set device location",
+          details: location.error.message,
+        });
+        return;
       }
       const options = {
         url,
@@ -478,7 +507,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       locationBeingSet.delete(device.id);
     } catch (error) {
       if (error instanceof Error) {
-        logError('Could not set device location', error.message);
+        logError({
+          message: "Could not set device location",
+          details: error.message,
+          error,
+        });
       }
       locationBeingSet.delete(device.id);
     }
@@ -499,7 +532,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       const res = await CapacitorHttp.get({
         url: `${url}/api/location`,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...headers,
         },
       });
@@ -518,16 +551,19 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       } else {
         return {
           success: false,
-          message: 'Could not get location',
+          message: "Could not get location",
         };
       }
     } catch (error) {
       if (error instanceof Error) {
-        logError('Could not get location', error.message);
+        logWarning({
+          message: "Could not get location",
+          details: error.message,
+        });
       }
       return {
         success: false,
-        message: 'Could not get location',
+        message: "Could not get location",
       };
     }
   };
