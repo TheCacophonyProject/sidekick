@@ -15,8 +15,8 @@ if (performSigning) {
 val sdk = 33
 val minSdkVersion = 22
 val majorVersion = 3
-val minorVersion = 1
-val patchVersion = 0
+val minorVersion = 0
+val patchVersion = 2
 android {
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
