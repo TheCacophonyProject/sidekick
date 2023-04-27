@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.AaptOptions
-
 plugins {
     kotlin("multiplatform")
     kotlin("native.cocoapods")
@@ -26,10 +24,8 @@ kotlin {
         }
     }
 
-
-
     cocoapods {
-        summary = "Some description for the Shared Module"
+        summary = "Cacophony Project Shared Module"
         homepage = "Link to the Shared Module homepage"
         version = "1.0"
         ios.deploymentTarget = "13.0"

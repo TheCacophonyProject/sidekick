@@ -1,6 +1,8 @@
 package nz.org.cacophony.sidekick
 
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -54,11 +56,18 @@ class CacophonyPlugin: Plugin() {
         cacophony.getStationsForUser(pluginCall(call))
     }
 
+    fun PackageManager.getPackageInfoCompat(packageName: String, flags: Int = 0): PackageInfo =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(flags.toLong()))
+        } else {
+            @Suppress("DEPRECATION") getPackageInfo(packageName, flags)
+        }
+
     @PluginMethod
     fun getAppVersion(call: PluginCall) {
         // Get version name
         try {
-            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val pInfo = context.packageManager.getPackageInfoCompat(context.packageName)
             val version = pInfo.versionName
             val data = JSObject()
             data.put("data", version)

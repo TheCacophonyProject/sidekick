@@ -16,7 +16,7 @@ val sdk = 33
 val minSdkVersion = 22
 val majorVersion = 3
 val minorVersion = 0
-val patchVersion = 2
+val patchVersion = 3
 android {
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
@@ -73,6 +73,7 @@ dependencies {
     implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
     implementation("androidx.activity:activity-compose:1.4.0")
     implementation(platform("com.google.firebase:firebase-bom:31.5.0"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation(project(mapOf("path" to ":capacitor-android")))
     implementation("androidx.core:core-splashscreen:1.0.0-rc01")
