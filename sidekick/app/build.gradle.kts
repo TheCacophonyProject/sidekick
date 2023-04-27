@@ -16,7 +16,7 @@ val sdk = 33
 val minSdkVersion = 22
 val majorVersion = 3
 val minorVersion = 0
-val patchVersion = 3
+val patchVersion = 4
 android {
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
@@ -49,8 +49,7 @@ android {
     }
     buildTypes {
         getByName("release")  {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             if (performSigning) {
                 signingConfig = signingConfigs.getByName("config")
             }
