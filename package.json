@@ -1,6 +1,9 @@
 {
   "name": "sidekick-app",
   "scripts": {
+    "dev": "npm run dev:unix || npm run dev:windows",
+    "dev:unix": "./run_dev_unix.sh",
+    "dev:windows": ".\\run_dev_windows.bat",
     "start": "vite dev --host",
     "build": "vite build",
     "serve": "vite start",

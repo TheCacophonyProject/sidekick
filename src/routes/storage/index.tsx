@@ -33,12 +33,15 @@ export default function Storage() {
 
     headerMap.set("/storage", [
       header[0],
-      <button onClick={deleteSaved} class="text-red-400">
-        <FaRegularTrashCan size={32} />
+      <button
+        onClick={deleteSaved}
+        class="block rounded-lg p-2 text-red-400 outline outline-2 outline-slate-200"
+      >
+        <FaRegularTrashCan size={28} />
       </button>,
     ]);
-    console.log(headerMap.get("/storage"));
   });
+
   const upload = async () => {
     if (!user.data()) {
       const { value } = await Dialog.confirm({
@@ -54,9 +57,11 @@ export default function Storage() {
 
     await storage.uploadItems();
   };
+
   const isProd = (rec: { isProd: boolean }) => rec.isProd;
   const isSame = (rec: { isProd: boolean }) => rec.isProd === user.isProd();
-  const isDev = (rec: { isProd: boolean }) => !rec.isProd;
+  const isTest = (rec: { isProd: boolean }) => !rec.isProd;
+
   return (
     <section class="pb-bar pt-bar relative h-full space-y-2 overflow-y-auto bg-gray-200 px-2">
       <ActionContainer
@@ -99,20 +104,20 @@ export default function Storage() {
         >
           <A href="recordings" class="flex items-center text-gray-800">
             <span class="w-24">
-              Saved: {storage.UnuploadedRecordings().filter(isDev).length}{" "}
+              Saved: {storage.UnuploadedRecordings().filter(isTest).length}{" "}
             </span>
             <span class="ml-2">
-              Uploaded: {storage.UploadedRecordings().filter(isDev).length}
+              Uploaded: {storage.UploadedRecordings().filter(isTest).length}
             </span>
           </A>
         </ActionContainer>
         <ActionContainer icon={ImNotification} header="Test Events">
           <p class="flex items-center text-gray-800">
             <span class="w-24">
-              Saved: {storage.UnuploadedEvents().filter(isDev).length}{" "}
+              Saved: {storage.UnuploadedEvents().filter(isTest).length}{" "}
             </span>
             <span class="ml-2">
-              Uploaded: {storage.UploadedEvents().filter(isDev).length}
+              Uploaded: {storage.UploadedEvents().filter(isTest).length}
             </span>
           </p>
         </ActionContainer>

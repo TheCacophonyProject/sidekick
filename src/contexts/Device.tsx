@@ -204,8 +204,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           newDevice.endpoint,
           newDevice.host
         );
+
         if (connectedDevice) {
-          devices.set(connectedDevice.id, connectedDevice);
+          if (!devices.has(connectedDevice.id))
+            devices.set(connectedDevice.id, connectedDevice);
           return;
         }
       }

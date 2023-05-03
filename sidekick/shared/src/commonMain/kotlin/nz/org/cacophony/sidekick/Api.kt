@@ -44,6 +44,7 @@ suspend inline fun handleServerError(response: HttpResponse): InvalidResponse.Se
 suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<InvalidResponse, T> {
     return when (response.status) {
         HttpStatusCode.OK -> Either.catch {
+            println("response.body: ${response.body<String>()}")
             return response.body<T>().right()
         }.mapLeft {
             InvalidResponse.ParsingError("Error validating response ${it.cause?.message}: ${it.message}")

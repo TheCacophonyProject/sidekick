@@ -78,21 +78,6 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       setDb(db);
       const recs = await getSavedRecordings();
       const events = await getSavedEvents();
-      //const token = userContext.data()?.token;
-      //if (token) {
-      //  const stations = await CacophonyPlugin.getStationsForUser({ token });
-      //  if (stations.success) {
-      //    logSuccess({
-      //      message: `Found ${stations.data.length} stations`,
-      //      details: JSON.stringify(stations.data),
-      //    });
-      //  } else {
-      //    logWarning({
-      //      message: "Failed to get stations",
-      //      details: JSON.stringify(stations.message),
-      //    });
-      //  }
-      //}
       setSavedRecordings(recs);
       setSavedEvents(events);
     } catch (e) {

@@ -20,7 +20,7 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   .pt-bar {
-    padding-top: calc(5rem + env(safe-area-inset-top));
+    padding-top: calc(5.3rem + env(safe-area-inset-top));
   }
   .pb-bar {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));

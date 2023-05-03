@@ -38,7 +38,7 @@ data class StationResponse (
     val messages: List<String>
     )
 class StationApi(val api: Api) {
-    suspend fun getStations(token: Token): Either<ApiError, StationList> =
+    suspend fun getStations(token: Token): Either<ApiError, String> =
         api.getRequest("stations",token)
         .flatMap { validateResponse(it) }
 }

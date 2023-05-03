@@ -2,6 +2,7 @@ import { Browser } from "@capacitor/browser";
 import { BsCameraVideoFill } from "solid-icons/bs";
 import {
   createEffect,
+  createMemo,
   createResource,
   createSignal,
   For,
@@ -15,7 +16,7 @@ import ActionContainer from "../components/ActionContainer";
 import { Device, DevicePlugin, useDevice } from "../contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
-import { Dialog } from "@capacitor/dialog";
+import { Dialog as Prompt } from "@capacitor/dialog";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { FaSolidSpinner } from "solid-icons/fa";
 import CircleButton from "../components/CircleButton";
@@ -23,12 +24,16 @@ import { Geolocation } from "@capacitor/geolocation";
 import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
 import { useStorage } from "../contexts/Storage";
-import { ImCog, ImNotification } from "solid-icons/im";
+import { ImCog, ImCross, ImNotification } from "solid-icons/im";
 import { headerMap } from "../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
 import BackgroundLogo from "../components/BackgroundLogo";
 import { Recording } from "~/database/Entities/Recording";
 import { Event } from "~/database/Entities/Event";
+import { Portal } from "solid-js/web";
+import Dialog from "~/components/Dialog";
+import { CacophonyPlugin } from "~/contexts/CacophonyApi";
+import { useUserContext } from "~/contexts/User";
 
 interface DeviceDetailsProps {
   device: Device;
@@ -72,6 +77,27 @@ function DeviceDetails(props: DeviceDetailsProps) {
     setDeviceRecs(device);
   });
 
+  onMount(async () => {
+    const user = useUserContext();
+    const userData = user.data();
+    if (userData) {
+      await user.validateCurrToken();
+      const stationsRes = await CacophonyPlugin.getStationsForUser({
+        token: userData.token,
+      });
+      if (stationsRes.success) {
+        const stations = JSON.parse(stationsRes.data).stations;
+        console.log(
+          stations,
+          stations.filter(
+            (station: any) => station.groupName === props.device.group
+          ),
+          props.device
+        );
+      }
+    }
+  });
+
   const openDeviceInterface = leading(
     debounce,
     (device: Device) => {
@@ -82,8 +108,10 @@ function DeviceDetails(props: DeviceDetailsProps) {
     800
   );
 
+  const [showLocationSettings, setShowLocationSettings] = createSignal(false);
+
   const setLocationForDevice = async (device: Device) => {
-    const { value } = await Dialog.confirm({
+    const { value } = await Prompt.confirm({
       title: "Confirm",
       message: `Are you sure you want to set device ${device.name} to your current location?`,
     });
@@ -94,7 +122,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
 
   const download = async (device: Device) => {
-    const { value } = await Dialog.confirm({
+    const { value } = await Prompt.confirm({
       title: "Confirm",
       message: `Are you sure you want to download all recordings and events from ${device.name}?`,
     });
@@ -114,6 +142,23 @@ function DeviceDetails(props: DeviceDetailsProps) {
         </button>
       }
     >
+      <Dialog
+        show={showLocationSettings()}
+        onShowChange={setShowLocationSettings}
+      >
+        <div class="flex w-full justify-between">
+          <h1 class="text-xl font-bold text-slate-600">Set Location</h1>
+          <button
+            onClick={() => setShowLocationSettings(false)}
+            class="text-gray-500"
+          >
+            <ImCross size={12} />
+          </button>
+        </div>
+        <div class="w-8/12">
+          <input type="text" class="w-full" placeholder="Test" />
+        </div>
+      </Dialog>
       <div class=" flex items-center justify-between px-2">
         <div onClick={() => openDeviceInterface(props.device)} role="button">
           <div class="flex items-center space-x-2 ">
@@ -159,7 +204,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
           <button
             class="text-blue-500"
             disabled={context.locationBeingSet.has(props.device.id)}
-            onClick={() => setLocationForDevice(props.device)}
+            onClick={() => setShowLocationSettings(true)}
           >
             <Switch>
               <Match
@@ -188,10 +233,14 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
 function Devices() {
   const context = useDevice();
+  const devices = createMemo(() => {
+    const devices = [...context.devices.values()];
+    return devices;
+  });
   const [cancel, setCancel] = createSignal(false);
 
   const connectToBushnet = async () => {
-    const { value } = await Dialog.confirm({
+    const { value } = await Prompt.confirm({
       title: "Connecting to Device",
       message: `Please turn on the device and wait at least 2 minutes for the device to setup its Wi-Fi then press "OK".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
     });
@@ -214,7 +263,10 @@ function Devices() {
 
     headerMap.set("/devices", [
       header[0],
-      <button onClick={connectToBushnet} class="text-blue-500">
+      <button
+        onClick={connectToBushnet}
+        class="block rounded-lg p-2 text-blue-500 outline outline-2 outline-slate-200"
+      >
         <FaSolidWifi size={28} />
       </button>,
     ]);
@@ -225,7 +277,7 @@ function Devices() {
     })
   );
 
-  onMount(() => {
+  onMount(async () => {
     searchDevice();
     const search = setInterval(() => {
       searchDevice();
@@ -288,7 +340,7 @@ function Devices() {
                 ", "
               )} have different location stored. Would you like to update them to the current location?`;
 
-      const { value } = await Dialog.confirm({
+      const { value } = await Prompt.confirm({
         title: "Update Location",
         message,
       });
@@ -315,9 +367,7 @@ function Devices() {
   return (
     <>
       <section class="pb-bar pt-bar relative z-20 space-y-2 overflow-y-auto px-2">
-        <For
-          each={[...context.devices.values()].filter((dev) => dev.isConnected)}
-        >
+        <For each={devices().filter((dev) => dev.isConnected)}>
           {(device) => (
             <DeviceDetails
               device={device}
@@ -326,15 +376,17 @@ function Devices() {
           )}
         </For>
         <div class="h-32" />
-        <div class="pb-bar fixed inset-x-0 bottom-[4vh] z-20 mx-auto flex justify-center">
-          <CircleButton
-            onClick={searchDevice}
-            disabled={context.isDiscovering()}
-            loading={context.isDiscovering()}
-            text="Search Devices"
-            loadingText="Searching..."
-          />
-        </div>
+        <Portal>
+          <div class="pb-bar fixed inset-x-0 bottom-[4vh] z-20 mx-auto flex justify-center">
+            <CircleButton
+              onClick={searchDevice}
+              disabled={context.isDiscovering()}
+              loading={context.isDiscovering()}
+              text="Search Devices"
+              loadingText="Searching..."
+            />
+          </div>
+        </Portal>
       </section>
       <div class="pt-bar fixed inset-0 z-0 flex flex-col pb-32">
         <div class="my-auto">
