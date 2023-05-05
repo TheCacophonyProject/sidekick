@@ -101,9 +101,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       }
     } else {
       const res = await CacophonyPlugin.setToTestServer();
-      if (res.success) {
-        logSuccess({ message: "Server changed to test" });
-      } else {
+      if (!res.success) {
         logWarning({
           message: "Failed to change server",
           details: res.message,
@@ -116,7 +114,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     const user = data();
     if (user) {
       const { token, refreshToken, expiry, email, id } = user;
-      if (new Date(expiry).getTime() > Date.now()) return;
+      if (new Date(expiry).getTime() > Date.now()) return user;
       const result = await CacophonyPlugin.validateToken({
         token,
         refreshToken,
@@ -124,8 +122,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       });
       if (result.success) {
         const { token, refreshToken, expiry } = result.data;
-        mutateUser({ id, email, token, refreshToken, expiry, prod: isProd() });
+        const user = { id, email, token, refreshToken, expiry, prod: isProd() };
+        mutateUser(user);
         console.log("Token refreshed");
+        return user;
       } else {
         logWarning({
           message: "Please check your internet connection, or try relogging.",

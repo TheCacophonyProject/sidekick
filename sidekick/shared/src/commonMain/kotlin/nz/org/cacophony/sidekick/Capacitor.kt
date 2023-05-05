@@ -25,6 +25,7 @@ sealed interface CapacitorInterfaceError {
 interface CapacitorInterface {
     fun <T> runCatch(call: PluginCall, block: suspend () -> T) = Either.catch { runBlocking { block() } }.mapLeft { call.failure(it.message ?: "Unknown error") }
 }
+
 inline fun PluginCall.success(data: Any? = null) = data
     .rightIfNotNull { resolve(mapOf("success" to true)) }
     .map { resolve(mapOf("success" to true, "data" to it)) }

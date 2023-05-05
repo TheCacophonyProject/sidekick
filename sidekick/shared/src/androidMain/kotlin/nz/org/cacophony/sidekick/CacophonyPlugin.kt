@@ -56,6 +56,11 @@ class CacophonyPlugin: Plugin() {
         cacophony.getStationsForUser(pluginCall(call))
     }
 
+    @PluginMethod
+    fun updateStation(call: PluginCall) {
+        cacophony.updateStation(pluginCall(call))
+    }
+
     fun PackageManager.getPackageInfoCompat(packageName: String, flags: Int = 0): PackageInfo =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(flags.toLong()))

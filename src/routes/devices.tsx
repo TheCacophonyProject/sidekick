@@ -24,7 +24,7 @@ import { Geolocation } from "@capacitor/geolocation";
 import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
 import { useStorage } from "../contexts/Storage";
-import { ImCog, ImCross, ImNotification } from "solid-icons/im";
+import { ImCheckmark, ImCog, ImCross, ImNotification } from "solid-icons/im";
 import { headerMap } from "../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
 import BackgroundLogo from "../components/BackgroundLogo";
@@ -32,9 +32,8 @@ import { Recording } from "~/database/Entities/Recording";
 import { Event } from "~/database/Entities/Event";
 import { Portal } from "solid-js/web";
 import Dialog from "~/components/Dialog";
-import { CacophonyPlugin } from "~/contexts/CacophonyApi";
-import { useUserContext } from "~/contexts/User";
-
+import { logSuccess, logWarning } from "~/contexts/Notification";
+import { AiFillEdit } from "solid-icons/ai";
 interface DeviceDetailsProps {
   device: Device;
   shouldUpdateLocation: boolean | undefined;
@@ -60,7 +59,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   createEffect(() => {
     const saved = storage
-      .SavedEvents()
+      .savedEvents()
       .filter((event) => event.device === props.device.id && !event.isUploaded);
     const device = [...(context.deviceEventKeys.get(props.device.id) ?? [])];
 
@@ -70,32 +69,11 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   createEffect(() => {
     const saved = storage
-      .SavedRecordings()
+      .savedRecordings()
       .filter((rec) => rec.device === props.device.id && !rec.isUploaded);
     const device = [...(context.deviceRecordings.get(props.device.id) ?? [])];
     setSavedRecs(saved);
     setDeviceRecs(device);
-  });
-
-  onMount(async () => {
-    const user = useUserContext();
-    const userData = user.data();
-    if (userData) {
-      await user.validateCurrToken();
-      const stationsRes = await CacophonyPlugin.getStationsForUser({
-        token: userData.token,
-      });
-      if (stationsRes.success) {
-        const stations = JSON.parse(stationsRes.data).stations;
-        console.log(
-          stations,
-          stations.filter(
-            (station: any) => station.groupName === props.device.group
-          ),
-          props.device
-        );
-      }
-    }
   });
 
   const openDeviceInterface = leading(
@@ -109,15 +87,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
   );
 
   const [showLocationSettings, setShowLocationSettings] = createSignal(false);
-
   const setLocationForDevice = async (device: Device) => {
-    const { value } = await Prompt.confirm({
-      title: "Confirm",
-      message: `Are you sure you want to set device ${device.name} to your current location?`,
-    });
-
-    if (!value) return;
     if (!device.isConnected) return;
+    setShowLocationSettings(true);
     await context?.setDeviceToCurrLocation(device);
   };
 
@@ -129,6 +101,28 @@ function DeviceDetails(props: DeviceDetailsProps) {
     if (!value) return;
     if (!device.isConnected) return;
     await context.saveItems(device);
+  };
+
+  // eslint-disable-next-line solid/reactivity
+  const [location] = context.getLocationByDevice(props.device);
+
+  let LocationNameInput: HTMLInputElement;
+  const [isEditing, setIsEditing] = createSignal(false);
+  const toggleEditing = () => {
+    setIsEditing(!isEditing());
+    if (isEditing()) {
+      LocationNameInput.focus();
+    } else {
+      LocationNameInput.blur();
+    }
+  };
+
+  const saveLocationName = async () => {
+    const loc = location();
+    const newName = LocationNameInput.value;
+    if (!loc || !newName) return;
+    await storage.updateLocationName(loc, newName);
+    toggleEditing();
   };
 
   return (
@@ -147,7 +141,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
         onShowChange={setShowLocationSettings}
       >
         <div class="flex w-full justify-between">
-          <h1 class="text-xl font-bold text-slate-600">Set Location</h1>
+          <h1 class="text-xl font-bold text-slate-600">Location Settings</h1>
           <button
             onClick={() => setShowLocationSettings(false)}
             class="text-gray-500"
@@ -155,8 +149,55 @@ function DeviceDetails(props: DeviceDetailsProps) {
             <ImCross size={12} />
           </button>
         </div>
-        <div class="w-8/12">
-          <input type="text" class="w-full" placeholder="Test" />
+        <div class="w-full">
+          <Show when={location()}>
+            {
+              <>
+                <div class="space-y-2">
+                  <div>
+                    <p class="text-sm text-slate-400">Name:</p>
+                    <Show
+                      when={isEditing()}
+                      fallback={
+                        <div
+                          class="flex justify-between"
+                          onClick={() => toggleEditing()}
+                        >
+                          <h1 class="text-sm text-gray-800">
+                            {location()?.name}
+                          </h1>
+                          <button class="text-blue-600">
+                            <AiFillEdit size={18} />
+                          </button>
+                        </div>
+                      }
+                    >
+                      <div class="flex">
+                        <input
+                          ref={LocationNameInput}
+                          type="text"
+                          class="w-full rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
+                          placeholder={location()?.name}
+                        />
+                        <button
+                          class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
+                          onClick={toggleEditing}
+                        >
+                          <ImCross size={12} />
+                        </button>
+                        <button
+                          class="pl-4 pr-2 text-green-400"
+                          onClick={saveLocationName}
+                        >
+                          <ImCheckmark size={18} />
+                        </button>
+                      </div>
+                    </Show>
+                  </div>
+                </div>
+              </>
+            }
+          </Show>
         </div>
       </Dialog>
       <div class=" flex items-center justify-between px-2">
@@ -179,7 +220,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
               Events Saved:{" "}
               {
                 storage
-                  .SavedEvents()
+                  .savedEvents()
                   .filter((val) => val.device === props.device.id).length
               }
               /{context.deviceEventKeys.get(props.device.id)?.length ?? 0}{" "}
@@ -271,11 +312,19 @@ function Devices() {
       </button>,
     ]);
   });
-  const [pos] = createResource(() =>
-    Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-    })
-  );
+  const [pos] = createResource(() => {
+    try {
+      return Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+      });
+    } catch (e) {
+      if (e instanceof Error) {
+        logWarning(e);
+      } else {
+        logWarning({ message: "Error getting current location" });
+      }
+    }
+  });
 
   onMount(async () => {
     searchDevice();
@@ -295,22 +344,35 @@ function Devices() {
       return [[...context.devices.values()], pos()] as const;
     },
     async (sources) => {
-      if (!sources) return [];
-      const [devices, pos] = sources;
-      if (!pos) return [];
-      const devicesToUpdate: string[] = [];
-      for (const device of devices.values()) {
-        if (!device.isConnected) continue;
-        const locationRes = await context.getLocation(device);
-        if (!locationRes.success) continue;
-        const loc = locationRes.data;
-        const diffLat = Math.abs(loc.latitude - pos.coords.latitude);
-        const diffLong = Math.abs(loc.longitude - pos.coords.longitude);
-        if (diffLat > 0.001 || diffLong > 0.001) {
-          devicesToUpdate.push(device.id);
+      try {
+        if (!sources) return [];
+        const [devices, pos] = sources;
+        if (!pos) return [];
+        const devicesToUpdate: string[] = [];
+        for (const device of devices.values()) {
+          if (!device.isConnected) continue;
+          const locationRes = await context.getLocationCoords(device);
+          if (!locationRes.success) continue;
+          const loc = locationRes.data;
+          const diffLat = Math.abs(loc.latitude - pos.coords.latitude);
+          const diffLong = Math.abs(loc.longitude - pos.coords.longitude);
+          if (diffLat > 0.001 || diffLong > 0.001) {
+            devicesToUpdate.push(device.id);
+          }
         }
+        return devicesToUpdate;
+      } catch (e) {
+        if (e instanceof Error) {
+          logWarning(e);
+        } else if (typeof e === "string") {
+          logWarning({
+            message: "Error updating device locations",
+            details: e,
+          });
+        }
+
+        return [];
       }
-      return devicesToUpdate;
     }
   );
 

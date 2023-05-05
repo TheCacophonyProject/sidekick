@@ -3,13 +3,24 @@ import {
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createMemo, createSignal, onMount } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  on,
+  onMount,
+} from "solid-js";
 import { DeviceDetails, DeviceId } from "./Device";
 import { useUserContext } from "./User";
 import { createContextProvider } from "@solid-primitives/context";
-import { CacophonyPlugin } from "./CacophonyApi";
+import {
+  CacophonyPlugin,
+  getLocationsForUser,
+  UserDetails,
+} from "./CacophonyApi";
 import { DevicePlugin } from "./Device";
-import { logError, logSuccess, logWarning } from "./Notification";
+import { logError, logWarning } from "./Notification";
 import {
   createEventSchema,
   getEvents,
@@ -33,6 +44,14 @@ import type {
 } from "../database/Entities/Recording";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import { openConnection } from "../database";
+import {
+  createLocationSchema,
+  deleteLocation,
+  getLocations,
+  insertLocation,
+  Location,
+  updateLocation,
+} from "~/database/Entities/Location";
 
 type RecordingFile = {
   filename: string;
@@ -45,24 +64,28 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const userContext = useUserContext();
   const driver = new SQLiteConnection(CapacitorSQLite);
   const [db, setDb] = createSignal<SQLiteDBConnection>();
-  const [SavedRecordings, setSavedRecordings] = createSignal<Recording[]>([]);
-  const UploadedRecordings = createMemo(
+  // Recordings
+  const [savedRecordings, setSavedRecordings] = createSignal<Recording[]>([]);
+  const uploadedRecordings = createMemo(
     () =>
-      SavedRecordings().filter((rec) => rec.isUploaded) as UploadedRecording[]
+      savedRecordings().filter((rec) => rec.isUploaded) as UploadedRecording[]
   );
-  const UnuploadedRecordings = createMemo(() =>
-    SavedRecordings().filter((rec) => !rec.isUploaded)
+  const unuploadedRecordings = createMemo(() =>
+    savedRecordings().filter((rec) => !rec.isUploaded)
   );
-  const [SavedEvents, setSavedEvents] = createSignal<Event[]>([]);
-  const UploadedEvents = createMemo(() =>
-    SavedEvents().filter((event) => event.isUploaded)
+  // Events
+  const [savedEvents, setSavedEvents] = createSignal<Event[]>([]);
+  const uploadedEvents = createMemo(() =>
+    savedEvents().filter((event) => event.isUploaded)
   );
-  const UnuploadedEvents = createMemo(() =>
-    SavedEvents().filter((event) => !event.isUploaded)
+  const unuploadedEvents = createMemo(() =>
+    savedEvents().filter((event) => !event.isUploaded)
   );
+  // locations
   const [isUploading, setIsUploading] = createSignal(false);
 
   const DatabaseName = "Cacophony";
+
   onMount(async () => {
     try {
       const db = await openConnection(
@@ -74,16 +97,145 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       );
       await db.execute(createRecordingSchema);
       await db.execute(createEventSchema);
+      await db.execute(createLocationSchema);
 
       setDb(db);
+
       const recs = await getSavedRecordings();
-      const events = await getSavedEvents();
       setSavedRecordings(recs);
+      const events = await getSavedEvents();
       setSavedEvents(events);
     } catch (e) {
-      console.error(e);
+      if (e instanceof Error) {
+        logError({ message: "Failed to open database", error: e });
+      } else {
+        logError({
+          message: "Failed to open database",
+          details: "Unknown error: " + e,
+        });
+      }
     }
   });
+
+  const getSavedLocations = async () => {
+    const currdb = db();
+    if (!currdb) return [];
+    return getLocations(currdb)();
+  };
+
+  const getUserLocations = async () => {
+    const userData = userContext.data();
+    if (!userData) return [];
+    const user = await userContext.validateCurrToken();
+    if (!user) return [];
+    const locations = await getLocationsForUser(user.token);
+    return locations;
+  };
+
+  const getSyncedLocations = () => async () => {
+    const currdb = db();
+    if (!currdb) return [];
+    const locations = await getUserLocations();
+    try {
+      const savedLocations = await getSavedLocations();
+      const locationsToInsert = locations.filter(
+        (location) =>
+          !savedLocations.some(
+            (savedLocation) => savedLocation.id === location.id
+          )
+      );
+      const locationsToUpdate = savedLocations.filter((savedLocation) =>
+        locations.some(
+          (location) =>
+            savedLocation.id === location.id &&
+            savedLocation.updatedAt !== location.updatedAt
+        )
+      );
+      const locationsToDelete = savedLocations.filter(
+        (savedLocation) =>
+          !locations.some((location) => location.id === savedLocation.id)
+      );
+
+      await Promise.all([
+        ...locationsToInsert.map((location) =>
+          insertLocation(currdb)(location)
+        ),
+        ...locationsToUpdate.map((location) =>
+          updateLocation(currdb)(location)
+        ),
+        ...locationsToDelete.map((location) =>
+          deleteLocation(currdb)(location)
+        ),
+      ]);
+      return getSavedLocations();
+    } catch (e) {
+      if (e instanceof Error) {
+        logError({ message: "Failed to sync locations:", error: e });
+        return [];
+      } else {
+        logWarning({
+          message: "Failed to sync locations",
+        });
+        return [];
+      }
+    }
+  };
+
+  const [savedLocations, { mutate }] = createResource(
+    () => [userContext.data(), db()],
+    getSyncedLocations()
+  );
+
+  const syncLocationName = async (id: number, name: string) => {
+    const user = await userContext.validateCurrToken();
+    if (!user) return;
+    const currdb = db();
+    if (!currdb) return;
+    try {
+      await CacophonyPlugin.updateStation({
+        token: user.token,
+        id,
+        name,
+      });
+      await updateLocation(currdb)({
+        id,
+        updateName: false,
+      });
+    } catch (e) {
+      await updateLocation(currdb)({
+        id,
+        updateName: true,
+      });
+    }
+  };
+
+  createEffect(() => {
+    on(savedLocations, async (locations) => {
+      console.log("locations to update", locations);
+      if (!locations) return;
+      await Promise.all(
+        locations
+          .filter((loc) => loc.updateName)
+          .map((location) => {
+            return syncLocationName(location.id, location.name);
+          })
+      );
+      mutate((locations) =>
+        locations?.map((loc) => ({ ...loc, updateName: false }))
+      );
+    });
+  });
+
+  const updateLocationName = async (location: Location, newName: string) => {
+    const currdb = db();
+    if (!currdb) return;
+    const updatedLocation = { ...location, name: newName, updateName: true };
+
+    await updateLocation(currdb)(updatedLocation);
+    mutate((locations) =>
+      locations?.map((loc) => (loc.id === location.id ? updatedLocation : loc))
+    );
+  };
 
   const findRecording = async (
     options: { id: string } | { name: string; device: string }
@@ -200,7 +352,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
-    let events = UnuploadedEvents().filter(
+    let events = unuploadedEvents().filter(
       (e) => e.isProd === userContext.isProd()
     );
     const errors = [];
@@ -244,7 +396,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     const currdb = db();
     if (!currdb) return;
     await deleteEventFromDb(currdb)(event);
-    setSavedEvents(SavedEvents().filter((e) => e.key !== event.key));
+    setSavedEvents(savedEvents().filter((e) => e.key !== event.key));
   };
 
   const deleteEvents = async (options?: {
@@ -310,9 +462,9 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     }
     // Delete all recordings from the database apart from uploaded ones
     // as the device may not have internet access
-    const savedRecordings = SavedRecordings().filter((r) => !r.isUploaded);
-    await deleteRecordingsFromDb(currdb)(savedRecordings);
-    setSavedRecordings(SavedRecordings().filter((r) => r.isUploaded));
+    const recs = savedRecordings().filter((r) => !r.isUploaded);
+    await deleteRecordingsFromDb(currdb)(recs);
+    setSavedRecordings(savedRecordings().filter((r) => r.isUploaded));
   };
 
   const uploadRecordings = async () => {
@@ -320,7 +472,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!currdb) return;
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
-    let recordings = UnuploadedRecordings().filter(
+    let recordings = unuploadedRecordings().filter(
       (rec) => rec.isProd === userContext.isProd()
     );
     for (let i = 0; i < recordings.length; i++) {
@@ -379,18 +531,20 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 
   return {
-    SavedRecordings,
-    UnuploadedRecordings,
-    UploadedRecordings,
-    UploadedEvents,
-    SavedEvents,
-    UnuploadedEvents,
+    savedRecordings,
+    unuploadedRecordings,
+    uploadedRecordings,
+    savedEvents,
+    uploadedEvents,
+    unuploadedEvents,
+    savedLocations,
     saveRecording,
     deleteRecording,
     deleteRecordings,
     uploadRecordings,
     getSavedRecordings,
     saveEvent,
+    updateLocationName,
     uploadEvents,
     uploadItems,
     isUploading,

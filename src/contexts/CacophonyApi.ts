@@ -1,5 +1,8 @@
 import { registerPlugin } from "@capacitor/core";
+import { z } from "zod";
+import { LocationSchema } from "~/database/Entities/Location";
 import { Result } from ".";
+import { logError } from "./Notification";
 
 type AuthToken = {
   token: string;
@@ -10,30 +13,6 @@ type AuthToken = {
 export type UserDetails = AuthToken & {
   id: string;
   email: string;
-};
-
-export type Settings = {
-  referenceImages: string[];
-};
-
-export type Station = {
-  id: number;
-  name: string;
-  location: Location;
-  lastUpdatedById: number;
-  createdAt: string;
-  activeAt: string;
-  retiredAt: string;
-  lastThermalRecordingTime: string;
-  lastAudioRecordingTime: string;
-  lastActiveThermalTime: string;
-  lastActiveAudioTime: string;
-  automatic: boolean;
-  settings: Settings;
-  needsRename: boolean;
-  updatedAt: string;
-  groupId: number;
-  groupName: string;
 };
 
 type JSONString = string;
@@ -84,9 +63,57 @@ export interface CacophonyPlugin {
     }[];
   }>;
   getStationsForUser(options: { token: string }): Result<JSONString>;
+  updateStation(options: {
+    token: string;
+    id: number;
+    name: string;
+  }): Result<JSONString>;
   setToProductionServer(): Result;
   setToTestServer(): Result;
   getAppVersion(): Result<string>;
 }
 
 export const CacophonyPlugin = registerPlugin<CacophonyPlugin>("Cacophony");
+
+const SuccessResSchema = z.object({
+  success: z.literal(true),
+  messages: z.array(z.string()),
+  stations: z.array(
+    LocationSchema.omit({ coords: true })
+      .extend({
+        location: z.object({ lat: z.number(), lng: z.number() }),
+      })
+      .transform((val) => ({
+        ...val,
+        coords: val.location,
+      }))
+  ),
+});
+
+const FailureResSchema = z.object({
+  success: z.literal(false),
+  messages: z.array(z.string()),
+});
+
+const LocationResSchema = z.discriminatedUnion("success", [
+  SuccessResSchema,
+  FailureResSchema,
+]);
+
+export async function getLocationsForUser(token: string) {
+  const locationJson = await CacophonyPlugin.getStationsForUser({ token });
+  if (locationJson.success) {
+    const locationRes = LocationResSchema.parse(JSON.parse(locationJson.data));
+    if (!locationRes.success) {
+      throw new Error(locationRes.messages.join(", "));
+    }
+
+    return locationRes.stations;
+  } else {
+    logError({
+      message: "Failed to get locations",
+      details: locationJson.message,
+    });
+    return [];
+  }
+}

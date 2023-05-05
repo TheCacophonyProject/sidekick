@@ -44,7 +44,6 @@ suspend inline fun handleServerError(response: HttpResponse): InvalidResponse.Se
 suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<InvalidResponse, T> {
     return when (response.status) {
         HttpStatusCode.OK -> Either.catch {
-            println("response.body: ${response.body<String>()}")
             return response.body<T>().right()
         }.mapLeft {
             InvalidResponse.ParsingError("Error validating response ${it.cause?.message}: ${it.message}")
@@ -126,6 +125,19 @@ suspend inline fun Api.deleteRequest(path: String, token: Token? = null): Either
 
 // Update other functions similarly
 suspend inline fun <reified T> Api.postJSON(
+    path: String,
+    body: T,
+    token: Token? = null,
+): Either<ApiError, HttpResponse> = request("Post") {
+    client.post(childPath(path)) {
+        headers {
+            token?.let { append(HttpHeaders.Authorization, token) }
+            append(HttpHeaders.ContentType, ContentType.Application.Json)
+        }
+        body?.let { setBody(body) }
+    }
+}
+suspend inline fun <reified T> Api.patchJSON(
     path: String,
     body: T,
     token: Token? = null,

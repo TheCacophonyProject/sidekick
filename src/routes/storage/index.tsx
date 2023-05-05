@@ -75,20 +75,20 @@ export default function Storage() {
       >
         <A href="recordings" class="flex items-center text-gray-800">
           <span class="w-24">
-            Saved: {storage.UnuploadedRecordings().filter(isProd).length}{" "}
+            Saved: {storage.unuploadedRecordings().filter(isProd).length}{" "}
           </span>
           <span class="ml-2">
-            Uploaded: {storage.UploadedRecordings().filter(isProd).length}
+            Uploaded: {storage.uploadedRecordings().filter(isProd).length}
           </span>
         </A>
       </ActionContainer>
       <ActionContainer icon={ImNotification} header="Events">
         <p class="flex items-center text-gray-800">
           <span class="w-24">
-            Saved: {storage.UnuploadedEvents().filter(isProd).length}{" "}
+            Saved: {storage.unuploadedEvents().filter(isProd).length}{" "}
           </span>
           <span class="ml-2">
-            Uploaded: {storage.UploadedEvents().filter(isProd).length}
+            Uploaded: {storage.uploadedEvents().filter(isProd).length}
           </span>
         </p>
       </ActionContainer>
@@ -104,20 +104,20 @@ export default function Storage() {
         >
           <A href="recordings" class="flex items-center text-gray-800">
             <span class="w-24">
-              Saved: {storage.UnuploadedRecordings().filter(isTest).length}{" "}
+              Saved: {storage.unuploadedRecordings().filter(isTest).length}{" "}
             </span>
             <span class="ml-2">
-              Uploaded: {storage.UploadedRecordings().filter(isTest).length}
+              Uploaded: {storage.uploadedRecordings().filter(isTest).length}
             </span>
           </A>
         </ActionContainer>
         <ActionContainer icon={ImNotification} header="Test Events">
           <p class="flex items-center text-gray-800">
             <span class="w-24">
-              Saved: {storage.UnuploadedEvents().filter(isTest).length}{" "}
+              Saved: {storage.unuploadedEvents().filter(isTest).length}{" "}
             </span>
             <span class="ml-2">
-              Uploaded: {storage.UploadedEvents().filter(isTest).length}
+              Uploaded: {storage.uploadedEvents().filter(isTest).length}
             </span>
           </p>
         </ActionContainer>
@@ -132,8 +132,8 @@ export default function Storage() {
           onClick={upload}
           disabled={
             storage.isUploading() ||
-            (storage.UnuploadedRecordings().filter(isSame).length === 0 &&
-              storage.UnuploadedEvents().filter(isSame).length === 0)
+            (storage.unuploadedRecordings().filter(isSame).length === 0 &&
+              storage.unuploadedEvents().filter(isSame).length === 0)
           }
           loading={storage.isUploading()}
         />

@@ -115,6 +115,19 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
                 )
         }
     }
+
+    @Serializable
+    data class UpdateStationCall(val token: String, val id: String, val name: String)
+    fun updateStation(call: PluginCall) = runCatch(call) {
+        call.validateCall<UpdateStationCall>("token", "id", "name").map { station ->
+            stationApi.updateStation(station.id, station.name, station.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
+                )
+        }
+    }
+
     fun setToTestServer(call: PluginCall) = runCatch(call) {
         api.setToTest();
         call.success()

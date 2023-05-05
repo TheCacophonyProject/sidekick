@@ -55,7 +55,6 @@
     "@solid-primitives/set": "^0.4.2",
     "@solidjs/meta": "^0.28.2",
     "@solidjs/router": "^0.7.0",
-    "drizzle-orm": "^0.23.2",
     "kysely": "^0.23.5",
     "motion": "^10.15.5",
     "sidekick-app": "link:",
