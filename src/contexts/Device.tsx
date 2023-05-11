@@ -145,7 +145,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         isConnected: true,
         locationSet: false,
       };
-      clearUploaded(device);
       return device;
     } else {
       // Use host ipv4 address if device is not found
@@ -154,7 +153,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (connection.success) {
         const info = await DevicePlugin.getDeviceInfo({ url });
         if (!info.success) {
-          logWarning(new Error(`Device not found at ${url}`));
+          logWarning({
+            message:
+              "Unable to communicate with device, please reset/update the device.",
+          });
           return;
         }
         const id: DeviceId = info.data.deviceID.toString();
@@ -173,14 +175,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           isConnected: true,
           locationSet: false,
         };
-        clearUploaded(device);
         return device;
-      } else {
-        logError(
-          new Error(
-            `Device not found at ${url} or ${host}: ${connection.message}`
-          )
-        );
       }
     }
   };
@@ -218,12 +213,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         );
 
         if (connectedDevice) {
-          if (!devices.has(connectedDevice.id))
-            devices.set(connectedDevice.id, connectedDevice);
+          devices.set(connectedDevice.id, connectedDevice);
+          clearUploaded(connectedDevice);
           return;
         }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      logError({
+      logWarning({
         message: `Unable to connect to discovered device`,
         details: JSON.stringify(newDevice),
       });
@@ -304,7 +300,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           error: error,
         });
       } else {
-        logError({
+        logWarning({
           message: "Could not delete recordings",
           details: JSON.stringify(error),
         });
@@ -477,7 +473,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
-  const saveItems = async (device: ConnectedDevice) => {
+  const saveItems = async (deviceId: DeviceId) => {
+    const device = devices.get(deviceId);
+    if (!device || !device.isConnected) return;
     const { id } = device;
     const isSupported = await KeepAwake.isSupported();
     if (isSupported) {
@@ -500,9 +498,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     timestamp: z.number().transform((val) => val.toString()),
   });
 
-  const setDeviceToCurrLocation = async (device: ConnectedDevice) => {
+  const setDeviceToCurrLocation = async (deviceId: DeviceId) => {
     try {
-      const { url } = device;
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return;
       locationBeingSet.add(device.id);
       const { timestamp, coords } = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
@@ -516,7 +515,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         return;
       }
       const options = {
-        url,
+        url: device.url,
         ...location.data,
       };
       const res = await DevicePlugin.setDeviceLocation(options);
@@ -535,15 +534,22 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           error,
         });
       }
-      locationBeingSet.delete(device.id);
+      locationBeingSet.delete(deviceId);
     }
   };
 
   const getLocationCoords = async (
-    device: ConnectedDevice
+    device: DeviceId
   ): Result<Location<number>> => {
     try {
-      const { url } = device;
+      const deviceObj = devices.get(device);
+      if (!deviceObj || !deviceObj.isConnected) {
+        return {
+          success: false,
+          message: "Device is not connected",
+        };
+      }
+      const { url } = deviceObj;
       const locationSchema = z.object({
         latitude: z.number(),
         longitude: z.number(),
@@ -634,17 +640,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   ) => {
     const { latitude, longitude } = deviceCoords;
     const { lat, lng } = loc;
-    return isWithinRadius(lat, lng, latitude, longitude, range);
+    const inRange = isWithinRadius(lat, lng, latitude, longitude, range);
+    return inRange;
   };
-  const getLocationByDevice = (device: Device) => {
+  const getLocationByDevice = (deviceId: DeviceId) => {
     return createResource(
       () => storage.savedLocations(),
       async (locations) => {
         try {
-          if (!locations.length || !device.isConnected) return null;
-          const deviceLocation = await getLocationCoords(device);
+          const device = devices.get(deviceId);
+          if (!device || !locations.length || !device.isConnected) return null;
+          const deviceLocation = await getLocationCoords(device.id);
           if (!deviceLocation.success) return null;
-          console.log("deviceLocation", deviceLocation);
           const sameGroupLocatoins = locations.filter(
             (loc) => loc.groupName === device.group
           );

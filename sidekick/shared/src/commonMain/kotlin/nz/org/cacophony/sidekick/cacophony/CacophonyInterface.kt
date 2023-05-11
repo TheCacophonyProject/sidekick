@@ -128,6 +128,31 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
         }
     }
 
+    @Serializable
+    data class CreateStationCall(val token: String, val name: String, val lat: Double, val lon: Double, val groupName: String, val from: String)
+    fun createStation(call: PluginCall) = runCatch(call) {
+        call.validateCall<CreateStationCall>("token", "name", "lat", "lon", "groupName", "activeAt").map { station ->
+            stationApi.createStation(station.name, station.lat, station.lon, station.groupName, station.from, station.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
+                )
+        }
+    }
+
+    @Serializable
+    data class UploadImageCall(val token: String, val station: String, val filename: String)
+    fun uploadReferencePhoto(call: PluginCall) = runCatch(call) {
+        call.validateCall<UploadImageCall>("token", "station", "filename").map { image ->
+            stationApi.uploadReferencePhoto(image.station,image.filename.removePrefix("file://").toPath(), image.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
+                )
+        }
+    }
+
+
     fun setToTestServer(call: PluginCall) = runCatch(call) {
         api.setToTest();
         call.success()

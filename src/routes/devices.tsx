@@ -7,13 +7,20 @@ import {
   createSignal,
   For,
   Match,
+  on,
   onCleanup,
   onMount,
   Show,
   Switch,
 } from "solid-js";
 import ActionContainer from "../components/ActionContainer";
-import { Device, DevicePlugin, useDevice } from "../contexts/Device";
+import {
+  ConnectedDevice,
+  Device,
+  DeviceId,
+  DevicePlugin,
+  useDevice,
+} from "../contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
 import { Dialog as Prompt } from "@capacitor/dialog";
@@ -32,14 +39,25 @@ import { Recording } from "~/database/Entities/Recording";
 import { Event } from "~/database/Entities/Event";
 import { Portal } from "solid-js/web";
 import Dialog from "~/components/Dialog";
-import { logSuccess, logWarning } from "~/contexts/Notification";
+import { logWarning } from "~/contexts/Notification";
 import { AiFillEdit } from "solid-icons/ai";
+import { TbCameraPlus } from "solid-icons/tb";
+import { Camera, CameraResultType } from "@capacitor/camera";
+import { isKeyObject } from "util/types";
+
 interface DeviceDetailsProps {
-  device: Device;
+  id: DeviceId;
+  name: string;
+  groupName: string;
+  url: string;
+  isProd: boolean;
   shouldUpdateLocation: boolean | undefined;
 }
 
 function DeviceDetails(props: DeviceDetailsProps) {
+  createEffect(() => {
+    console.log(props);
+  });
   const context = useDevice();
   const storage = useStorage();
   const [savedRecs, setSavedRecs] = createSignal<Recording[]>([]);
@@ -60,8 +78,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
   createEffect(() => {
     const saved = storage
       .savedEvents()
-      .filter((event) => event.device === props.device.id && !event.isUploaded);
-    const device = [...(context.deviceEventKeys.get(props.device.id) ?? [])];
+      .filter((event) => event.device === props.id && !event.isUploaded);
+    const device = [...(context.deviceEventKeys.get(props.id) ?? [])];
 
     setSavedEvents(saved);
     setEventKeys(device);
@@ -70,41 +88,42 @@ function DeviceDetails(props: DeviceDetailsProps) {
   createEffect(() => {
     const saved = storage
       .savedRecordings()
-      .filter((rec) => rec.device === props.device.id && !rec.isUploaded);
-    const device = [...(context.deviceRecordings.get(props.device.id) ?? [])];
+      .filter((rec) => rec.device === props.id && !rec.isUploaded);
+    const device = [...(context.deviceRecordings.get(props.id) ?? [])];
     setSavedRecs(saved);
     setDeviceRecs(device);
   });
 
   const openDeviceInterface = leading(
     debounce,
-    (device: Device) => {
-      if (device.isConnected) {
-        Browser.open({ url: device.url });
-      }
+    () => {
+      Browser.open({ url: props.url });
     },
     800
   );
 
   const [showLocationSettings, setShowLocationSettings] = createSignal(false);
-  const setLocationForDevice = async (device: Device) => {
-    if (!device.isConnected) return;
-    setShowLocationSettings(true);
-    await context?.setDeviceToCurrLocation(device);
-  };
+  createEffect(() => {
+    on(showLocationSettings, async (shown) => {
+      if (!shown) return;
+      await context?.setDeviceToCurrLocation(props.id);
+    });
+  });
 
-  const download = async (device: Device) => {
+  const download = async () => {
     const { value } = await Prompt.confirm({
       title: "Confirm",
-      message: `Are you sure you want to download all recordings and events from ${device.name}?`,
+      message: `Are you sure you want to download all recordings and events from ${props.name}?`,
     });
     if (!value) return;
-    if (!device.isConnected) return;
-    await context.saveItems(device);
+    await context.saveItems(props.id);
   };
 
   // eslint-disable-next-line solid/reactivity
-  const [location] = context.getLocationByDevice(props.device);
+  const [location] = context.getLocationByDevice(props.id);
+  createEffect(() => {
+    console.log(location()?.name);
+  });
 
   let LocationNameInput: HTMLInputElement;
   const [isEditing, setIsEditing] = createSignal(false);
@@ -117,21 +136,85 @@ function DeviceDetails(props: DeviceDetailsProps) {
     }
   };
 
+  const [newName, setNewName] = createSignal("");
+  createEffect(() => {
+    console.log("new", newName());
+  });
   const saveLocationName = async () => {
-    const loc = location();
     const newName = LocationNameInput.value;
-    if (!loc || !newName) return;
-    await storage.updateLocationName(loc, newName);
+    if (!newName) return;
+    setNewName(newName);
     toggleEditing();
+  };
+
+  const [pictureUrl, setPictureUrl] = createSignal("");
+  const [pictureFilepath, setPictureFilepath] = createSignal("");
+  const hasPicture = () => pictureUrl() !== "";
+  const canSave = (): boolean =>
+    newName() !== "" || (location() !== null && hasPicture());
+
+  const addPhotoToDevice = async () => {
+    const image = await Camera.getPhoto({
+      quality: 50,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+    });
+
+    if (image.webPath) setPictureUrl(image.webPath);
+    if (image.path) setPictureFilepath(image.path);
+  };
+  createEffect(() => {
+    console.log(location());
+  });
+
+  const saveLocationSettings = async () => {
+    debugger;
+    const name = newName();
+    const picture = pictureFilepath();
+    const loc = location();
+    if (loc) {
+      if (name) {
+        await storage.updateLocationName(loc, name);
+      }
+      if (picture) {
+        debugger;
+        await storage.updateLocationImage(loc, picture);
+      }
+    } else {
+      const deviceLocation = await context.getLocationCoords(props.id);
+      if (!deviceLocation.success) {
+        logWarning({
+          message: "Could not get device location",
+          details: deviceLocation.message,
+        });
+        return;
+      }
+      await storage.saveLocation({
+        name,
+        coords: {
+          lat: deviceLocation.data.latitude,
+          lng: deviceLocation.data.longitude,
+        },
+        groupName: props.groupName,
+        isProd: props.isProd,
+      });
+    }
+    // await storage.updateLocationPicture(loc, pictureUrl());
+    toggleEditing();
+  };
+
+  const locationName = () => {
+    const name = newName();
+    if (name) return name;
+    const loc = location();
+    if (!loc) return "No Location Found";
+    return loc.name;
   };
 
   return (
     <ActionContainer
       action={
-        <button
-          class="text-blue-500"
-          onClick={() => openDeviceInterface(props.device)}
-        >
+        <button class="text-blue-500" onClick={() => openDeviceInterface()}>
           <RiSystemArrowRightSLine size={32} />
         </button>
       }
@@ -150,63 +233,110 @@ function DeviceDetails(props: DeviceDetailsProps) {
           </button>
         </div>
         <div class="w-full">
-          <Show when={location()}>
-            {
-              <>
-                <div class="space-y-2">
-                  <div>
-                    <p class="text-sm text-slate-400">Name:</p>
-                    <Show
-                      when={isEditing()}
-                      fallback={
-                        <div
-                          class="flex justify-between"
-                          onClick={() => toggleEditing()}
-                        >
-                          <h1 class="text-sm text-gray-800">
-                            {location()?.name}
-                          </h1>
-                          <button class="text-blue-600">
-                            <AiFillEdit size={18} />
-                          </button>
-                        </div>
-                      }
-                    >
-                      <div class="flex">
-                        <input
-                          ref={LocationNameInput}
-                          type="text"
-                          class="w-full rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
-                          placeholder={location()?.name}
-                        />
-                        <button
-                          class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
-                          onClick={toggleEditing}
-                        >
-                          <ImCross size={12} />
-                        </button>
-                        <button
-                          class="pl-4 pr-2 text-green-400"
-                          onClick={saveLocationName}
-                        >
-                          <ImCheckmark size={18} />
-                        </button>
-                      </div>
-                    </Show>
+          <div class="space-y-4">
+            <div>
+              <Show when={pictureUrl() && !newName() && !location()}>
+                <p class="text-sm text-yellow-400">
+                  Add a name to save new location.
+                </p>
+              </Show>
+              <p class="text-sm text-slate-400">Name:</p>
+              <Show
+                when={isEditing()}
+                fallback={
+                  <div
+                    class="flex justify-between"
+                    onClick={() => toggleEditing()}
+                  >
+                    <h1 class="text-sm text-gray-800">{locationName()}</h1>
+                    <button class="text-blue-600">
+                      <AiFillEdit size={18} />
+                    </button>
                   </div>
+                }
+              >
+                <div class="flex">
+                  <input
+                    ref={LocationNameInput}
+                    type="text"
+                    class="w-full rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
+                    placeholder={locationName()}
+                  />
+                  <button
+                    class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
+                    onClick={toggleEditing}
+                  >
+                    <ImCross size={12} />
+                  </button>
+                  <button
+                    class="pl-4 pr-2 text-green-400"
+                    onClick={saveLocationName}
+                  >
+                    <ImCheckmark size={18} />
+                  </button>
                 </div>
-              </>
-            }
-          </Show>
+              </Show>
+            </div>
+            <div>
+              <p class="text-sm text-slate-400">Photo Reference:</p>
+              <div class="rounded-md bg-slate-100">
+                <Show
+                  when={pictureUrl()}
+                  fallback={
+                    <button
+                      class="flex w-full flex-col items-center justify-center p-8  text-gray-700"
+                      onClick={() => addPhotoToDevice()}
+                    >
+                      <TbCameraPlus size={52} />
+                      <p class="text-sm text-gray-800">Add Photo</p>
+                    </button>
+                  }
+                >
+                  <img
+                    src={pictureUrl()}
+                    class="max-h-[18rem] w-full rounded-md object-cover p-4"
+                  />
+                </Show>
+              </div>
+            </div>
+            <div
+              classList={{
+                hidden: !location() && !hasPicture() && !newName(),
+              }}
+              class="mt-4 flex justify-end space-x-2 text-gray-500"
+            >
+              <button
+                classList={{
+                  "bg-blue-500 py-2 px-4 text-white rounded-md": canSave(),
+                  "bg-gray-200 py-2 px-4 text-gray-500 rounded-md": !canSave(),
+                }}
+                disabled={!canSave()}
+                onClick={() => saveLocationSettings()}
+              >
+                <p>{location() ? "Update" : "Save"}</p>
+              </button>
+              <button
+                class="text-gray-400"
+                onClick={() => {
+                  setNewName("");
+                  setPictureUrl("");
+                  setPictureFilepath("");
+                  setShowLocationSettings(false);
+                }}
+              >
+                <p>Cancel</p>
+              </button>
+            </div>
+          </div>
         </div>
       </Dialog>
       <div class=" flex items-center justify-between px-2">
-        <div onClick={() => openDeviceInterface(props.device)} role="button">
+        <div onClick={() => openDeviceInterface()} role="button">
           <div class="flex items-center space-x-2 ">
-            <Show when={!props.device.isProd}>
+            <Show when={!props.isProd}>
               <ImCog size={20} />
             </Show>
-            <h1 class="break-all text-left sm:text-lg">{props.device.name}</h1>
+            <h1 class="break-all text-left sm:text-lg">{props.name}</h1>
           </div>
           <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
             <BsCameraVideoFill size={20} />
@@ -219,17 +349,16 @@ function DeviceDetails(props: DeviceDetailsProps) {
             <p class="text-sm">
               Events Saved:{" "}
               {
-                storage
-                  .savedEvents()
-                  .filter((val) => val.device === props.device.id).length
+                storage.savedEvents().filter((val) => val.device === props.id)
+                  .length
               }
-              /{context.deviceEventKeys.get(props.device.id)?.length ?? 0}{" "}
+              /{context.deviceEventKeys.get(props.id)?.length ?? 0}{" "}
             </p>
           </div>
         </div>
         <div class=" flex items-center space-x-6 px-2 text-blue-500">
           <Show
-            when={!context.devicesDownloading.has(props.device.id)}
+            when={!context.devicesDownloading.has(props.id)}
             fallback={<FaSolidSpinner size={28} class="animate-spin" />}
           >
             <button
@@ -237,21 +366,21 @@ function DeviceDetails(props: DeviceDetailsProps) {
                 disabledDownload() ? "text-slate-300" : "text-blue-500"
               }`}
               disabled={disabledDownload()}
-              onClick={() => download(props.device)}
+              onClick={() => download()}
             >
               <FiDownload size={28} />
             </button>
           </Show>
           <button
             class="text-blue-500"
-            disabled={context.locationBeingSet.has(props.device.id)}
+            disabled={context.locationBeingSet.has(props.id)}
             onClick={() => setShowLocationSettings(true)}
           >
             <Switch>
               <Match
                 when={
                   props.shouldUpdateLocation === undefined ||
-                  context.locationBeingSet.has(props.device.id)
+                  context.locationBeingSet.has(props.id)
                 }
               >
                 <FaSolidSpinner size={28} class="animate-spin" />
@@ -271,13 +400,37 @@ function DeviceDetails(props: DeviceDetailsProps) {
     </ActionContainer>
   );
 }
-
+export function isKeyOfObject<T extends object>(
+  key: string | number | symbol,
+  obj: T
+): key is keyof T {
+  return key in obj;
+}
 function Devices() {
   const context = useDevice();
-  const devices = createMemo(() => {
-    const devices = [...context.devices.values()];
-    return devices;
-  });
+  const devices = createMemo(
+    () => {
+      const devices = [...context.devices.values()];
+      return devices.filter((dev): dev is ConnectedDevice => dev.isConnected);
+    },
+    [],
+    {
+      equals: (prev, next) => {
+        // check all objects in array are equal
+        if (prev.length !== next.length) return false;
+        prev.forEach((val) => {
+          next.forEach((val2) => {
+            Object.keys(val).forEach((key) => {
+              if (!isKeyOfObject(key, val) && !isKeyOfObject(key, val2))
+                return false;
+              if (val[key] !== val2[key]) return false;
+            });
+          });
+        });
+        return true;
+      },
+    }
+  );
   const [cancel, setCancel] = createSignal(false);
 
   const connectToBushnet = async () => {
@@ -294,7 +447,7 @@ function Devices() {
     context.startDiscovery();
     setTimeout(() => {
       context.stopDiscovery();
-    }, 5000);
+    }, 6000);
   };
 
   onMount(() => {
@@ -312,9 +465,9 @@ function Devices() {
       </button>,
     ]);
   });
-  const [pos] = createResource(() => {
+  const [pos] = createResource(async () => {
     try {
-      return Geolocation.getCurrentPosition({
+      return await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
       });
     } catch (e) {
@@ -351,7 +504,7 @@ function Devices() {
         const devicesToUpdate: string[] = [];
         for (const device of devices.values()) {
           if (!device.isConnected) continue;
-          const locationRes = await context.getLocationCoords(device);
+          const locationRes = await context.getLocationCoords(device.id);
           if (!locationRes.success) continue;
           const loc = locationRes.data;
           const diffLat = Math.abs(loc.latitude - pos.coords.latitude);
@@ -408,8 +561,8 @@ function Devices() {
       });
       if (value) {
         for (const device of context.devices.values()) {
-          if (devices.includes(device.id) && device.isConnected) {
-            await context.setDeviceToCurrLocation(device);
+          if (devices.includes(device.id)) {
+            await context.setDeviceToCurrLocation(device.id);
           }
         }
       } else {
@@ -426,13 +579,21 @@ function Devices() {
     return shouldUpdateLocation;
   };
 
+  createEffect(() => {
+    console.log(devices());
+  });
+
   return (
     <>
       <section class="pb-bar pt-bar relative z-20 space-y-2 overflow-y-auto px-2">
-        <For each={devices().filter((dev) => dev.isConnected)}>
+        <For each={devices()}>
           {(device) => (
             <DeviceDetails
-              device={device}
+              id={device.id}
+              name={device.name}
+              url={device.url}
+              isProd={device.isProd}
+              groupName={device.group}
               shouldUpdateLocation={shouldDeviceUpdateLocation(device)}
             />
           )}

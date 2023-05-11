@@ -171,7 +171,7 @@ class DevicePlugin: Plugin() {
     }
 
     @Suppress("DEPRECATION")
-    fun connectToWifiLegacy(ssid: String, password: String, onConnect: () -> Unit, onFail: () -> Unit) {
+    private fun connectToWifiLegacy(ssid: String, password: String, onConnect: () -> Unit, onFail: () -> Unit) {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
         // Enable Wi-Fi if it's not enabled

@@ -1,7 +1,7 @@
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
 
-const DBName = "LocationTableV5";
+const DBName = "LocationTestV4";
 
 const CoordsSchema = z.object({
   lat: z.number(),
@@ -17,13 +17,15 @@ const SettingsSchema = z.object({
 export const LocationSchema = z.object({
   id: z.number().positive(),
   name: z.string(),
+  userId: z.number().positive(),
   coords: CoordsSchema,
   updatedAt: z.string(),
   settings: SettingsSchema.optional(),
+  isProd: z.coerce.boolean().default(false),
   updatePic: z.coerce.boolean().default(false),
   updateName: z.coerce.boolean().default(false),
+  needsCreation: z.coerce.boolean().optional(),
   needsRename: z.coerce.boolean().optional(),
-  groupId: z.coerce.number().positive(),
   groupName: z.string(),
 });
 
@@ -52,31 +54,35 @@ export const createLocationSchema = `
 CREATE TABLE IF NOT EXISTS ${DBName} (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
+  userId INTEGER NOT NULL,
   coords TEXT NOT NULL,
+  isProd INTEGER NOT NULL,
   needsRename INTEGER NOT NULL,
+  needsCreation INTEGER NOT NULL,
   updatePic INTEGER NOT NULL,
   updateName INTEGER NOT NULL,
   referenceImages TEXT,
   updatedAt TEXT NOT NULL,
-  groupId INTEGER NOT NULL,
   groupName TEXT NOT NULL
 );
 `;
 
 export type Location = z.infer<typeof LocationSchema>;
 const getLocationByIdSql = `SELECT * FROM ${DBName} WHERE id = ?`;
-const insertStaionSql = `INSERT INTO ${DBName} ( id, name, coords, needsRename, updatePic, updateName, updatedAt, groupId, groupName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const insertStaionSql = `INSERT INTO ${DBName} ( id, name, userId, coords, isProd, needsRename, needsCreation, updatePic, updateName, updatedAt, groupName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 export const insertLocation =
   (db: SQLiteDBConnection) => async (location: Location) => {
     const values = [
       location.id,
       location.name,
+      location.userId,
       JSON.stringify(location.coords),
+      location.isProd ? 1 : 0,
       location.needsRename ? 1 : 0,
+      location.needsCreation ? 1 : 0,
       location.updatePic ? 1 : 0,
       location.updateName ? 1 : 0,
       location.updatedAt,
-      location.groupId,
       location.groupName,
     ];
 

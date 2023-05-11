@@ -17,6 +17,8 @@ export type UserDetails = AuthToken & {
 
 type JSONString = string;
 
+type ISODateString = string;
+
 export interface CacophonyPlugin {
   authenticateUser(user: { email: string; password: string }): Result<{
     token: string;
@@ -65,8 +67,20 @@ export interface CacophonyPlugin {
   getStationsForUser(options: { token: string }): Result<JSONString>;
   updateStation(options: {
     token: string;
-    id: number;
+    id: string;
     name: string;
+  }): Result<JSONString>;
+  uploadReferencePhoto(options: {
+    token: string;
+    station: string;
+    filename: string;
+  }): Result<JSONString>;
+  createStation(options: {
+    token: string;
+    name: string;
+    lat: number;
+    lng: number;
+    from: ISODateString;
   }): Result<JSONString>;
   setToProductionServer(): Result;
   setToTestServer(): Result;
@@ -79,7 +93,7 @@ const SuccessResSchema = z.object({
   success: z.literal(true),
   messages: z.array(z.string()),
   stations: z.array(
-    LocationSchema.omit({ coords: true })
+    LocationSchema.omit({ coords: true, userId: true })
       .extend({
         location: z.object({ lat: z.number(), lng: z.number() }),
       })

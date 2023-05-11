@@ -7,6 +7,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
+import io.ktor.client.utils.EmptyContent.headers
 import io.ktor.http.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -128,8 +129,9 @@ suspend inline fun <reified T> Api.postJSON(
     path: String,
     body: T,
     token: Token? = null,
+    url: String = childPath(path)
 ): Either<ApiError, HttpResponse> = request("Post") {
-    client.post(childPath(path)) {
+    client.post(url) {
         headers {
             token?.let { append(HttpHeaders.Authorization, token) }
             append(HttpHeaders.ContentType, ContentType.Application.Json)
@@ -142,7 +144,7 @@ suspend inline fun <reified T> Api.patchJSON(
     body: T,
     token: Token? = null,
 ): Either<ApiError, HttpResponse> = request("Post") {
-    client.post(childPath(path)) {
+    client.patch(childPath(path)) {
         headers {
             token?.let { append(HttpHeaders.Authorization, token) }
             append(HttpHeaders.ContentType, ContentType.Application.Json)
@@ -157,6 +159,20 @@ suspend inline fun Api.submitForm(
     encodeInQuery: Boolean = false
 ): Either<ApiError, HttpResponse> = request("SubmitForm") {
     client.submitForm(childPath(path), form, encodeInQuery) {
+        headers {
+            token?.let { append(HttpHeaders.Authorization, token) }
+        }
+    }
+}
+
+suspend fun Api.submitFormWithBinaryData(
+    path: String,
+    form: Parameters,
+    token: Token? = null,
+    encodeInQuery: Boolean = false,
+    callback: (formData: FormDataContent) -> Unit
+): Either<ApiError, HttpResponse> = request("SubmitFormWithBinaryData") {
+    client.submitFormWithBinaryData(url = childPath(path)) {
         headers {
             token?.let { append(HttpHeaders.Authorization, token) }
         }

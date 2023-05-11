@@ -14,13 +14,9 @@ import {
 import { DeviceDetails, DeviceId } from "./Device";
 import { useUserContext } from "./User";
 import { createContextProvider } from "@solid-primitives/context";
-import {
-  CacophonyPlugin,
-  getLocationsForUser,
-  UserDetails,
-} from "./CacophonyApi";
+import { CacophonyPlugin, getLocationsForUser } from "./CacophonyApi";
 import { DevicePlugin } from "./Device";
-import { logError, logWarning } from "./Notification";
+import { logError, logSuccess, logWarning } from "./Notification";
 import {
   createEventSchema,
   getEvents,
@@ -127,9 +123,14 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     const userData = userContext.data();
     if (!userData) return [];
     const user = await userContext.validateCurrToken();
+    debugger;
     if (!user) return [];
     const locations = await getLocationsForUser(user.token);
-    return locations;
+    return locations.map((location) => ({
+      ...location,
+      isProd: userData.prod,
+      userId: parseInt(userData.id),
+    }));
   };
 
   const getSyncedLocations = () => async () => {
@@ -155,6 +156,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
         (savedLocation) =>
           !locations.some((location) => location.id === savedLocation.id)
       );
+      debugger;
 
       await Promise.all([
         ...locationsToInsert.map((location) =>
@@ -170,7 +172,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       return getSavedLocations();
     } catch (e) {
       if (e instanceof Error) {
-        logError({ message: "Failed to sync locations:", error: e });
+        logError({ message: "Failed to sync locations", error: e });
         return [];
       } else {
         logWarning({
@@ -194,7 +196,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     try {
       await CacophonyPlugin.updateStation({
         token: user.token,
-        id,
+        id: id.toString(),
         name,
       });
       await updateLocation(currdb)({
@@ -229,12 +231,132 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   const updateLocationName = async (location: Location, newName: string) => {
     const currdb = db();
     if (!currdb) return;
-    const updatedLocation = { ...location, name: newName, updateName: true };
+    const updatedLocation = { ...location, name: newName };
+    try {
+      const validToken = await userContext.validateCurrToken();
+      if (validToken) {
+        const res = await CacophonyPlugin.updateStation({
+          token: validToken.token,
+          id: location.id.toString(),
+          name: newName,
+        });
+        if (res.success) {
+          updatedLocation.updateName = false;
+          logSuccess({
+            message: "Successfully updated location name",
+          });
+        } else {
+          logWarning({
+            message: "Failed to update location name",
+            details: res.message,
+          });
+        }
+      }
+      updatedLocation.updateName = true;
+      await updateLocation(currdb)(updatedLocation);
+      mutate((locations) =>
+        locations?.map((loc) =>
+          loc.id === location.id ? updatedLocation : loc
+        )
+      );
+    } catch (e) {
+      logWarning({
+        message: "Failed to update location name",
+        details: JSON.stringify(e),
+      });
+      updatedLocation.updateName = true;
+      await updateLocation(currdb)(updatedLocation);
+      mutate((locations) =>
+        locations?.map((loc) =>
+          loc.id === location.id ? updatedLocation : loc
+        )
+      );
+    }
+  };
 
-    await updateLocation(currdb)(updatedLocation);
-    mutate((locations) =>
-      locations?.map((loc) => (loc.id === location.id ? updatedLocation : loc))
-    );
+  const updateLocationImage = async (
+    location: Location,
+    newPicture: string
+  ) => {
+    const currdb = db();
+    if (!currdb) return;
+    const updatedLocation = {
+      ...location,
+      settings: {
+        referenceImages: [
+          ...(location?.settings?.referenceImages ?? []),
+          newPicture,
+        ],
+      },
+    };
+    try {
+      const validToken = await userContext.validateCurrToken();
+      if (validToken) {
+        const res = await CacophonyPlugin.uploadReferencePhoto({
+          token: validToken.token,
+          station: location.id.toString(),
+          filename: newPicture,
+        });
+        if (res.success) {
+          updatedLocation.updatePic = false;
+          logSuccess({
+            message: "Successfully updated location picture",
+          });
+        } else {
+          logWarning({
+            message: "Failed to update location picture",
+            details: res.message,
+          });
+        }
+      }
+      updatedLocation.updatePic = true;
+      await updateLocation(currdb)(updatedLocation);
+      mutate((locations) =>
+        locations?.map((loc) =>
+          loc.id === location.id ? updatedLocation : loc
+        )
+      );
+    } catch (e) {
+      logWarning({
+        message: "Failed to update location picture",
+        details: JSON.stringify(e),
+      });
+      updatedLocation.updatePic = true;
+      await updateLocation(currdb)(updatedLocation);
+      mutate((locations) =>
+        locations?.map((loc) =>
+          loc.id === location.id ? updatedLocation : loc
+        )
+      );
+    }
+  };
+
+  const getNextLocationId = () => {
+    let randomId = Math.floor(Math.random() * 1000000000);
+    while (savedLocations()?.some((loc) => loc.id === randomId)) {
+      randomId = Math.floor(Math.random() * 1000000000);
+    }
+    return randomId;
+  };
+
+  const saveNewLocation = async (
+    location: Omit<
+      Location,
+      "id" | "updatedAt" | "updatePic" | "updateName" | "needsCreation"
+    >
+  ) => {
+    const currdb = db();
+    if (!currdb) return;
+    const newLocation = {
+      ...location,
+      id: getNextLocationId(),
+      needsCreation: true,
+      updateName: false,
+      updatePic: false,
+      updatedAt: new Date().toISOString(),
+    };
+    await insertLocation(currdb)(newLocation);
+    mutate((locations) => [...(locations ?? []), newLocation]);
   };
 
   const findRecording = async (
@@ -538,6 +660,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     uploadedEvents,
     unuploadedEvents,
     savedLocations,
+    saveLocation: saveNewLocation,
     saveRecording,
     deleteRecording,
     deleteRecordings,
@@ -545,6 +668,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     getSavedRecordings,
     saveEvent,
     updateLocationName,
+    updateLocationImage,
     uploadEvents,
     uploadItems,
     isUploading,
