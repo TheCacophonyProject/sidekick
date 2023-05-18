@@ -219,11 +219,16 @@ function Devices() {
       </button>,
     ]);
   });
-  const [pos] = createResource(() =>
-    Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-    })
-  );
+  const [pos] = createResource(async () => {
+    try {
+      const res = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+      });
+      return res;
+    } catch (e) {
+      return null;
+    }
+  });
 
   onMount(() => {
     searchDevice();

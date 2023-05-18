@@ -1,6 +1,7 @@
 {
   "name": "sidekick-app",
   "scripts": {
+    "dev:unix": "./run_dev_unix.sh",
     "start": "vite dev --host",
     "build": "vite build",
     "serve": "vite start",
