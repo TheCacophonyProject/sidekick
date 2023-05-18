@@ -11,7 +11,7 @@ import { createContextProvider } from "@solid-primitives/context";
 import { ReactiveSet } from "@solid-primitives/set";
 import { z } from "zod";
 import { KeepAwake } from "@capacitor-community/keep-awake";
-import { Coords } from "~/database/Entities/Location";
+import { Coords, Location } from "~/database/Entities/Location";
 
 export type DeviceId = string;
 export type DeviceName = string;
@@ -30,7 +30,7 @@ export type DeviceDetails = {
   isProd: boolean;
 };
 
-type Location<T extends string | number> = {
+type DeviceCoords<T extends string | number> = {
   latitude: T;
   longitude: T;
   altitude: T;
@@ -61,7 +61,7 @@ export interface DevicePlugin {
   getDeviceInfo(options: DeviceUrl): Result<DeviceInfo>;
   getDeviceConfig(options: DeviceUrl): Result<string>;
   getDeviceLocation(options: DeviceUrl): Result<string>;
-  setDeviceLocation(options: DeviceUrl & Location<string>): Result;
+  setDeviceLocation(options: DeviceUrl & DeviceCoords<string>): Result;
   getRecordings(options: DeviceUrl): Result<string[]>;
   getEventKeys(options: DeviceUrl): Result<number[]>;
   getEvents(options: DeviceUrl & { keys: string }): Result<string>;
@@ -540,7 +540,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
   const getLocationCoords = async (
     device: DeviceId
-  ): Result<Location<number>> => {
+  ): Result<DeviceCoords<number>> => {
     try {
       const deviceObj = devices.get(device);
       if (!deviceObj || !deviceObj.isConnected) {
@@ -635,7 +635,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
   const withinRange = (
     loc: Coords,
-    deviceCoords: Location<number>,
+    deviceCoords: DeviceCoords<number>,
     range = MAX_DISTANCE_FROM_STATION_FOR_RECORDING
   ) => {
     const { latitude, longitude } = deviceCoords;
@@ -646,19 +646,21 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   const getLocationByDevice = (deviceId: DeviceId) => {
     return createResource(
       () => storage.savedLocations(),
-      async (locations) => {
+      async (locations): Promise<Location | undefined> => {
         try {
           const device = devices.get(deviceId);
-          if (!device || !locations.length || !device.isConnected) return null;
+          if (!device || !locations.length || !device.isConnected) return;
           const deviceLocation = await getLocationCoords(device.id);
-          if (!deviceLocation.success) return null;
+          if (!deviceLocation.success) return;
           const sameGroupLocatoins = locations.filter(
             (loc) => loc.groupName === device.group
           );
-          const location = sameGroupLocatoins.filter((loc) =>
-            withinRange(loc.coords, deviceLocation.data)
+          const location = sameGroupLocatoins.filter(
+            (loc) =>
+              withinRange(loc.coords, deviceLocation.data) &&
+              device.isProd === loc.isProd
           );
-          if (!location.length) return null;
+          if (!location.length) return;
           return location[0];
         } catch (error) {
           if (error instanceof Error) {

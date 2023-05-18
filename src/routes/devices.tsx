@@ -31,7 +31,14 @@ import { Geolocation } from "@capacitor/geolocation";
 import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
 import { useStorage } from "../contexts/Storage";
-import { ImCheckmark, ImCog, ImCross, ImNotification } from "solid-icons/im";
+import {
+  ImArrowLeft,
+  ImArrowRight,
+  ImCheckmark,
+  ImCog,
+  ImCross,
+  ImNotification,
+} from "solid-icons/im";
 import { headerMap } from "../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
 import BackgroundLogo from "../components/BackgroundLogo";
@@ -43,7 +50,6 @@ import { logWarning } from "~/contexts/Notification";
 import { AiFillEdit } from "solid-icons/ai";
 import { TbCameraPlus } from "solid-icons/tb";
 import { Camera, CameraResultType } from "@capacitor/camera";
-import { isKeyObject } from "util/types";
 
 interface DeviceDetailsProps {
   id: DeviceId;
@@ -119,10 +125,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
     await context.saveItems(props.id);
   };
 
-  // eslint-disable-next-line solid/reactivity
   const [location] = context.getLocationByDevice(props.id);
   createEffect(() => {
-    console.log(location()?.name);
+    console.log(location());
   });
 
   let LocationNameInput: HTMLInputElement;
@@ -147,38 +152,39 @@ function DeviceDetails(props: DeviceDetailsProps) {
     toggleEditing();
   };
 
-  const [pictureUrl, setPictureUrl] = createSignal("");
-  const [pictureFilepath, setPictureFilepath] = createSignal("");
-  const hasPicture = () => pictureUrl() !== "";
+  const [photoFiles, setPhotoFiles] = createSignal<
+    { file: string; url: string }[]
+  >([]);
   const canSave = (): boolean =>
-    newName() !== "" || (location() !== null && hasPicture());
+    newName() !== "" || (location() !== null && photoFiles().length > 0);
 
   const addPhotoToDevice = async () => {
     const image = await Camera.getPhoto({
       quality: 50,
       allowEditing: false,
       resultType: CameraResultType.Uri,
+      width: 500,
     });
 
-    if (image.webPath) setPictureUrl(image.webPath);
-    if (image.path) setPictureFilepath(image.path);
+    if (image.path && image.webPath)
+      setPhotoFiles((curr) => [
+        ...curr,
+        { file: image.path ?? "", url: image.webPath ?? "" },
+      ]);
   };
-  createEffect(() => {
-    console.log(location());
-  });
 
   const saveLocationSettings = async () => {
-    debugger;
     const name = newName();
-    const picture = pictureFilepath();
+    const photoPaths = photoFiles();
     const loc = location();
     if (loc) {
       if (name) {
         await storage.updateLocationName(loc, name);
       }
-      if (picture) {
-        debugger;
-        await storage.updateLocationImage(loc, picture);
+      if (photoPaths.length > 0) {
+        for (const { file } of photoPaths) {
+          await storage.updateLocationPhoto(loc, file);
+        }
       }
     } else {
       const deviceLocation = await context.getLocationCoords(props.id);
@@ -211,6 +217,55 @@ function DeviceDetails(props: DeviceDetailsProps) {
     return loc.name;
   };
 
+  const [photoIndex, setPhotoIndex] = createSignal(0);
+  const hasPicture = () => {
+    const loc = location();
+    if (!loc) return photoFiles().length > 0;
+    return loc?.referenceImages?.length ?? 0 > 0;
+  };
+
+  // Server Side referenceImages are first in the array
+  const [photoReference] = createResource(
+    () => [location(), photoFiles(), photoIndex()] as const,
+    async (values) => {
+      const [loc, picUrl, idx] = values;
+      const refLength = loc?.referenceImages?.length ?? 0;
+      if (idx > refLength - 1 && picUrl.length > 0) {
+        return picUrl[idx - refLength].url;
+      }
+
+      if (!loc || !loc.referenceImages) return "";
+      const data = await storage.getReferencePhotoForLocation(
+        loc.id,
+        loc.referenceImages[idx]
+      );
+      return data;
+    }
+  );
+
+  const removePhotoReference = async () => {
+    const refLength = location()?.referenceImages?.length ?? 0;
+    const idx = photoIndex();
+    if (idx > refLength - 1) {
+      setPhotoFiles((curr) => {
+        const newFiles = [...curr];
+        newFiles.splice(idx - refLength, 1);
+        return newFiles;
+      });
+    } else {
+      const loc = location();
+      if (loc && loc.referenceImages?.length) {
+        await storage.deleteReferencePhotoForLocation(
+          loc,
+          loc.referenceImages[photoIndex()]
+        );
+      }
+    }
+  };
+
+  const photoLength = () =>
+    (location()?.referenceImages?.length ?? 0) + photoFiles().length;
+
   return (
     <ActionContainer
       action={
@@ -235,7 +290,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
         <div class="w-full">
           <div class="space-y-4">
             <div>
-              <Show when={pictureUrl() && !newName() && !location()}>
+              <Show when={photoFiles().length && !newName() && !location()}>
                 <p class="text-sm text-yellow-400">
                   Add a name to save new location.
                 </p>
@@ -279,9 +334,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
             </div>
             <div>
               <p class="text-sm text-slate-400">Photo Reference:</p>
-              <div class="rounded-md bg-slate-100">
+              <div class="relative rounded-md bg-slate-100">
                 <Show
-                  when={pictureUrl()}
+                  when={photoReference()}
                   fallback={
                     <button
                       class="flex w-full flex-col items-center justify-center p-8  text-gray-700"
@@ -292,9 +347,52 @@ function DeviceDetails(props: DeviceDetailsProps) {
                     </button>
                   }
                 >
+                  <div class="absolute flex h-full w-full flex-col justify-between gap-2">
+                    <div class="flex w-full justify-between">
+                      <button
+                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-blue-500"
+                        onClick={() => addPhotoToDevice()}
+                      >
+                        <TbCameraPlus size={28} />
+                      </button>
+                      <button
+                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-red-500"
+                        onClick={() => removePhotoReference()}
+                      >
+                        <ImCross size={18} />
+                      </button>
+                    </div>
+                    <div class="flex w-full justify-between">
+                      <button
+                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-gray-500"
+                        onClick={() =>
+                          setPhotoIndex((i) =>
+                            i === 0 ? photoLength() - 1 : i - 1
+                          )
+                        }
+                      >
+                        <ImArrowLeft size={18} />
+                      </button>
+                      <button
+                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-gray-500"
+                        onClick={() =>
+                          setPhotoIndex((i) =>
+                            i === photoLength() - 1 ? 0 : i + 1
+                          )
+                        }
+                      >
+                        <ImArrowRight size={18} />
+                      </button>
+                    </div>
+                    <div>{photoIndex() + 1}</div>
+                  </div>
                   <img
-                    src={pictureUrl()}
-                    class="max-h-[18rem] w-full rounded-md object-cover p-4"
+                    src={
+                      !photoReference.loading && !photoReference.error
+                        ? (photoReference() as string)
+                        : ""
+                    }
+                    class="h-[18rem] w-full rounded-md object-cover p-4"
                   />
                 </Show>
               </div>
@@ -319,8 +417,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                 class="text-gray-400"
                 onClick={() => {
                   setNewName("");
-                  setPictureUrl("");
-                  setPictureFilepath("");
+                  setPhotoFiles([]);
                   setShowLocationSettings(false);
                 }}
               >
@@ -578,10 +675,6 @@ function Devices() {
       updated !== undefined ? updated.includes(device.id) : undefined;
     return shouldUpdateLocation;
   };
-
-  createEffect(() => {
-    console.log(devices());
-  });
 
   return (
     <>

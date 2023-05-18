@@ -192,6 +192,9 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         setServer("prod");
       }
     },
+    getServerUrl() {
+      return isProd() ? "https://api.cacophony.org.nz" : "https://api-test.cacophony.org.nz";
+    }
   };
 });
 

@@ -47,6 +47,10 @@ actual fun getFile(file: Path): Either<IOException, ByteArray> {
     }
 }
 
+actual fun hasFile(path: Path): Boolean {
+    return FileSystem.SYSTEM.exists(path)
+}
+
 actual fun deleteDirectory(path: Path): Either<IOException, Unit> {
     return try {
         FileSystem.SYSTEM.deleteRecursively(path, true);

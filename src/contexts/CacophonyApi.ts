@@ -75,6 +75,16 @@ export interface CacophonyPlugin {
     station: string;
     filename: string;
   }): Result<JSONString>;
+  getReferencePhoto(options: {
+    token: string;
+    station: string;
+    fileKey: string;
+  }): Result<JSONString>;
+  deleteReferencePhoto(options: {
+    token: string;
+    station: string;
+    fileKey: string;
+  }): Result<{localDeleted: boolean, serverDeleted: boolean}>;
   createStation(options: {
     token: string;
     name: string;

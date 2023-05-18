@@ -11,9 +11,12 @@ import nz.org.cacophony.sidekick.Api
 
 const val prodUrl = "https://api.cacophony.org.nz/api/v1"
 const val testUrl = "https://api-test.cacophony.org.nz/api/v1"
+const val browseProdUrl = "https://browse.cacophony.org.nz/api/v1"
+const val browseTestUrl = "https://browse-test.cacophony.org.nz/api/v1"
 
 class CacophonyApi: Api {
     override var basePath: String = prodUrl
+    var browsePath: String = browseProdUrl
     override val currentPath: String = ""
     override val client = HttpClient {
         install(ContentNegotiation) {
@@ -31,9 +34,11 @@ class CacophonyApi: Api {
     fun setToTest() {
         println("Setting to test")
         basePath = testUrl
+        browsePath = browseTestUrl
     }
     fun setToProd() {
         println("Setting to prod")
         basePath = prodUrl
+        browsePath = browseProdUrl
     }
 }

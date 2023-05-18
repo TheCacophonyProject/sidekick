@@ -164,21 +164,6 @@ suspend inline fun Api.submitForm(
         }
     }
 }
-
-suspend fun Api.submitFormWithBinaryData(
-    path: String,
-    form: Parameters,
-    token: Token? = null,
-    encodeInQuery: Boolean = false,
-    callback: (formData: FormDataContent) -> Unit
-): Either<ApiError, HttpResponse> = request("SubmitFormWithBinaryData") {
-    client.submitFormWithBinaryData(url = childPath(path)) {
-        headers {
-            token?.let { append(HttpHeaders.Authorization, token) }
-        }
-    }
-}
-
 suspend inline fun Api.post(
     path: String,
     block: HttpRequestBuilder.() -> Unit = {},

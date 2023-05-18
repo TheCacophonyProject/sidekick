@@ -149,6 +149,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
                 parseInt(`${location.id}${location.isProd ? "1" : "0"}`)
             )
         );
+        debugger;
         const locationsToUpdate = locations
           .map((location) => {
             const diffLoc = savedLocations.find(
@@ -168,7 +169,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
                 }
                 return result;
               }, {} as Record<keyof Location, unknown>);
-              console.log(diff);
+              debugger;
               return {
                 ...diff,
                 id: diffLoc.id,
@@ -176,7 +177,6 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
             }
           })
           .filter(Boolean) as Location[];
-        console.log(locations, locationsToUpdate);
 
         await Promise.all([
           insertLocations(currdb)(locationsToInsert),
@@ -235,8 +235,12 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       });
       if (res.success) {
         const photoPath = res.data;
-        return `${window.location.origin}/_capacitor_file_/${photoPath}`;
+        const file = await Filesystem.readFile({
+          path: `file://${photoPath}`,
+        });
+        return file.data;
       }
+      debugger;
       return res.message;
     } catch (e) {
       logWarning({
@@ -248,7 +252,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   };
 
   const deleteReferencePhotoForLocation = async (
-    location: Location,
+    id: number,
     fileKey: string
   ) => {
     const currdb = db();
@@ -257,23 +261,23 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!user) return;
     const res = await CacophonyPlugin.deleteReferencePhoto({
       token: user.token,
-      station: location.id.toString(),
+      station: id.toString(),
       fileKey,
     });
 
     if (res.success) {
       const deleted = res.data;
-      const referenceImages = location.referenceImages?.filter(
-        (image) => image !== fileKey
-      );
-      await updateLocation(currdb)({
-        id: location.id,
-        referenceImages,
-        needsDeletion: !deleted.serverDeleted,
-      });
-      mutate((locations) =>
-        locations?.map((loc) => {
-          if (loc.id === location.id) {
+      mutate((locations) => {
+        locations?.map(async (loc) => {
+          if (loc.id === id) {
+            const referenceImages = loc.referenceImages.filter(
+              (image) => image.fileKey !== fileKey
+            );
+            await updateLocation(currdb)({
+              id,
+              referenceImages,
+              needsDeletion: !deleted.serverDeleted,
+            });
             return {
               ...loc,
               referenceImages,
@@ -281,8 +285,8 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
             };
           }
           return loc;
-        })
-      );
+        });
+      });
     } else {
       logWarning({
         message: "Failed to delete reference photo for location",
@@ -357,20 +361,26 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     const currdb = db();
     if (!currdb) return;
     debugger;
+    const updatedLocation = {
+      ...location,
+      settings: {
+        referenceImages: [
+          ...(location?.settings?.referenceImages ?? []),
+          newPhoto,
+        ],
+      },
+    };
     try {
+      updatedLocation.updatePic = true;
       const validToken = await userContext.validateCurrToken();
       if (validToken) {
         const res = await CacophonyPlugin.uploadReferencePhoto({
           token: validToken.token,
-          station: location.id.toString().slice(0, -1),
+          station: location.id.toString(),
           filename: newPhoto,
         });
         if (res.success) {
-          location.updatePic = false;
-          location.referenceImages = [
-            ...(location.referenceImages ?? []),
-            res.data,
-          ];
+          updatedLocation.updatePic = false;
           logSuccess({
             message: "Successfully updated location picture",
           });
@@ -380,24 +390,26 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
             details: res.message,
           });
         }
-      } else {
-        throw new Error("No valid token, may not have internet connection");
       }
+      await updateLocation(currdb)(updatedLocation);
+      mutate((locations) =>
+        locations?.map((loc) =>
+          loc.id === location.id ? updatedLocation : loc
+        )
+      );
     } catch (e) {
       logWarning({
         message: "Failed to update location picture",
         details: JSON.stringify(e),
       });
-      location.updatePic = true;
-      location.referenceImages = [
-        ...(location.referenceImages ?? []),
-        newPhoto.slice(7),
-      ];
+      updatedLocation.updatePic = true;
+      await updateLocation(currdb)(updatedLocation);
+      mutate((locations) =>
+        locations?.map((loc) =>
+          loc.id === location.id ? updatedLocation : loc
+        )
+      );
     }
-    await updateLocation(currdb)(location);
-    mutate((locations) =>
-      locations?.map((loc) => (loc.id === location.id ? location : loc))
-    );
   };
 
   const getNextLocationId = () => {

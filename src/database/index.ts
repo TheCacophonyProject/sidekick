@@ -2,6 +2,7 @@ import {
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
+import { z } from "zod";
 
 /**
  *
@@ -39,4 +40,57 @@ export const openConnection = async (
 export const removeEscapedQuotes = (str: string) => {
   return str.replace(/\\\"/g, '"').replace(/^"(.*)"$/, "$1");
 };
+export const boolToInt = z.coerce.boolean().transform((val) => (val ? 1 : 0));
+export const insertIntoTable =
+  <T extends object, S extends z.Schema<T>>({
+    tableName,
+    schema,
+  }: {
+    tableName: string;
+    schema: S;
+  }) =>
+  (db: SQLiteDBConnection) =>
+  async (obj: T) => {
+    // Validate the object using the provided Zod schema
+    const validatedObj = schema.parse(obj);
 
+    // Generate the SQL query based on the object's keys and values
+    const keys = Object.keys(validatedObj);
+    const placeholders = keys.map(() => "?").join(", ");
+    const values = keys.map((key) => validatedObj[key as keyof T]);
+    const insertSql = `INSERT INTO ${tableName} (${keys.join(
+      ", "
+    )}) VALUES (${placeholders})`;
+
+    return db.run(insertSql, values);
+  };
+
+export const insertManyIntoTable =
+  <T extends object, S extends z.Schema<T>>({
+    tableName,
+    schema,
+  }: {
+    tableName: string;
+    schema: S;
+  }) =>
+  (db: SQLiteDBConnection) =>
+  async (objs: T[]) => {
+    if (objs.length === 0) return;
+    // Validate the object using the provided Zod schema
+    const validatedObjs = objs.map((obj) => schema.parse(obj));
+
+    // Generate the SQL query based on the object's keys and values
+    const keys = Object.keys(validatedObjs[0]);
+    // Generate placeholders for each object
+    const placeholders = validatedObjs
+      .flatMap(() => `(${keys.map(() => "?").join(", ")})`)
+      .join(", ");
+    const values = validatedObjs.flatMap((obj) =>
+      keys.map((key) => obj[key as keyof T])
+    );
+    const insertSql = `INSERT INTO ${tableName} (${keys.join(
+      ", "
+    )}) VALUES ${placeholders};`;
+
+    return db.run(insertSql, values);
+  };

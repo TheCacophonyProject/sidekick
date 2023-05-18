@@ -3,6 +3,7 @@ package nz.org.cacophony.sidekick.cacophony
 import arrow.core.Either
 import kotlinx.serialization.Serializable
 import nz.org.cacophony.sidekick.*
+import nz.org.cacophony.sidekick.device.DeviceInterface
 import okio.Path.Companion.toPath
 
 @Suppress("UNUSED")
@@ -10,7 +11,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     val api = CacophonyApi()
     private val userApi = UserApi(api)
     private val recordingApi = DeviceApi(api)
-    private val stationApi = StationApi(api)
+    private val stationApi = StationApi(api, filePath)
 
     @Serializable
     data class User(val email: String, val password: String)
@@ -152,6 +153,26 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
         }
     }
 
+    @Serializable
+    data class StationReferencePhoto(val token: String, val station: String, val fileKey: String)
+    fun getReferencePhoto(call: PluginCall) = runCatch(call) {
+        call.validateCall<StationReferencePhoto>("token", "station", "fileKey").map { photo ->
+            stationApi.getReferencePhoto(photo.station,photo.fileKey.replace("/","_"), photo.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
+                )
+        }
+    }
+    fun deleteReferencePhoto(call: PluginCall) = runCatch(call) {
+        call.validateCall<StationReferencePhoto>("token", "station", "fileKey").map { photo ->
+            stationApi.deleteReferencePhoto(photo.station,photo.fileKey.replace("/", "_"), photo.token)
+                .fold(
+                    { error -> call.failure(error.toString()) },
+                    { call.success(it) }
+                )
+        }
+    }
 
     fun setToTestServer(call: PluginCall) = runCatch(call) {
         api.setToTest();

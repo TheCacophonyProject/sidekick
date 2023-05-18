@@ -66,6 +66,17 @@ class CacophonyPlugin: Plugin() {
         cacophony.uploadReferencePhoto(pluginCall(call))
     }
 
+    @PluginMethod
+    fun getReferencePhoto(call: PluginCall) {
+        cacophony.getReferencePhoto(pluginCall(call))
+    }
+
+    @PluginMethod
+    fun deleteReferencePhoto(call: PluginCall) {
+        cacophony.deleteReferencePhoto(pluginCall(call))
+    }
+
+
     fun PackageManager.getPackageInfoCompat(packageName: String, flags: Int = 0): PackageInfo =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(flags.toLong()))
