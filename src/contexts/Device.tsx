@@ -643,6 +643,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     const inRange = isWithinRadius(lat, lng, latitude, longitude, range);
     return inRange;
   };
+
   const getLocationByDevice = (deviceId: DeviceId) => {
     return createResource(
       () => storage.savedLocations(),

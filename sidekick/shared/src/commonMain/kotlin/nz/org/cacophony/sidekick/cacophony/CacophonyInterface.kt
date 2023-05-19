@@ -148,7 +148,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
             stationApi.uploadReferencePhoto(image.station,image.filename.removePrefix("file://").toPath(), image.token)
                 .fold(
                     { error -> call.failure(error.toString()) },
-                    { call.success(it) }
+                    { call.success(it.fileKey) }
                 )
         }
     }

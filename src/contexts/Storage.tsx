@@ -235,7 +235,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       });
       if (res.success) {
         const photoPath = res.data;
-        return `${window.location.origin}/_capacitor_file_/${photoPath}`;
+        return `${window.location.origin}/_capacitor_file_${photoPath}`;
       }
       return res.message;
     } catch (e) {
@@ -257,7 +257,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (!user) return;
     const res = await CacophonyPlugin.deleteReferencePhoto({
       token: user.token,
-      station: location.id.toString(),
+      station: location.id.toString().slice(0, -1),
       fileKey,
     });
 
@@ -283,11 +283,13 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
           return loc;
         })
       );
+      return true;
     } else {
       logWarning({
         message: "Failed to delete reference photo for location",
-        details: `${id} ${fileKey}: ${res.message}`,
+        details: `${location.id} ${fileKey}: ${res.message}`,
       });
+      return false;
     }
   };
 
@@ -316,7 +318,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       if (validToken) {
         const res = await CacophonyPlugin.updateStation({
           token: validToken.token,
-          id: location.id.toString(),
+          id: location.id.toString().slice(0, -1),
           name: newName,
         });
         if (res.success) {

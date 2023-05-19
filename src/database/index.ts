@@ -86,7 +86,9 @@ export const insertManyIntoTable =
       .flatMap(() => `(${keys.map(() => "?").join(", ")})`)
       .join(", ");
     const values = validatedObjs.flatMap((obj) =>
-      keys.map((key) => obj[key as keyof T])
+      keys.map((key) => {
+        JSON.stringify(obj[key as keyof T]);
+      })
     );
     const insertSql = `INSERT INTO ${tableName} (${keys.join(
       ", "

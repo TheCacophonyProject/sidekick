@@ -85,6 +85,8 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
             val path = filePath.toPath().resolve("cache/${fileKey}")
             return if (hasFile(path)) {
                 path.toString().right()
+            } else if (hasFile(fileKey.toPath())){
+                fileKey.right()
             } else {
                 api.getRequest("stations/$id/reference-photo/${fileKey}", token)
                     .flatMap { validateResponse<ByteArray>(it) }

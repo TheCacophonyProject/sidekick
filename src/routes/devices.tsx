@@ -132,8 +132,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   let LocationNameInput: HTMLInputElement;
   const [isEditing, setIsEditing] = createSignal(false);
-  const toggleEditing = () => {
-    setIsEditing(!isEditing());
+  const toggleEditing = (state: boolean = !isEditing()) => {
+    setIsEditing(state);
     if (isEditing()) {
       LocationNameInput.focus();
     } else {
@@ -152,11 +152,12 @@ function DeviceDetails(props: DeviceDetailsProps) {
     toggleEditing();
   };
 
-  const [photoFiles, setPhotoFiles] = createSignal<
+  const [photoFilesToUpload, setPhotoFilesToUpload] = createSignal<
     { file: string; url: string }[]
   >([]);
   const canSave = (): boolean =>
-    newName() !== "" || (location() !== null && photoFiles().length > 0);
+    newName() !== "" ||
+    (location() !== null && photoFilesToUpload().length > 0);
 
   const addPhotoToDevice = async () => {
     const image = await Camera.getPhoto({
@@ -166,24 +167,40 @@ function DeviceDetails(props: DeviceDetailsProps) {
       width: 500,
     });
 
-    if (image.path && image.webPath)
-      setPhotoFiles((curr) => [
+    if (image.path && image.webPath) {
+      setPhotoFilesToUpload((curr) => [
         ...curr,
         { file: image.path ?? "", url: image.webPath ?? "" },
       ]);
+      const loc = location();
+      setPhotoIndex(
+        (loc?.referenceImages ?? []).length + photoFilesToUpload().length - 1
+      );
+    }
   };
 
   const saveLocationSettings = async () => {
     const name = newName();
-    const photoPaths = photoFiles();
+    const photoPaths = photoFilesToUpload();
     const loc = location();
     if (loc) {
       if (name) {
         await storage.updateLocationName(loc, name);
+        setNewName("");
       }
       if (photoPaths.length > 0) {
         for (const { file } of photoPaths) {
-          await storage.updateLocationPhoto(loc, file);
+          try {
+            await storage.updateLocationPhoto(loc, file);
+            setPhotoFilesToUpload((curr) =>
+              curr.filter((photo) => photo.file !== file)
+            );
+          } catch {
+            logWarning({
+              message: "Could not save location photo",
+              details: `Could not save photo ${file} for location ${loc}`,
+            });
+          }
         }
       }
     } else {
@@ -205,8 +222,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
         isProd: props.isProd,
       });
     }
-    // await storage.updateLocationPicture(loc, pictureUrl());
-    toggleEditing();
+    toggleEditing(false);
   };
 
   const locationName = () => {
@@ -220,13 +236,13 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const [photoIndex, setPhotoIndex] = createSignal(0);
   const hasPicture = () => {
     const loc = location();
-    if (!loc) return photoFiles().length > 0;
+    if (!loc) return photoFilesToUpload().length > 0;
     return loc?.referenceImages?.length ?? 0 > 0;
   };
 
   // Server Side referenceImages are first in the array
   const [photoReference] = createResource(
-    () => [location(), photoFiles(), photoIndex()] as const,
+    () => [location(), photoFilesToUpload(), photoIndex()] as const,
     async (values) => {
       const [loc, picUrl, idx] = values;
       const refLength = loc?.referenceImages?.length ?? 0;
@@ -235,6 +251,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
       }
 
       if (!loc || !loc.referenceImages) return "";
+      const img = loc.referenceImages[idx];
+      if (!img) return "";
       const data = await storage.getReferencePhotoForLocation(
         loc.id,
         loc.referenceImages[idx]
@@ -247,7 +265,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
     const refLength = location()?.referenceImages?.length ?? 0;
     const idx = photoIndex();
     if (idx > refLength - 1) {
-      setPhotoFiles((curr) => {
+      setPhotoFilesToUpload((curr) => {
         const newFiles = [...curr];
         newFiles.splice(idx - refLength, 1);
         return newFiles;
@@ -255,16 +273,28 @@ function DeviceDetails(props: DeviceDetailsProps) {
     } else {
       const loc = location();
       if (loc && loc.referenceImages?.length) {
-        await storage.deleteReferencePhotoForLocation(
-          loc,
-          loc.referenceImages[photoIndex()]
-        );
+        const prompt = await Prompt.confirm({
+          title: "Confirm Deletion",
+          message: "Are you sure you want to delete this photo?",
+        });
+        if (prompt.value) {
+          const res = await storage.deleteReferencePhotoForLocation(
+            loc,
+            loc.referenceImages[photoIndex()]
+          );
+          if (res) {
+            setPhotoIndex((curr) => {
+              if (curr > 0) return curr - 1;
+              return 0;
+            });
+          }
+        }
       }
     }
   };
 
   const photoLength = () =>
-    (location()?.referenceImages?.length ?? 0) + photoFiles().length;
+    (location()?.referenceImages?.length ?? 0) + photoFilesToUpload().length;
 
   return (
     <ActionContainer
@@ -290,7 +320,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
         <div class="w-full">
           <div class="space-y-4">
             <div>
-              <Show when={photoFiles().length && !newName() && !location()}>
+              <Show
+                when={photoFilesToUpload().length && !newName() && !location()}
+              >
                 <p class="text-sm text-yellow-400">
                   Add a name to save new location.
                 </p>
@@ -350,13 +382,13 @@ function DeviceDetails(props: DeviceDetailsProps) {
                   <div class="absolute flex h-full w-full flex-col justify-between gap-2">
                     <div class="flex w-full justify-between">
                       <button
-                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-blue-500"
+                        class="flex h-10 w-10 items-center justify-center rounded-br-lg bg-slate-100 p-2 text-blue-500"
                         onClick={() => addPhotoToDevice()}
                       >
                         <TbCameraPlus size={28} />
                       </button>
                       <button
-                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-red-500"
+                        class="flex h-10 w-10 items-center justify-center rounded-bl-lg bg-slate-100 p-2 text-red-500"
                         onClick={() => removePhotoReference()}
                       >
                         <ImCross size={18} />
@@ -364,7 +396,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                     </div>
                     <div class="flex w-full justify-between">
                       <button
-                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-gray-500"
+                        class="flex h-10 w-10 items-center justify-center rounded-r-full bg-slate-100 p-2 text-gray-500"
                         onClick={() =>
                           setPhotoIndex((i) =>
                             i === 0 ? photoLength() - 1 : i - 1
@@ -374,7 +406,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         <ImArrowLeft size={18} />
                       </button>
                       <button
-                        class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 p-2 text-gray-500"
+                        class="flex h-10 w-10 items-center justify-center rounded-l-full bg-slate-100 p-2 text-gray-500"
                         onClick={() =>
                           setPhotoIndex((i) =>
                             i === photoLength() - 1 ? 0 : i + 1
@@ -384,7 +416,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         <ImArrowRight size={18} />
                       </button>
                     </div>
-                    <div>{photoIndex() + 1}</div>
+                    <div class="w-fit self-center rounded-lg bg-slate-50 p-1">
+                      {photoIndex() + 1}/{photoLength()}
+                    </div>
                   </div>
                   <img
                     src={
@@ -417,7 +451,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                 class="text-gray-400"
                 onClick={() => {
                   setNewName("");
-                  setPhotoFiles([]);
+                  setPhotoFilesToUpload([]);
                   setShowLocationSettings(false);
                 }}
               >
