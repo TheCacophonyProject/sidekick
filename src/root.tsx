@@ -15,7 +15,13 @@ import { BiSolidCopyAlt } from "solid-icons/bi";
 const routes = [
   {
     path: "/devices",
-    component: lazy(() => import("./routes/devices")),
+    children: [
+      { path: "/", component: lazy(() => import("./routes/devices/index")) },
+      {
+        path: "/:id",
+        component: lazy(() => import("./routes/devices/[...id]")),
+      },
+    ],
   },
   {
     path: "/storage",

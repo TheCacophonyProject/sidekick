@@ -2,17 +2,25 @@ package nz.org.cacophony.sidekick
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
+import android.net.wifi.WifiNetworkSpecifier
 import android.net.wifi.WifiNetworkSuggestion
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.provider.Settings.ACTION_WIFI_ADD_NETWORKS
 import android.provider.Settings.EXTRA_WIFI_NETWORK_LIST
 import androidx.activity.result.ActivityResult
+import androidx.annotation.RequiresPermission
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -111,6 +119,7 @@ class DevicePlugin: Plugin() {
         device.checkDeviceConnection(pluginCall(call))
     }
 
+    var currNetworkCallback: ConnectivityManager.NetworkCallback? = null
 
     @PluginMethod
     fun connectToDeviceAP(call: PluginCall) {
@@ -119,22 +128,42 @@ class DevicePlugin: Plugin() {
             val password = "feathers"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                // ask for permission
-                val intent = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
-                    val wifiNetworkSuggestion = WifiNetworkSuggestion.Builder()
-                        .setSsid(ssid)
-                        .setWpa2Passphrase(password)
-                        .setIsAppInteractionRequired(true)
-                        .build()
-                    val wifiNetworkSuggestions = arrayListOf(wifiNetworkSuggestion)
-                    val bundle = Bundle()
-                    bundle.putParcelableArrayList(EXTRA_WIFI_NETWORK_LIST, wifiNetworkSuggestions)
-                    val intent = Intent(ACTION_WIFI_ADD_NETWORKS)
-                    intent.putExtras(bundle)
-                    intent
-                } else {
-                    Intent(Settings.ACTION_WIFI_SETTINGS)
+                val wifiSpecifier = WifiNetworkSpecifier.Builder()
+                    .setSsid(ssid)
+                    .setWpa2Passphrase(password)
+                    .build()
+                val networkRequest =NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .setNetworkSpecifier(wifiSpecifier)
+                    .build()
+                val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                cm.bindProcessToNetwork(null)
+                val callback = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: android.net.Network) {
+                        super.onAvailable(network)
+                        cm.bindProcessToNetwork(network)
+                        val result = JSObject()
+                        result.put("success", true)
+                        call.resolve(result)
+                    }
+
+                    override fun onUnavailable() {
+                        super.onUnavailable()
+                        val result = JSObject()
+                        result.put("success", false)
+                        result.put("message", "Failed to connect to device AP")
+                        call.resolve(result)
+                    }
+
+                    override fun onLost(network: Network) {
+                        super.onLost(network)
+                        cm.bindProcessToNetwork(null)
+                        cm.unregisterNetworkCallback(this)
+                    }
                 }
-                startActivityForResult(call, intent, "connectToWifi")
+                currNetworkCallback = callback
+                val threeMinutes = 180000
+                cm.requestNetwork(networkRequest, callback, threeMinutes)
             } else {
                 connectToWifiLegacy(ssid, password, {
                     val result = JSObject()

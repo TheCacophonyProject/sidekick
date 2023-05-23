@@ -471,6 +471,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
+  const LOCATION_ERROR =
+    "Please ensure location is enabled, and permissions are granted";
   const setDeviceToCurrLocation = async (device: ConnectedDevice) => {
     try {
       const { url } = device;
@@ -488,7 +490,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       const location = locationSchema.safeParse({ ...coords, timestamp });
       if (!location.success) {
         logWarning({
-          message: "Could not set device location",
+          message: LOCATION_ERROR,
           details: location.error.message,
         });
         return;
@@ -507,10 +509,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       locationBeingSet.delete(device.id);
     } catch (error) {
       if (error instanceof Error) {
-        logError({
-          message: "Could not set device location",
+        logWarning({
+          message: LOCATION_ERROR,
           details: error.message,
-          error,
         });
       }
       locationBeingSet.delete(device.id);

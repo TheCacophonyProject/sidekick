@@ -11,24 +11,26 @@ import {
   Show,
   Switch,
 } from "solid-js";
-import ActionContainer from "../components/ActionContainer";
-import { Device, DevicePlugin, useDevice } from "../contexts/Device";
+import ActionContainer from "../../components/ActionContainer";
+import { Device, DevicePlugin, useDevice } from "../../contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
 import { Dialog } from "@capacitor/dialog";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { FaSolidSpinner } from "solid-icons/fa";
-import CircleButton from "../components/CircleButton";
+import CircleButton from "../../components/CircleButton";
 import { Geolocation } from "@capacitor/geolocation";
 import { TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
-import { useStorage } from "../contexts/Storage";
+import { useStorage } from "../../contexts/Storage";
 import { ImCog, ImNotification } from "solid-icons/im";
-import { headerMap } from "../components/Header";
+import { headerMap } from "../../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
-import BackgroundLogo from "../components/BackgroundLogo";
+import BackgroundLogo from "../../components/BackgroundLogo";
 import { Recording } from "~/database/Entities/Recording";
 import { Event } from "~/database/Entities/Event";
+import { useNavigate } from "@solidjs/router";
+import { logWarning } from "~/contexts/Notification";
 
 interface DeviceDetailsProps {
   device: Device;
@@ -71,12 +73,12 @@ function DeviceDetails(props: DeviceDetailsProps) {
     setSavedRecs(saved);
     setDeviceRecs(device);
   });
-
+  const navigate = useNavigate();
   const openDeviceInterface = leading(
     debounce,
     (device: Device) => {
       if (device.isConnected) {
-        Browser.open({ url: device.url });
+        navigate(`/devices/${device.id}`);
       }
     },
     800
@@ -190,22 +192,26 @@ function Devices() {
   const context = useDevice();
   const [cancel, setCancel] = createSignal(false);
 
-  const connectToBushnet = async () => {
-    const { value } = await Dialog.confirm({
-      title: "Connecting to Device",
-      message: `Please turn on the device and wait at least 2 minutes for the device to setup its Wi-Fi then press "OK".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
-    });
-
-    if (!value) return;
-    await DevicePlugin.connectToDeviceAP();
-  };
-
   const searchDevice = () => {
     context.startDiscovery();
     setTimeout(() => {
       context.stopDiscovery();
     }, 5000);
   };
+  const connectToDeviceAP = leading(
+    debounce,
+    async () => {
+      const res = await DevicePlugin.connectToDeviceAP();
+      if (res.success) {
+        searchDevice();
+      } else {
+        logWarning({
+          message: "Please ensure wifi is enabled and try again",
+        });
+      }
+    },
+    800
+  );
 
   onMount(() => {
     // Add delete button to header
@@ -214,7 +220,7 @@ function Devices() {
 
     headerMap.set("/devices", [
       header[0],
-      <button onClick={connectToBushnet} class="text-blue-500">
+      <button onClick={connectToDeviceAP} class="text-blue-500">
         <FaSolidWifi size={28} />
       </button>,
     ]);
@@ -319,7 +325,7 @@ function Devices() {
 
   return (
     <>
-      <section class="pb-bar pt-bar relative z-20 space-y-2 overflow-y-auto px-2">
+      <section class="pb-bar pt-bar relative z-20 mt-1 space-y-2 overflow-y-auto px-2">
         <For
           each={[...context.devices.values()].filter((dev) => dev.isConnected)}
         >
