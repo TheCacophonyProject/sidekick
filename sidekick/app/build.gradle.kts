@@ -16,7 +16,7 @@ val sdk = 33
 val minSdkVersion = 22
 val majorVersion = 3
 val minorVersion = 0
-val patchVersion = 5
+val patchVersion = 6
 android {
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
