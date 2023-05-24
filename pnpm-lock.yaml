@@ -8,8 +8,8 @@ dependencies:
     specifier: ^4.0.0
     version: 4.0.0(@capacitor/core@5.0.4)
   '@capacitor-community/sqlite':
-    specifier: 4.8.0-1
-    version: 4.8.0-1(@capacitor/core@5.0.4)
+    specifier: 5.0.0-beta.2
+    version: 5.0.0-beta.2(@capacitor/core@5.0.4)
   '@capacitor/android':
     specifier: ^5.0.4
     version: 5.0.4(@capacitor/core@5.0.4)
@@ -519,10 +519,10 @@ packages:
       '@capacitor/core': 5.0.4
     dev: false
 
-  /@capacitor-community/sqlite@4.8.0-1(@capacitor/core@5.0.4):
-    resolution: {integrity: sha512-Og8grCawNO5uJqZN+lXftZEtQSGD9eZFt9ddYqs6t5R8j8j8ka0620BkA9rI995owlYQXWV8GYPDNQLDOXkOOg==}
+  /@capacitor-community/sqlite@5.0.0-beta.2(@capacitor/core@5.0.4):
+    resolution: {integrity: sha512-1o/bUUnTaqrhLqsoS8vURweQluQdFkl0ZkQT2Xhcb7nztWu0nLBvRhZWUqkTFUvoBzqU3GTXLat1rhxIO1ntVQ==}
     peerDependencies:
-      '@capacitor/core': ^4.0.0
+      '@capacitor/core': ^5.0.0-beta.1
     dependencies:
       '@capacitor/core': 5.0.4
       jeep-sqlite: 2.3.4
