@@ -20,7 +20,7 @@ const LoginInput = (props: LoginInput) => {
         {props.label}
       </label>
       <input
-        class="rounded-md border-2 py-3 px-2 shadow-inner transition-colors"
+        class="rounded-md border-2 px-2 py-3 shadow-inner transition-colors"
         classList={{
           "border-slate-50": !props.invalid,
           "border-red-300": props.invalid,
@@ -101,61 +101,63 @@ function Login() {
   return (
     <form
       ref={form}
-      class="flex h-screen w-screen flex-col justify-center gap-y-4 bg-white px-8 text-lg"
+      class="flex h-screen w-screen flex-col items-center justify-center gap-y-4 bg-white px-8 text-lg"
       onSubmit={onSubmit}
     >
-      <Show when={!user?.isProd()}>
-        <div class="pt-safe absolute top-0 mt-8 flex items-center pr-8 font-bold text-neutral-700">
-          <ImCog size={32} />
-          <h1 class="ml-2">Test Mode</h1>
+      <div class="w-full  max-w-xl">
+        <Show when={!user?.isProd()}>
+          <div class="pt-safe absolute top-0 mt-8 flex items-center pr-8 font-bold text-neutral-700">
+            <ImCog size={32} />
+            <h1 class="ml-2">Test Mode</h1>
+          </div>
+        </Show>
+        <div
+          class="mb-6 mt-20 max-w-[90%] justify-center"
+          role="button"
+          onTouchStart={logoDown}
+        >
+          <CacaophonyLogo />
         </div>
-      </Show>
-      <div
-        class="mb-6 mt-20 max-w-[90%] justify-center"
-        role="button"
-        onTouchStart={logoDown}
-      >
-        <CacaophonyLogo />
-      </div>
-      <LoginInput
-        type="email"
-        placeholder="example@gmail.com"
-        name="email"
-        label="Email"
-        invalid={Boolean(emailError())}
-        onInput={onInput}
-      />
-      <LoginInput
-        type="password"
-        name="password"
-        label="Password"
-        invalid={Boolean(passwordError())}
-        onInput={onInput}
-      />
-      <Show when={error} fallback={<div class="h-8" />}>
-        <p class="h-8 text-red-500">{error()}</p>
-      </Show>
-      <button
-        class="mb-8 rounded-md bg-blue-500 py-4 font-semibold text-white"
-        type="submit"
-      >
-        {loggingIn() ? "Logging In..." : "Login"}
-      </button>
-      <p class="text-base text-gray-600 md:text-base">
-        Don't have a Cacophony Account?
-        <button class="ml-1 text-blue-500" onClick={openRegisterPage}>
-          Register
+        <LoginInput
+          type="email"
+          placeholder="example@gmail.com"
+          name="email"
+          label="Email"
+          invalid={Boolean(emailError())}
+          onInput={onInput}
+        />
+        <LoginInput
+          type="password"
+          name="password"
+          label="Password"
+          invalid={Boolean(passwordError())}
+          onInput={onInput}
+        />
+        <Show when={error} fallback={<div class="h-8" />}>
+          <p class="h-8 text-red-500">{error()}</p>
+        </Show>
+        <button
+          class=" mb-8 w-full rounded-md bg-blue-500 py-4 font-semibold text-white"
+          type="submit"
+        >
+          {loggingIn() ? "Logging In..." : "Login"}
         </button>
-      </p>
-      <button
-        class="text-blue-500"
-        onClick={(e) => {
-          e.preventDefault();
-          user?.skip();
-        }}
-      >
-        Skip Login
-      </button>
+        <p class="text-base text-gray-600 md:text-base">
+          Don't have a Cacophony Account?
+          <button class="ml-1 text-blue-500" onClick={openRegisterPage}>
+            Register
+          </button>
+        </p>
+        <button
+          class="text-blue-500"
+          onClick={(e) => {
+            e.preventDefault();
+            user?.skip();
+          }}
+        >
+          Skip Login
+        </button>
+      </div>
     </form>
   );
 }

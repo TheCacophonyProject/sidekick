@@ -128,42 +128,50 @@ class DevicePlugin: Plugin() {
             val password = "feathers"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                // ask for permission
-                val wifiSpecifier = WifiNetworkSpecifier.Builder()
-                    .setSsid(ssid)
-                    .setWpa2Passphrase(password)
-                    .build()
-                val networkRequest =NetworkRequest.Builder()
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                    .setNetworkSpecifier(wifiSpecifier)
-                    .build()
-                val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val cm =
+                    context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 cm.bindProcessToNetwork(null)
-                val callback = object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: android.net.Network) {
-                        super.onAvailable(network)
-                        cm.bindProcessToNetwork(network)
-                        val result = JSObject()
-                        result.put("success", true)
-                        call.resolve(result)
-                    }
-
-                    override fun onUnavailable() {
-                        super.onUnavailable()
-                        val result = JSObject()
-                        result.put("success", false)
-                        result.put("message", "Failed to connect to device AP")
-                        call.resolve(result)
-                    }
-
-                    override fun onLost(network: Network) {
-                        super.onLost(network)
-                        cm.bindProcessToNetwork(null)
-                        cm.unregisterNetworkCallback(this)
-                    }
+                val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                if (!wifiManager.isWifiEnabled) {
+                    val result = JSObject()
+                    result.put("success", false)
+                    result.put("message", "WiFi is disabled on the device")
+                    call.resolve(result)
+                    return
                 }
-                currNetworkCallback = callback
-                val threeMinutes = 180000
-                cm.requestNetwork(networkRequest, callback, threeMinutes)
+                    val wifiSpecifier = WifiNetworkSpecifier.Builder()
+                        .setSsid(ssid)
+                        .setWpa2Passphrase(password)
+                        .build()
+                    val networkRequest = NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .setNetworkSpecifier(wifiSpecifier)
+                        .build()
+                val callback = object : ConnectivityManager.NetworkCallback() {
+                        override fun onAvailable(network: Network) {
+                            super.onAvailable(network)
+                            cm.bindProcessToNetwork(network)
+                            val result = JSObject()
+                            result.put("success", true)
+                            call.resolve(result)
+                        }
+
+                        override fun onUnavailable() {
+                            super.onUnavailable()
+                            val result = JSObject()
+                            result.put("success", false)
+                            result.put("message", "Failed to connect to device AP")
+                            call.resolve(result)
+                        }
+
+                        override fun onLost(network: Network) {
+                            super.onLost(network)
+                            cm.bindProcessToNetwork(null)
+                            cm.unregisterNetworkCallback(this)
+                        }
+                    }
+                    currNetworkCallback = callback
+                    cm.requestNetwork(networkRequest, callback)
             } else {
                 connectToWifiLegacy(ssid, password, {
                     val result = JSObject()
