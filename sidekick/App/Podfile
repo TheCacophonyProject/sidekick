@@ -8,18 +8,19 @@ use_frameworks!
 install! 'cocoapods', :disable_input_output_paths => true
 
 def capacitor_pods
-  pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios'
-  pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@4.7.0_@capacitor+core@4.7.0/node_modules/@capacitor/ios'
-  pod 'CapacitorCommunityFirebaseCrashlytics', :path => '../../node_modules/.pnpm/@capacitor-community+firebase-crashlytics@2.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/firebase-crashlytics'
-  pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@3.0.0_@capacitor+core@4.7.0/node_modules/@capacitor-community/keep-awake'
-  pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@4.6.2-3_@capacitor+core@4.7.0/node_modules/@capacitor-community/sqlite'
-  pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@4.1.1_@capacitor+core@4.7.0/node_modules/@capacitor/browser'
-  pod 'CapacitorCamera', :path => '../../node_modules/.pnpm/@capacitor+camera@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/camera'
-  pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/clipboard'
-  pod 'CapacitorDialog', :path => '../../node_modules/.pnpm/@capacitor+dialog@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/dialog'
-  pod 'CapacitorFilesystem', :path => '../../node_modules/.pnpm/@capacitor+filesystem@4.1.4_@capacitor+core@4.7.0/node_modules/@capacitor/filesystem'
-  pod 'CapacitorGeolocation', :path => '../../node_modules/.pnpm/@capacitor+geolocation@4.1.0_@capacitor+core@4.7.0/node_modules/@capacitor/geolocation'
-  pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@4.0.2_@capacitor+core@4.7.0/node_modules/@capacitor/preferences'
+  pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@5.0.3_@capacitor+core@5.0.3/node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@5.0.3_@capacitor+core@5.0.3/node_modules/@capacitor/ios'
+  pod 'CapacitorCommunityFirebaseCrashlytics', :path => '../../node_modules/.pnpm/@capacitor-community+firebase-crashlytics@3.0.0_@capacitor+core@5.0.3/node_modules/@capacitor-community/firebase-crashlytics'
+  pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@4.0.0_@capacitor+core@5.0.3/node_modules/@capacitor-community/keep-awake'
+  pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@4.8.0-1_@capacitor+core@5.0.3/node_modules/@capacitor-community/sqlite'
+  pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/app'
+  pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/browser'
+  pod 'CapacitorCamera', :path => '../../node_modules/.pnpm/@capacitor+camera@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/camera'
+  pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/clipboard'
+  pod 'CapacitorDialog', :path => '../../node_modules/.pnpm/@capacitor+dialog@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/dialog'
+  pod 'CapacitorFilesystem', :path => '../../node_modules/.pnpm/@capacitor+filesystem@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/filesystem'
+  pod 'CapacitorGeolocation', :path => '../../node_modules/.pnpm/@capacitor+geolocation@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/geolocation'
+  pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@5.0.2_@capacitor+core@5.0.3/node_modules/@capacitor/preferences'
 end
 
 target 'App' do

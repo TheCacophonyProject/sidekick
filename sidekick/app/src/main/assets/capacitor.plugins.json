@@ -12,6 +12,10 @@
 		"classpath": "com.getcapacitor.community.database.sqlite.CapacitorSQLitePlugin"
 	},
 	{
+		"pkg": "@capacitor/app",
+		"classpath": "com.capacitorjs.plugins.app.AppPlugin"
+	},
+	{
 		"pkg": "@capacitor/browser",
 		"classpath": "com.capacitorjs.plugins.browser.BrowserPlugin"
 	},

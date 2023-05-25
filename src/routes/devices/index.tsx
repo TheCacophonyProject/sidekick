@@ -1,4 +1,3 @@
-import { Browser } from "@capacitor/browser";
 import { BsCameraVideoFill } from "solid-icons/bs";
 import {
   createEffect,
@@ -13,46 +12,33 @@ import {
   Show,
   Switch,
 } from "solid-js";
-import ActionContainer from "../components/ActionContainer";
-import {
-  ConnectedDevice,
-  Device,
-  DeviceId,
-  DevicePlugin,
-  useDevice,
-} from "../contexts/Device";
+import ActionContainer from "../../components/ActionContainer";
+import { ConnectedDevice, Device, DeviceId, DevicePlugin, useDevice } from "../../contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
+import { AiFillEdit } from "solid-icons/ai"
 import { Dialog as Prompt } from "@capacitor/dialog";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { FaSolidSpinner } from "solid-icons/fa";
-import CircleButton from "../components/CircleButton";
+import CircleButton from "../../components/CircleButton";
 import { Geolocation } from "@capacitor/geolocation";
-import { TbCurrentLocation } from "solid-icons/tb";
+import { TbCameraPlus, TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
-import { useStorage } from "../contexts/Storage";
-import {
-  ImArrowLeft,
-  ImArrowRight,
-  ImCheckmark,
-  ImCog,
-  ImCross,
-  ImNotification,
-} from "solid-icons/im";
-import { headerMap } from "../components/Header";
+import { useStorage } from "../../contexts/Storage";
+import { ImArrowLeft, ImArrowRight, ImCheckmark, ImCog, ImCross, ImNotification } from "solid-icons/im";
+import { headerMap } from "../../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
-import BackgroundLogo from "../components/BackgroundLogo";
+import BackgroundLogo from "../../components/BackgroundLogo";
 import { Recording } from "~/database/Entities/Recording";
 import { Event } from "~/database/Entities/Event";
-import { Portal } from "solid-js/web";
-import Dialog from "~/components/Dialog";
+import { useNavigate } from "@solidjs/router";
 import { logWarning } from "~/contexts/Notification";
-import { AiFillEdit } from "solid-icons/ai";
-import { TbCameraPlus } from "solid-icons/tb";
+import { Portal } from "solid-js/web";
 import { Camera, CameraResultType } from "@capacitor/camera";
+import Dialog from "~/components/Dialog";
 
 interface DeviceDetailsProps {
-  id: DeviceId;
+  id: string;
   name: string;
   groupName: string;
   url: string;
@@ -99,11 +85,11 @@ function DeviceDetails(props: DeviceDetailsProps) {
     setSavedRecs(saved);
     setDeviceRecs(device);
   });
-
+  const navigate = useNavigate();
   const openDeviceInterface = leading(
     debounce,
     () => {
-      Browser.open({ url: props.url });
+      navigate(`/devices/${props.id}`);
     },
     800
   );
@@ -351,7 +337,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                   />
                   <button
                     class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
-                    onClick={toggleEditing}
+                    onClick={() => toggleEditing()}
                   >
                     <ImCross size={12} />
                   </button>
@@ -537,6 +523,7 @@ export function isKeyOfObject<T extends object>(
 ): key is keyof T {
   return key in obj;
 }
+
 function Devices() {
   const context = useDevice();
   const devices = createMemo(
@@ -564,22 +551,26 @@ function Devices() {
   );
   const [cancel, setCancel] = createSignal(false);
 
-  const connectToBushnet = async () => {
-    const { value } = await Prompt.confirm({
-      title: "Connecting to Device",
-      message: `Please turn on the device and wait at least 2 minutes for the device to setup its Wi-Fi then press "OK".\n Alternatively: connect to the device's wifi "bushnet" password "feathers" when available`,
-    });
-
-    if (!value) return;
-    await DevicePlugin.connectToDeviceAP();
-  };
-
   const searchDevice = () => {
     context.startDiscovery();
     setTimeout(() => {
       context.stopDiscovery();
     }, 6000);
   };
+  const connectToDeviceAP = leading(
+    debounce,
+    async () => {
+      const res = await DevicePlugin.connectToDeviceAP();
+      if (res.success) {
+        searchDevice();
+      } else {
+        logWarning({
+          message: "Please ensure wifi is enabled and try again",
+        });
+      }
+    },
+    800
+  );
 
   onMount(() => {
     // Add delete button to header
@@ -588,10 +579,7 @@ function Devices() {
 
     headerMap.set("/devices", [
       header[0],
-      <button
-        onClick={connectToBushnet}
-        class="block rounded-lg p-2 text-blue-500 outline outline-2 outline-slate-200"
-      >
+      <button onClick={connectToDeviceAP} class="text-blue-500">
         <FaSolidWifi size={28} />
       </button>,
     ]);
@@ -681,9 +669,9 @@ function Devices() {
               context.devices.get(devicesToUpdate[0])?.name
             } has a different location stored. Would you like to update it to your current location?`
           : `${devicesToUpdate
-              .map((val) => context.devices.get(val)?.name)
-              .join(
-                ", "
+            .map((val) => context.devices.get(val)?.name)
+            .join(
+              ", "
               )} have different location stored. Would you like to update them to the current location?`;
 
       const { value } = await Prompt.confirm({
@@ -712,8 +700,10 @@ function Devices() {
 
   return (
     <>
-      <section class="pb-bar pt-bar relative z-20 space-y-2 overflow-y-auto px-2">
-        <For each={devices()}>
+      <section class="pb-bar pt-bar relative z-20 mt-1 space-y-2 overflow-y-auto px-2">
+        <For
+          each={[...context.devices.values()].filter((dev) => dev.isConnected)}
+        >
           {(device) => (
             <DeviceDetails
               id={device.id}

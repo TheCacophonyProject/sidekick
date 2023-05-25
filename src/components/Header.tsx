@@ -1,7 +1,8 @@
 import { JSXElement, createEffect, createSignal } from "solid-js";
 import { RiSystemArrowLeftSLine } from "solid-icons/ri";
 import { ReactiveMap } from "@solid-primitives/map";
-import { useLocation, A } from "@solidjs/router";
+import { useLocation, A, useNavigate } from "@solidjs/router";
+import { App } from "@capacitor/app";
 
 type Header = string;
 type HeaderButton = JSXElement;
@@ -21,6 +22,7 @@ function Header() {
     headerMap.get(location.pathname) || "Dashboard"
   );
   const [backNav, setBackNav] = createSignal<JSXElement>(<></>);
+  const navigate = useNavigate();
   createEffect(() => {
     if (headerMap.has(location.pathname)) {
       const newHeader = headerMap.get(location.pathname) ?? ["Dashboard"];
@@ -41,8 +43,19 @@ function Header() {
             <RiSystemArrowLeftSLine size={32} />
           </A>
         );
+        App.addListener("backButton", () => {
+          navigate(link.join("/"));
+        });
       } else {
         setBackNav(<></>);
+        App.removeAllListeners();
+        App.addListener("backButton", () => {
+          if (location.pathname !== "/devices") {
+            navigate("/devices");
+          } else {
+            App.exitApp();
+          }
+        });
       }
     } else {
       setHeader("");
@@ -55,7 +68,7 @@ function Header() {
         <div class="flex w-6 items-center justify-center">{backNav()}</div>
         <h2 class="ml-4 text-4xl font-bold text-gray-800">{header()}</h2>
       </div>
-      <div class="pt-6 pr-2">{HeaderButton()}</div>
+      <div class="pr-2 pt-6">{HeaderButton()}</div>
     </div>
   );
 }
