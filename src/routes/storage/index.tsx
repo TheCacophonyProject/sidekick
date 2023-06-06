@@ -33,10 +33,7 @@ export default function Storage() {
 
     headerMap.set("/storage", [
       header[0],
-      <button
-        onClick={deleteSaved}
-        class="block rounded-lg p-2 text-red-400 outline outline-2 outline-slate-200"
-      >
+      <button onClick={deleteSaved} class="text-red-400">
         <FaRegularTrashCan size={28} />
       </button>,
     ]);

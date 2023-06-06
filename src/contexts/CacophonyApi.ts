@@ -84,7 +84,7 @@ export interface CacophonyPlugin {
     token: string;
     station: string;
     fileKey: string;
-  }): Result<{localDeleted: boolean, serverDeleted: boolean}>;
+  }): Result<{ localDeleted: boolean; serverDeleted: boolean }>;
   createStation(options: {
     token: string;
     name: string;
@@ -131,7 +131,6 @@ export async function getLocationsForUser(token: string) {
     if (!locationRes.success) {
       throw new Error(locationRes.messages.join(", "));
     }
-
     return locationRes.stations;
   } else {
     logError({

@@ -69,9 +69,11 @@ export const insertManyIntoTable =
   <T extends object, S extends z.Schema<T>>({
     tableName,
     schema,
+    keys,
   }: {
     tableName: string;
     schema: S;
+    keys: string[];
   }) =>
   (db: SQLiteDBConnection) =>
   async (objs: T[]) => {
@@ -79,16 +81,12 @@ export const insertManyIntoTable =
     // Validate the object using the provided Zod schema
     const validatedObjs = objs.map((obj) => schema.parse(obj));
 
-    // Generate the SQL query based on the object's keys and values
-    const keys = Object.keys(validatedObjs[0]);
     // Generate placeholders for each object
     const placeholders = validatedObjs
       .flatMap(() => `(${keys.map(() => "?").join(", ")})`)
       .join(", ");
     const values = validatedObjs.flatMap((obj) =>
-      keys.map((key) => {
-        JSON.stringify(obj[key as keyof T]);
-      })
+      keys.map((key) => obj[key as keyof T])
     );
     const insertSql = `INSERT INTO ${tableName} (${keys.join(
       ", "

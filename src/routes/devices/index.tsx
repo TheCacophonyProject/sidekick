@@ -13,10 +13,15 @@ import {
   Switch,
 } from "solid-js";
 import ActionContainer from "../../components/ActionContainer";
-import { ConnectedDevice, Device, DeviceId, DevicePlugin, useDevice } from "../../contexts/Device";
+import {
+  ConnectedDevice,
+  Device,
+  DevicePlugin,
+  useDevice,
+} from "../../contexts/Device";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { BiRegularCurrentLocation } from "solid-icons/bi";
-import { AiFillEdit } from "solid-icons/ai"
+import { AiFillEdit } from "solid-icons/ai";
 import { Dialog as Prompt } from "@capacitor/dialog";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { FaSolidSpinner } from "solid-icons/fa";
@@ -25,7 +30,14 @@ import { Geolocation } from "@capacitor/geolocation";
 import { TbCameraPlus, TbCurrentLocation } from "solid-icons/tb";
 import { FiDownload } from "solid-icons/fi";
 import { useStorage } from "../../contexts/Storage";
-import { ImArrowLeft, ImArrowRight, ImCheckmark, ImCog, ImCross, ImNotification } from "solid-icons/im";
+import {
+  ImArrowLeft,
+  ImArrowRight,
+  ImCheckmark,
+  ImCog,
+  ImCross,
+  ImNotification,
+} from "solid-icons/im";
 import { headerMap } from "../../components/Header";
 import { FaSolidWifi } from "solid-icons/fa";
 import BackgroundLogo from "../../components/BackgroundLogo";
@@ -112,14 +124,12 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
 
   const [location] = context.getLocationByDevice(props.id);
-  createEffect(() => {
-    console.log(location());
-  });
 
   let LocationNameInput: HTMLInputElement;
   const [isEditing, setIsEditing] = createSignal(false);
-  const toggleEditing = (state: boolean = !isEditing()) => {
+  const toggleEditing = (state = !isEditing()) => {
     setIsEditing(state);
+    if (!LocationNameInput) return;
     if (isEditing()) {
       LocationNameInput.focus();
     } else {
@@ -129,7 +139,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   const [newName, setNewName] = createSignal("");
   createEffect(() => {
-    console.log("new", newName());
+    console.log("location", location());
   });
   const saveLocationName = async () => {
     const newName = LocationNameInput.value;
@@ -147,7 +157,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   const addPhotoToDevice = async () => {
     const image = await Camera.getPhoto({
-      quality: 50,
+      quality: 100,
       allowEditing: false,
       resultType: CameraResultType.Uri,
       width: 500,
@@ -669,9 +679,9 @@ function Devices() {
               context.devices.get(devicesToUpdate[0])?.name
             } has a different location stored. Would you like to update it to your current location?`
           : `${devicesToUpdate
-            .map((val) => context.devices.get(val)?.name)
-            .join(
-              ", "
+              .map((val) => context.devices.get(val)?.name)
+              .join(
+                ", "
               )} have different location stored. Would you like to update them to the current location?`;
 
       const { value } = await Prompt.confirm({
@@ -700,9 +710,11 @@ function Devices() {
 
   return (
     <>
-      <section class="pb-bar pt-bar relative z-20 mt-1 space-y-2 overflow-y-auto px-2">
+      <section class="pb-bar pt-bar pt-[ relative z-20 space-y-2 overflow-y-auto px-2">
         <For
-          each={[...context.devices.values()].filter((dev) => dev.isConnected)}
+          each={devices().filter(
+            (dev): dev is ConnectedDevice => dev.isConnected
+          )}
         >
           {(device) => (
             <DeviceDetails

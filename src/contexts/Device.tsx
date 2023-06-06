@@ -12,6 +12,7 @@ import { ReactiveSet } from "@solid-primitives/set";
 import { z } from "zod";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import { Coords, Location } from "~/database/Entities/Location";
+import { debug } from "console";
 
 export type DeviceId = string;
 export type DeviceName = string;
@@ -153,10 +154,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (connection.success) {
         const info = await DevicePlugin.getDeviceInfo({ url });
         if (!info.success) {
-          logWarning({
-            message:
-              "Unable to communicate with device, please reset/update the device.",
-          });
           return;
         }
         const id: DeviceId = info.data.deviceID.toString();
@@ -207,22 +204,25 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         return;
 
       for (let i = 0; i < 3; i++) {
-        const connectedDevice = await endpointToDevice(
-          newDevice.endpoint,
-          newDevice.host
-        );
+        try {
+          const connectedDevice = await endpointToDevice(
+            newDevice.endpoint,
+            newDevice.host
+          );
 
-        if (connectedDevice) {
-          devices.set(connectedDevice.id, connectedDevice);
-          clearUploaded(connectedDevice);
-          return;
+          if (connectedDevice) {
+            devices.set(connectedDevice.id, connectedDevice);
+            clearUploaded(connectedDevice);
+            return;
+          }
+        } catch (e) {
+          logWarning({
+            message: `Unable to connect to discovered device`,
+            details: JSON.stringify(newDevice),
+          });
         }
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      logWarning({
-        message: `Unable to connect to discovered device`,
-        details: JSON.stringify(newDevice),
-      });
     });
     setCallbackID(id);
   };
@@ -262,7 +262,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (error instanceof Error) {
         logError({
           message: "Could not get recordings",
-          details: error.message,
+          error,
         });
       }
       return [];
@@ -654,8 +654,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           if (!device || !locations.length || !device.isConnected) return;
           const deviceLocation = await getLocationCoords(device.id);
           if (!deviceLocation.success) return;
+          const removeCapitalsAndSpaces = (str: string) =>
+            str.toLowerCase().replace(/\s/g, "");
           const sameGroupLocatoins = locations.filter(
-            (loc) => loc.groupName === device.group
+            (loc) => removeCapitalsAndSpaces(loc.groupName) === device.group
           );
           const location = sameGroupLocatoins.filter(
             (loc) =>

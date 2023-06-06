@@ -63,7 +63,7 @@ function Recordings() {
   const storage = useStorage();
   const Devices = createMemo(() => {
     const devices = new Set<string>(
-      storage.UploadedRecordings().map((rec) => rec.deviceName)
+      storage.uploadedRecordings().map((rec) => rec.deviceName)
     );
     return [...devices];
   });
@@ -75,7 +75,7 @@ function Recordings() {
           <DeviceRecordingsDisplay
             deviceId={device}
             recordings={storage
-              .UploadedRecordings()
+              .uploadedRecordings()
               .filter((rec) => rec.deviceName === device)}
             {...(Devices().length === 1 && { initialOpen: true })}
           />

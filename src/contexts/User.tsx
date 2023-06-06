@@ -7,6 +7,7 @@ import { z } from "zod";
 import { CacophonyPlugin } from "./CacophonyApi";
 import { useNavigate } from "@solidjs/router";
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
+import { u } from "drizzle-orm/column.d-c31e7ad3";
 const UserSchema = z.object({
   token: z.string(),
   id: z.string(),
@@ -86,6 +87,30 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     mutateSkip(false);
     await refetch();
   }
+  async function login(email: string, password: string) {
+    const authUser = await CacophonyPlugin.authenticateUser({
+      email,
+      password,
+    });
+    if (!authUser.success) {
+      logWarning({
+        message: "Login failed",
+        details: authUser.message,
+      });
+      return;
+    }
+    const { token, id, refreshToken } = authUser.data;
+    Preferences.set({ key: "skippedLogin", value: "false" });
+    mutateUser({
+      token,
+      id,
+      email,
+      refreshToken,
+      expiry: new Date().toISOString(),
+      prod: isProd(),
+    });
+    mutateSkip(false);
+  }
 
   const [server, setServer] = createSignal<"test" | "prod">("prod");
   const isProd = () => server() === "prod";
@@ -110,16 +135,25 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     }
   });
 
+  // Validate the current token.
   async function validateCurrToken() {
     const user = data();
     if (user) {
       const { token, refreshToken, expiry, email, id } = user;
-      if (new Date(expiry).getTime() > Date.now()) return user;
+
+      // Check if token is valid
+      const expiryDate = new Date(expiry);
+      const now = new Date();
+      if (expiryDate > now) return user;
+
+      // Refresh token
       const result = await CacophonyPlugin.validateToken({
         token,
         refreshToken,
         expiry,
       });
+
+      // Update user
       if (result.success) {
         const { token, refreshToken, expiry } = result.data;
         const user = { id, email, token, refreshToken, expiry, prod: isProd() };
@@ -136,65 +170,52 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   }
   const isAuthorized = () => data() && data() !== null;
 
+  function skip() {
+    Preferences.set({ key: "skippedLogin", value: "true" });
+    nav("/devices");
+    mutateSkip(true);
+  }
+
+  async function requestDeletion(): Result<string> {
+    const usr = data();
+    if (!usr) return Promise.reject("No user to delete");
+    await validateCurrToken();
+    const value = await CacophonyPlugin.requestDeletion({
+      token: usr.token,
+    });
+    logSuccess({
+      message: "Account deletion requested.",
+    });
+    return value;
+  }
+
+  function toggleServer() {
+    if (changeServer.loading) return;
+    if (isProd()) {
+      setServer("test");
+    } else {
+      setServer("prod");
+    }
+  }
+
+  function getServerUrl() {
+    return isProd()
+      ? "https://api.cacophony.org.nz"
+      : "https://api-test.cacophony.org.nz";
+  }
+
   return {
     data,
     isAuthorized,
     skippedLogin,
     validateCurrToken,
     isProd,
-    async login(email: string, password: string) {
-      const authUser = await CacophonyPlugin.authenticateUser({
-        email,
-        password,
-      });
-      if (!authUser.success) {
-        logWarning({
-          message: "Login failed",
-          details: authUser.message,
-        });
-        return;
-      }
-      const { token, id, refreshToken } = authUser.data;
-      Preferences.set({ key: "skippedLogin", value: "false" });
-      mutateUser({
-        token,
-        id,
-        email,
-        refreshToken,
-        expiry: new Date().toISOString(),
-        prod: isProd(),
-      });
-      mutateSkip(false);
-    },
+    login,
     logout,
-    skip() {
-      Preferences.set({ key: "skippedLogin", value: "true" });
-      nav("/devices");
-      mutateSkip(true);
-    },
-    async requestDeletion(): Result<string> {
-      const usr = data();
-      if (!usr) return Promise.reject("No user to delete");
-      await validateCurrToken();
-      const value = await CacophonyPlugin.requestDeletion({
-        token: usr.token,
-      });
-      logSuccess({
-        message: "Account deletion requested.",
-      });
-      return value;
-    },
-    toggleServer() {
-      if (changeServer.loading) return;
-      if (isProd()) {
-        setServer("test");
-      } else {
-        setServer("prod");
-      }
-    },
-    getServerUrl() {
-      return isProd() ? "https://api.cacophony.org.nz" : "https://api-test.cacophony.org.nz";
-    }
+    skip,
+    requestDeletion,
+    toggleServer,
+    getServerUrl,
   };
 });
 

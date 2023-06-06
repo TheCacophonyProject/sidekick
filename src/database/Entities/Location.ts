@@ -2,7 +2,7 @@ import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
 import { boolToInt, insertIntoTable, insertManyIntoTable } from "..";
 
-const TABLE_NAME = "LocationsV2";
+const TABLE_NAME = "LocationV3";
 
 const CoordsSchema = z.object({
   lat: z.number(),
@@ -23,41 +23,44 @@ export const LocationSchema = z.object({
   updatedAt: z.string(),
   settings: SettingsSchema.nullish(),
   isProd: z.coerce.boolean().default(false),
-  updatePic: z.coerce.boolean().default(false),
   updateName: z.coerce.boolean().default(false),
   needsCreation: z.coerce.boolean().default(false),
-  needsDeletion: z.coerce.boolean().default(false),
   needsRename: z.coerce.boolean().default(false),
   groupName: z.string(),
   referenceImages: z.array(z.string()).nullish(),
+  // Images created offline to sync with server
+  uploadImages: z.array(z.string()).nullish(),
+  deleteImages: z.array(z.string()).nullish(),
 });
 
 const MutationLocationSchema = LocationSchema.extend({
   coords: CoordsSchema.transform((val) => JSON.stringify(val)),
   settings: SettingsSchema.nullish(),
-})
-  .partial()
-  .transform((val) => {
-    // remove settings and set settings.referenceImages to string for key referenceImages
-    const { settings, ...rest } = val;
-    return {
-      ...rest,
-      ...(settings?.referenceImages && {
-        referenceImages: JSON.stringify(settings.referenceImages),
-      }),
-      id: parseInt(`${rest.id}${rest.isProd ? "1" : "0"}`),
-    };
-  });
+});
+const LocationParse = MutationLocationSchema.partial().transform((val) => {
+  // remove settings and set settings.referenceImages to string for key referenceImages
+  const { settings, ...rest } = val;
+  if (settings?.referenceImages) debugger;
+  return {
+    ...rest,
+    ...(settings?.referenceImages && {
+      referenceImages: JSON.stringify(settings.referenceImages),
+    }),
+    id: parseInt(`${rest.id}${rest.isProd ? "1" : "0"}`),
+  };
+});
 
+const stringToArr = z
+  .string()
+  .nullish()
+  .transform((val) => {
+    if (!val) return [];
+    return JSON.parse(val) as string[];
+  });
 const QueryLocationSchema = LocationSchema.extend({
   coords: z.string().transform((val) => CoordsSchema.parse(JSON.parse(val))),
-  referenceImages: z
-    .string()
-    .nullish()
-    .transform((val) => {
-      if (!val) return [];
-      return JSON.parse(val) as string[];
-    }),
+  referenceImages: stringToArr,
+  uploadImages: stringToArr,
 });
 
 export const createLocationSchema = `
@@ -69,10 +72,10 @@ CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
   isProd INTEGER NOT NULL,
   needsRename INTEGER NOT NULL,
   needsCreation INTEGER NOT NULL,
-  needsDeletion INTEGER NOT NULL,
-  updatePic INTEGER NOT NULL,
   updateName INTEGER NOT NULL,
   referenceImages TEXT,
+  uploadImages TEXT,
+  deleteImages TEXT,
   updatedAt TEXT NOT NULL,
   groupName TEXT NOT NULL
 );
@@ -85,7 +88,8 @@ export const insertLocation = insertIntoTable({
 });
 export const insertLocations = insertManyIntoTable({
   tableName: TABLE_NAME,
-  schema: MutationLocationSchema,
+  schema: LocationParse,
+  keys: Object.keys(MutationLocationSchema.shape),
 });
 const getLocationByIdSql = `SELECT * FROM ${TABLE_NAME} WHERE id = ?`;
 export const getLocationById =
@@ -110,6 +114,7 @@ export const getLocations =
     if (!result.values) return [];
     return result.values.map((row) => QueryLocationSchema.parse(row));
   };
+
 const deleteLocationSql = `DELETE FROM ${TABLE_NAME} WHERE id = ?`;
 export const deleteLocation =
   (db: SQLiteDBConnection) => async (location: Location) => {
@@ -132,6 +137,5 @@ const upateLocationSql = (location: UpdateLocation) => {
 export const updateLocation =
   (db: SQLiteDBConnection) => async (location: UpdateLocation) => {
     const [sql, values] = upateLocationSql(location);
-    debugger;
     return db.query(sql, [...values, location.id]);
   };

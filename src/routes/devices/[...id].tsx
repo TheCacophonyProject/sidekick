@@ -17,7 +17,9 @@ function DeviceSettings() {
     <>
       <section class="pb-bar pt-bar relative h-full">
         <Show when={device()}>
-          {(dev) => <iframe class="h-full w-full" src={dev().url} />}
+          {(dev) => (
+            <iframe class="h-full w-full max-w-[100vw]" src={dev().url} />
+          )}
         </Show>
       </section>
     </>
