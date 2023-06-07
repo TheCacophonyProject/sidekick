@@ -1,7 +1,7 @@
 import { HttpResponse, registerPlugin } from "@capacitor/core";
 import { createEffect, createSignal } from "solid-js";
 import { Geolocation } from "@capacitor/geolocation";
-import { logError, logWarning } from "./Notification";
+import { logError, logSuccess, logWarning } from "./Notification";
 import { CallbackId, Result, URL } from ".";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
@@ -504,6 +504,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         devices.set(device.id, {
           ...device,
           locationSet: true,
+        });
+        logSuccess({
+          message: `Successfully set location for ${device.name}. Please reset the device.`,
+          timeout: 6000,
         });
       }
       locationBeingSet.delete(device.id);

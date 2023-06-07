@@ -193,6 +193,7 @@ function Devices() {
   const [cancel, setCancel] = createSignal(false);
 
   const searchDevice = () => {
+    refetchLocation();
     context.startDiscovery();
     setTimeout(() => {
       context.stopDiscovery();
@@ -225,7 +226,8 @@ function Devices() {
       </button>,
     ]);
   });
-  const [pos] = createResource(async () => {
+
+  const [pos, { refetch: refetchPos }] = createResource(async () => {
     try {
       const res = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
@@ -246,33 +248,89 @@ function Devices() {
       clearInterval(search);
     });
   });
+  const MIN_STATION_SEPARATION_METERS = 60;
+  // The radius of the station is half the max distance between stations: any recording inside the radius can
+  // be considered to belong to that station.
+  const MAX_DISTANCE_FROM_STATION_FOR_RECORDING =
+    MIN_STATION_SEPARATION_METERS / 2;
 
-  const [devicesLocToUpdate] = createResource(
+  function haversineDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180; // Convert latitude from degrees to radians
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Returns the distance in meters
+  }
+
+  function isWithinRadius(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+    radius: number
+  ): boolean {
+    const distance = haversineDistance(lat1, lon1, lat2, lon2);
+    return distance <= radius;
+  }
+
+  const isWithinRange = (
+    prevLoc: [number, number],
+    newLoc: [number, number],
+    range = MAX_DISTANCE_FROM_STATION_FOR_RECORDING
+  ) => {
+    const [lat, lng] = prevLoc;
+    const [latitude, longitude] = newLoc;
+    const inRange = isWithinRadius(lat, lng, latitude, longitude, range);
+    return inRange;
+  };
+
+  const [devicesLocToUpdate, { refetch: refetchLocation }] = createResource(
     () => {
-      if (pos.loading) return false;
-
-      return [[...context.devices.values()], pos()] as const;
+      return [...context.devices.values()] as const;
     },
-    async (sources) => {
-      if (!sources) return [];
-      const [devices, pos] = sources;
-      if (!pos) return [];
+    async (devices) => {
+      if (!devices) return [];
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+      });
       const devicesToUpdate: string[] = [];
       for (const device of devices.values()) {
         if (!device.isConnected) continue;
         const locationRes = await context.getLocation(device);
         if (!locationRes.success) continue;
         const loc = locationRes.data;
-        const diffLat = Math.abs(loc.latitude - pos.coords.latitude);
-        const diffLong = Math.abs(loc.longitude - pos.coords.longitude);
-        if (diffLat > 0.001 || diffLong > 0.001) {
+        const newLoc: [number, number] = [
+          pos.coords.latitude,
+          pos.coords.longitude,
+        ];
+
+        const withinRange = isWithinRange(
+          [loc.latitude, loc.longitude],
+          newLoc
+        );
+        console.log(withinRange);
+        if (!withinRange) {
           devicesToUpdate.push(device.id);
         }
       }
+
       return devicesToUpdate;
     }
   );
 
+  const [dialogOpen, setDialogOpen] = createSignal(false);
   const [updatingDeviceLocations] = createResource(
     () => {
       if (devicesLocToUpdate.loading) return false;
@@ -298,11 +356,13 @@ function Devices() {
               .join(
                 ", "
               )} have different location stored. Would you like to update them to the current location?`;
-
+      if (dialogOpen()) return;
+      setDialogOpen(true);
       const { value } = await Dialog.confirm({
         title: "Update Location",
         message,
       });
+      setDialogOpen(false);
       if (value) {
         for (const device of context.devices.values()) {
           if (devices.includes(device.id) && device.isConnected) {
