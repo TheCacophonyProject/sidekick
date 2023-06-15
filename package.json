@@ -38,7 +38,7 @@
   "dependencies": {
     "@capacitor-community/firebase-crashlytics": "^3.0.0",
     "@capacitor-community/keep-awake": "^4.0.0",
-    "@capacitor-community/sqlite": "4.8.0-1",
+    "@capacitor-community/sqlite": "5.0.2",
     "@capacitor/android": "^5.0.3",
     "@capacitor/app": "^5.0.2",
     "@capacitor/browser": "^5.0.2",

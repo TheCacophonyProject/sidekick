@@ -19,6 +19,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.provider.Settings.ACTION_WIFI_ADD_NETWORKS
 import android.provider.Settings.EXTRA_WIFI_NETWORK_LIST
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResult
 import androidx.annotation.RequiresPermission
 import com.getcapacitor.JSObject

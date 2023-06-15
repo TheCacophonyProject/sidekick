@@ -7,25 +7,25 @@ import {
   LocationSchema,
   insertLocation,
   createLocationSchema,
+  getLocationById,
 } from "~/database/Entities/Location";
 import { db } from ".";
 import { CacophonyPlugin, getLocationsForUser } from "../CacophonyApi";
 import { logError, logSuccess, logWarning } from "../Notification";
 import { useUserContext } from "../User";
+import { Directory, Filesystem } from "@capacitor/filesystem";
 
 export function useLocationStorage() {
   const userContext = useUserContext();
   const getUserLocations = async () => {
     try {
-      const userData = userContext.data();
-      if (!userData) return [];
       const user = await userContext.validateCurrToken();
       if (!user) return [];
       const locations = await getLocationsForUser(user.token);
       return locations.map((location) => ({
         ...location,
-        isProd: userData.prod,
-        userId: parseInt(userData.id),
+        isProd: user.prod,
+        userId: parseInt(user.id),
       }));
     } catch (e) {
       if (e instanceof Error) {
@@ -61,7 +61,12 @@ export function useLocationStorage() {
               (savedLocation) =>
                 savedLocation.id ===
                   parseInt(`${location.id}${location.isProd ? "1" : "0"}`) &&
-                savedLocation.updatedAt !== location.updatedAt
+                savedLocation.updatedAt !== location.updatedAt &&
+                savedLocation.referenceImages?.every(
+                  (refImage) =>
+                    location.settings?.referenceImages?.includes(refImage) ??
+                    false
+                )
             );
             if (diffLoc) {
               // get difference between location and savedLocation objects
@@ -74,7 +79,6 @@ export function useLocationStorage() {
                 }
                 return result;
               }, {} as Record<keyof Location, unknown>);
-              console.log(diff);
               return {
                 ...diff,
                 id: diffLoc.id,
@@ -82,13 +86,37 @@ export function useLocationStorage() {
             }
           })
           .filter(Boolean) as Location[];
-        console.log(locations, locationsToUpdate);
+        console.log("Locations", locations, locationsToUpdate);
 
         await Promise.all([
           insertLocations(db)(locationsToInsert),
           ...locationsToUpdate.map((location) => updateLocation(db)(location)),
         ]);
-        return getLocations(db)();
+        // Sync locations names and photos
+        const newLocations = await getLocations(db)();
+        const syncedLocations = await Promise.all(
+          newLocations.map(async (location) => {
+            if (location.updateName) {
+              const sync = await syncLocationName(location.id, location.name);
+              location.updateName = !sync;
+            }
+            if (location.uploadImages?.length) {
+              console.log("syncing photos", location);
+              const sync = await syncLocationPhotos(
+                location.id,
+                location.uploadImages
+              );
+              location.uploadImages = sync ? [] : location.uploadImages;
+            }
+            if (location.deleteImages?.length) {
+              const sync = await syncLocationDeleteImages(location);
+              location.deleteImages = sync ? [] : location.deleteImages;
+            }
+            return location;
+          })
+        );
+        console.log(syncedLocations);
+        return syncedLocations;
       } catch (e) {
         if (e instanceof Error) {
           logError({ message: "Failed to sync locations", error: e });
@@ -102,6 +130,35 @@ export function useLocationStorage() {
       }
     }
   );
+
+  const syncLocationDeleteImages = async (location: Location) => {
+    const user = await userContext.validateCurrToken();
+    if (!user) return;
+    try {
+      const deleteImages = location.deleteImages ?? [];
+      for (const fileKey of deleteImages) {
+        const res = await CacophonyPlugin.deleteReferencePhoto({
+          token: user.token,
+          station: location.id.toString().slice(0, -1),
+          fileKey,
+        });
+        if (res.success && res.data.serverDeleted) {
+          location.deleteImages = deleteImages.filter(
+            (image) => image !== fileKey
+          );
+          await updateLocation(db)({
+            id: location.id,
+            deleteImages: location.deleteImages,
+          });
+        }
+      }
+      return true;
+    } catch (e) {
+      console.log(e);
+      return false;
+    }
+  };
+
   const deleteReferencePhotoForLocation = async (
     location: Location,
     fileKey: string
@@ -119,18 +176,22 @@ export function useLocationStorage() {
       const referenceImages = location.referenceImages?.filter(
         (image) => image !== fileKey
       );
+      const changes = {
+        referenceImages,
+        ...(!deleted.serverDeleted && {
+          deleteImages: [...(location.deleteImages ?? []), fileKey],
+        }),
+      };
       await updateLocation(db)({
         id: location.id,
-        referenceImages,
-        needsDeletion: !deleted.serverDeleted,
+        ...changes,
       });
       mutate((locations) =>
         locations?.map((loc) => {
           if (loc.id === location.id) {
             return {
               ...loc,
-              referenceImages,
-              needsDeletion: !deleted.serverDeleted,
+              ...changes,
             };
           }
           return loc;
@@ -139,12 +200,16 @@ export function useLocationStorage() {
       return true;
     } else {
       logWarning({
-        message: "Failed to delete reference photo for location",
+        message:
+          "Failed to delete reference photo for location. You can also delete it on the Cacophony website.",
         details: `${location.id} ${fileKey}: ${res.message}`,
       });
       return false;
     }
   };
+
+  const SyncLocationMessage =
+    "Could not update location name. We will sync it when you next open the app.";
   const updateLocationName = async (location: Location, newName: string) => {
     const updatedLocation = { ...location, name: newName };
     try {
@@ -162,12 +227,12 @@ export function useLocationStorage() {
           });
         } else {
           logWarning({
-            message: "Failed to update location name",
-            details: res.message,
+            message: SyncLocationMessage,
           });
         }
+      } else {
+        updatedLocation.updateName = true;
       }
-      updatedLocation.updateName = true;
       await updateLocation(db)(updatedLocation);
       mutate((locations) =>
         locations?.map((loc) =>
@@ -176,8 +241,7 @@ export function useLocationStorage() {
       );
     } catch (e) {
       logWarning({
-        message: "Failed to update location name",
-        details: JSON.stringify(e),
+        message: SyncLocationMessage,
       });
       updatedLocation.updateName = true;
       await updateLocation(db)(updatedLocation);
@@ -211,25 +275,37 @@ export function useLocationStorage() {
           logSuccess({
             message: "Successfully updated location picture",
           });
+          // Delete newPhoto from cache
+          Filesystem.deleteFile({
+            path: newPhoto,
+            directory: Directory.Cache,
+          });
         } else {
-          logError({
-            message: "Failed to update location picture",
+          logWarning({
+            message:
+              "Unable to upload location photo. We will try again when you next open the app.",
             details: res.message,
           });
+          if (!location.uploadImages?.includes(newPhoto)) {
+            location.uploadImages = [
+              ...(location.uploadImages ?? []),
+              newPhoto,
+            ];
+          }
         }
       } else {
-        throw new Error("No valid token, may not have internet connection");
+        if (!location.uploadImages?.includes(newPhoto)) {
+          location.uploadImages = [...(location.uploadImages ?? []), newPhoto];
+        }
       }
     } catch (e) {
-      debugger;
       logWarning({
         message: "Failed to update location picture",
         details: JSON.stringify(e),
       });
-      location.uploadImages = [
-        ...(location.uploadImages ?? []),
-        newPhoto.slice(7),
-      ];
+      if (!location.uploadImages?.includes(newPhoto)) {
+        location.uploadImages = [...(location.uploadImages ?? []), newPhoto];
+      }
     }
     await updateLocation(db)(location);
     mutate((locations) =>
@@ -267,20 +343,24 @@ export function useLocationStorage() {
     await insertLocation(db)(newLocation);
     mutate((locations) => [...(locations ?? []), newLocation]);
   };
+
   const getReferencePhotoForLocation = async (id: number, fileKey: string) => {
-    const user = await userContext.validateCurrToken();
-    if (!user) return;
     try {
+      const user = await userContext.validateCurrToken();
       const res = await CacophonyPlugin.getReferencePhoto({
-        token: user.token,
-        station: id.toString().slice(0, -1),
+        ...(user?.token && { token: user.token }),
+        station: id.toString().slice(0, -1), // id adds 0/1 to indicate production or test
         fileKey,
       });
       if (res.success) {
-        const photoPath = res.data;
-        return `${window.location.origin}/_capacitor_file_${photoPath}`;
+        return `${window.location.origin}/_capacitor_file_${res.data}`;
+      } else {
+        logWarning({
+          message: "Failed to get reference photo for location",
+          details: `${id} ${fileKey}: ${res.message}`,
+        });
+        return;
       }
-      return res.message;
     } catch (e) {
       logWarning({
         message: "Failed to get reference photo for location",
@@ -296,36 +376,54 @@ export function useLocationStorage() {
     try {
       await CacophonyPlugin.updateStation({
         token: user.token,
-        id: id.toString(),
+        id: id.toString().slice(0, -1),
         name,
       });
       await updateLocation(db)({
         id,
         updateName: false,
       });
+      return true;
     } catch (e) {
       await updateLocation(db)({
         id,
         updateName: true,
       });
+      return false;
     }
   };
 
-  createEffect(() => {
-    on(savedLocations, async (locations) => {
-      if (!locations) return;
+  const syncLocationPhotos = async (id: number, photos: string[]) => {
+    const user = await userContext.validateCurrToken();
+    if (!user) return;
+    try {
       await Promise.all(
-        locations
-          .filter((loc) => loc.updateName)
-          .map((location) => {
-            return syncLocationName(location.id, location.name);
-          })
+        photos.map(async (photo) => {
+          const res = await CacophonyPlugin.uploadReferencePhoto({
+            token: user.token,
+            station: id.toString().slice(0, -1),
+            filename: photo,
+          });
+          if (res.success) {
+            return res.data;
+          } else {
+            throw new Error(res.message);
+          }
+        })
       );
-      mutate((locations) =>
-        locations?.map((loc) => ({ ...loc, updateName: false }))
-      );
-    });
-  });
+      await updateLocation(db)({
+        id,
+        uploadImages: [],
+      });
+      return true;
+    } catch (e) {
+      await updateLocation(db)({
+        id,
+        uploadImages: photos,
+      });
+      return false;
+    }
+  };
 
   onMount(async () => {
     try {

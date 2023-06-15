@@ -48,6 +48,8 @@ import { logWarning } from "~/contexts/Notification";
 import { Portal } from "solid-js/web";
 import { Camera, CameraResultType } from "@capacitor/camera";
 import Dialog from "~/components/Dialog";
+import { create } from "domain";
+import { c } from "drizzle-orm/query-promise.d-e370e0a9";
 
 interface DeviceDetailsProps {
   id: string;
@@ -59,9 +61,6 @@ interface DeviceDetailsProps {
 }
 
 function DeviceDetails(props: DeviceDetailsProps) {
-  createEffect(() => {
-    console.log(props);
-  });
   const context = useDevice();
   const storage = useStorage();
   const [savedRecs, setSavedRecs] = createSignal<Recording[]>([]);
@@ -123,7 +122,22 @@ function DeviceDetails(props: DeviceDetailsProps) {
     await context.saveItems(props.id);
   };
 
-  const [location] = context.getLocationByDevice(props.id);
+  const [location, { refetch: refetchLocation }] = context.getLocationByDevice(
+    props.id
+  );
+  createEffect(() => {
+    console.log("location", location());
+  });
+
+  createEffect(() => {
+    on(
+      () => props.shouldUpdateLocation,
+      async (shouldUpdate) => {
+        if (!shouldUpdate) return;
+        refetchLocation();
+      }
+    );
+  });
 
   let LocationNameInput: HTMLInputElement;
   const [isEditing, setIsEditing] = createSignal(false);
@@ -138,9 +152,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
 
   const [newName, setNewName] = createSignal("");
-  createEffect(() => {
-    console.log("location", location());
-  });
   const saveLocationName = async () => {
     const newName = LocationNameInput.value;
     if (!newName) return;
@@ -151,9 +162,16 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const [photoFilesToUpload, setPhotoFilesToUpload] = createSignal<
     { file: string; url: string }[]
   >([]);
+
   const canSave = (): boolean =>
     newName() !== "" ||
     (location() !== null && photoFilesToUpload().length > 0);
+
+  const images = () => [
+    ...(location()?.referenceImages ?? []),
+    ...(location()?.uploadImages ?? []),
+    ...photoFilesToUpload(),
+  ];
 
   const addPhotoToDevice = async () => {
     const image = await Camera.getPhoto({
@@ -168,12 +186,13 @@ function DeviceDetails(props: DeviceDetailsProps) {
         ...curr,
         { file: image.path ?? "", url: image.webPath ?? "" },
       ]);
-      const loc = location();
-      setPhotoIndex(
-        (loc?.referenceImages ?? []).length + photoFilesToUpload().length - 1
-      );
+      setPhotoIndex(images().length - 1);
     }
   };
+
+  createEffect(() => {
+    console.log("location & images", images(), location());
+  });
 
   const saveLocationSettings = async () => {
     const name = newName();
@@ -230,30 +249,23 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
 
   const [photoIndex, setPhotoIndex] = createSignal(0);
-  const hasPicture = () => {
-    const loc = location();
-    if (!loc) return photoFilesToUpload().length > 0;
-    return loc?.referenceImages?.length ?? 0 > 0;
-  };
+  const hasPicture = () => images().length > 0;
 
   // Server Side referenceImages are first in the array
   const [photoReference] = createResource(
-    () => [location(), photoFilesToUpload(), photoIndex()] as const,
+    () => [location(), images(), photoIndex()] as const,
     async (values) => {
-      const [loc, picUrl, idx] = values;
-      const refLength = loc?.referenceImages?.length ?? 0;
-      if (idx > refLength - 1 && picUrl.length > 0) {
-        return picUrl[idx - refLength].url;
-      }
-
-      if (!loc || !loc.referenceImages) return "";
-      const img = loc.referenceImages[idx];
+      debugger;
+      const [loc, imgs, idx] = values;
+      const img = imgs[idx];
       if (!img) return "";
-      const data = await storage.getReferencePhotoForLocation(
-        loc.id,
-        loc.referenceImages[idx]
-      );
-      return data;
+      if (typeof img === "string") {
+        if (!loc) return "";
+        const data = await storage.getReferencePhotoForLocation(loc.id, img);
+        return data ?? "";
+      } else {
+        return img.url;
+      }
     }
   );
 
@@ -288,9 +300,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
       }
     }
   };
-
-  const photoLength = () =>
-    (location()?.referenceImages?.length ?? 0) + photoFilesToUpload().length;
 
   return (
     <ActionContainer
@@ -395,7 +404,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         class="flex h-10 w-10 items-center justify-center rounded-r-full bg-slate-100 p-2 text-gray-500"
                         onClick={() =>
                           setPhotoIndex((i) =>
-                            i === 0 ? photoLength() - 1 : i - 1
+                            i === 0 ? images().length - 1 : i - 1
                           )
                         }
                       >
@@ -405,7 +414,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         class="flex h-10 w-10 items-center justify-center rounded-l-full bg-slate-100 p-2 text-gray-500"
                         onClick={() =>
                           setPhotoIndex((i) =>
-                            i === photoLength() - 1 ? 0 : i + 1
+                            i === images().length - 1 ? 0 : i + 1
                           )
                         }
                       >
@@ -413,17 +422,25 @@ function DeviceDetails(props: DeviceDetailsProps) {
                       </button>
                     </div>
                     <div class="w-fit self-center rounded-lg bg-slate-50 p-1">
-                      {photoIndex() + 1}/{photoLength()}
+                      {photoIndex() + 1}/{images().length}
                     </div>
                   </div>
-                  <img
-                    src={
-                      !photoReference.loading && !photoReference.error
-                        ? (photoReference() as string)
-                        : ""
-                    }
-                    class="h-[18rem] w-full rounded-md object-cover p-4"
-                  />
+                  <div class="h-[18rem]">
+                    <Show
+                      when={
+                        !photoReference.loading &&
+                        !photoReference.error &&
+                        photoReference()
+                      }
+                    >
+                      {(photo) => (
+                        <img
+                          src={photo()}
+                          class="h-[18rem] w-full rounded-md object-cover p-4"
+                        />
+                      )}
+                    </Show>
+                  </div>
                 </Show>
               </div>
             </div>
@@ -562,11 +579,13 @@ function Devices() {
   const [cancel, setCancel] = createSignal(false);
 
   const searchDevice = () => {
+    refetchLocation();
     context.startDiscovery();
     setTimeout(() => {
       context.stopDiscovery();
     }, 6000);
   };
+
   const connectToDeviceAP = leading(
     debounce,
     async () => {
@@ -594,8 +613,11 @@ function Devices() {
       </button>,
     ]);
   });
-  const [pos] = createResource(async () => {
+
+  const [pos, { refetch: refetchPos }] = createResource(async () => {
     try {
+      const permission = await Geolocation.checkPermissions();
+      if (permission.location !== "granted") return;
       return await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
       });
@@ -618,31 +640,91 @@ function Devices() {
       clearInterval(search);
     });
   });
+  const MIN_STATION_SEPARATION_METERS = 60;
+  // The radius of the station is half the max distance between stations: any recording inside the radius can
+  // be considered to belong to that station.
+  const MAX_DISTANCE_FROM_STATION_FOR_RECORDING =
+    MIN_STATION_SEPARATION_METERS / 2;
 
-  const [devicesLocToUpdate] = createResource(
+  function haversineDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180; // Convert latitude from degrees to radians
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Returns the distance in meters
+  }
+
+  function isWithinRadius(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+    radius: number
+  ): boolean {
+    const distance = haversineDistance(lat1, lon1, lat2, lon2);
+    return distance <= radius;
+  }
+
+  const isWithinRange = (
+    prevLoc: [number, number],
+    newLoc: [number, number],
+    range = MAX_DISTANCE_FROM_STATION_FOR_RECORDING
+  ) => {
+    const [lat, lng] = prevLoc;
+    const [latitude, longitude] = newLoc;
+    const inRange = isWithinRadius(lat, lng, latitude, longitude, range);
+    return inRange;
+  };
+
+  const [devicesLocToUpdate, { refetch: refetchLocation }] = createResource(
     () => {
-      if (pos.loading) return false;
-
-      return [[...context.devices.values()], pos()] as const;
+      return [...context.devices.values()] as const;
     },
-    async (sources) => {
+    async (devices) => {
       try {
-        if (!sources) return [];
-        const [devices, pos] = sources;
-        if (!pos) return [];
+        if (!devices) return [];
+        const currPerm = await Geolocation.checkPermissions();
+        if (currPerm.location === "denied") return [];
+        if (currPerm.location !== "granted") {
+          const reqPerm = await Geolocation.requestPermissions();
+          if (reqPerm.location !== "granted") return [];
+        }
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+        });
         const devicesToUpdate: string[] = [];
         for (const device of devices.values()) {
           if (!device.isConnected) continue;
           const locationRes = await context.getLocationCoords(device.id);
           if (!locationRes.success) continue;
           const loc = locationRes.data;
-          const diffLat = Math.abs(loc.latitude - pos.coords.latitude);
-          const diffLong = Math.abs(loc.longitude - pos.coords.longitude);
-          if (diffLat > 0.001 || diffLong > 0.001) {
+          const newLoc: [number, number] = [
+            pos.coords.latitude,
+            pos.coords.longitude,
+          ];
+
+          const withinRange = isWithinRange(
+            [loc.latitude, loc.longitude],
+            newLoc
+          );
+          console.log(withinRange);
+          if (!withinRange) {
             devicesToUpdate.push(device.id);
           }
+          return devicesToUpdate;
         }
-        return devicesToUpdate;
       } catch (e) {
         if (e instanceof Error) {
           logWarning(e);
@@ -658,6 +740,7 @@ function Devices() {
     }
   );
 
+  const [dialogOpen, setDialogOpen] = createSignal(false);
   const [updatingDeviceLocations] = createResource(
     () => {
       if (devicesLocToUpdate.loading) return false;
@@ -684,10 +767,13 @@ function Devices() {
                 ", "
               )} have different location stored. Would you like to update them to the current location?`;
 
+      if (dialogOpen()) return;
+      setDialogOpen(true);
       const { value } = await Prompt.confirm({
         title: "Update Location",
         message,
       });
+      setDialogOpen(false);
       if (value) {
         for (const device of context.devices.values()) {
           if (devices.includes(device.id)) {
@@ -707,6 +793,13 @@ function Devices() {
       updated !== undefined ? updated.includes(device.id) : undefined;
     return shouldUpdateLocation;
   };
+
+  createEffect(() => {
+    console.log(devicesLocToUpdate.loading);
+    if (!devicesLocToUpdate.loading) {
+      console.log(devicesLocToUpdate());
+    }
+  });
 
   return (
     <>

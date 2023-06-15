@@ -8,6 +8,7 @@ import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { Dialog } from "@capacitor/dialog";
 import { BiRegularLogOut } from "solid-icons/bi";
 import { CacophonyPlugin } from "~/contexts/CacophonyApi";
+import { Geolocation } from "@capacitor/geolocation";
 
 function Settings() {
   const userContext = useUserContext();
@@ -39,10 +40,9 @@ function Settings() {
       return "1.0.0";
     }
   });
-
   return (
     <section class="pt-bar h-full space-y-2 bg-gray-200 px-2">
-      <div class="rounded-xl bg-slate-50 p-2">
+      <div class="space-y-2 rounded-xl bg-slate-50 p-2">
         <h1 class="ml-2 text-xl text-neutral-500">Account</h1>
         <ActionContainer icon={BsPersonFill} action={action}>
           <div class="pt-2">
@@ -66,7 +66,7 @@ function Settings() {
           </>
         </ActionContainer>
       </div>
-      <div class="mt-2 rounded-xl bg-slate-50 p-2">
+      <div class="mt-2 space-y-2 rounded-xl bg-slate-50 p-2">
         <h1 class="ml-2 text-xl text-neutral-500">Application</h1>
         <ActionContainer icon={ImMobile} header="App Version">
           <>

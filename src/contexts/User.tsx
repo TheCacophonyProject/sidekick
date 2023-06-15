@@ -140,12 +140,20 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     const user = data();
     if (user) {
       const { token, refreshToken, expiry, email, id } = user;
-
       // Check if token is valid
-      const expiryDate = new Date(expiry);
-      const now = new Date();
-      if (expiryDate > now) return user;
+      // Expiry is  ISO 8601 timestamp
+      const expiryDate = new Date(expiry).getTime();
+      const shouldRefresh = expiryDate > Date.now() + 5000;
+      console.log(
+        "Validating token",
+        user,
+        shouldRefresh,
+        expiryDate,
+        Date.now()
+      );
+      if (expiryDate > Date.now() + 5000) return user;
 
+      debugger;
       // Refresh token
       const result = await CacophonyPlugin.validateToken({
         token,

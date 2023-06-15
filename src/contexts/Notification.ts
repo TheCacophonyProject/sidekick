@@ -36,6 +36,7 @@ const removeNotificationAfterDuration = (id: string, duration: number) =>
 type LogDetails = {
   message: string;
   details?: string;
+  timeout?: number;
 };
 
 type LogBase = {
@@ -51,9 +52,8 @@ function isErrorLog(log: AnyLog): log is ErrorLog {
   return log.type === "error";
 }
 
-const logAction = async (log: AnyLog, duration = defaultDuration) => {
+const logAction = async (log: AnyLog) => {
   const id = generateID();
-  hideNotification(id, duration);
   const message = `message: ${log.message} details: ${log.details}`;
   if (isErrorLog(log)) {
     await FirebaseCrashlytics.recordException({ message });
@@ -69,6 +69,21 @@ const logAction = async (log: AnyLog, duration = defaultDuration) => {
       type: log.type,
     },
   ]);
+  hideNotification(id, log.timeout ?? defaultDuration);
+  if (isErrorLog(log)) {
+    console.log(log.message, log.details);
+    const message = `message: ${log.message} details: ${log.details}`;
+    if (log.error) {
+      console.error(log.error);
+      const stacktrace = await StackTrace.fromError(log.error);
+      await FirebaseCrashlytics.recordException({
+        message,
+        stacktrace,
+      });
+    } else {
+      await FirebaseCrashlytics.recordException({ message });
+    }
+  }
 };
 
 const logError = (errorLog: Omit<ErrorLog, "type">) =>

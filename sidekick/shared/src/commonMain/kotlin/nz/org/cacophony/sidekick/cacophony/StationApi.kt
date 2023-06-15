@@ -60,7 +60,7 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
     data class ReferenceImage(val fileKey: String, val messages: List<String>, val success: Boolean)
     suspend fun uploadReferencePhoto(id: String, filePath: Path, token: Token): Either<InvalidResponse, ReferenceImage> =
         getFile(filePath).map { image ->
-            val url = "${api.browsePath}/stations/$id/reference-photo"
+            val url = "${api.basePath}/stations/$id/reference-photo"
             val res = api.client.submitFormWithBinaryData(
                 url = url,
                formData = formData {
@@ -80,23 +80,25 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
         }.mapLeft { InvalidResponse.UnknownError("Unable to get image for $filePath") }
     @Serializable
     data class GetReferenceImage(val success: Boolean)
-    suspend fun getReferencePhoto(id: String, fileKey: String, token: Token): Either<InvalidResponse, String>  {
+    suspend fun getReferencePhoto(id: String, fileKey: String, token: Token?): Either<InvalidResponse, String>  {
         try {
+            val file = fileKey.split("/").last()
+            val fileKey = fileKey.replace("/","_")
             val path = filePath.toPath().resolve("cache/${fileKey}")
             return if (hasFile(path)) {
-                path.toString().right()
+                getFile(path).map { path.toString() }.mapLeft { InvalidResponse.UnknownError("Unable to get reference photo for $id: $it") }
             } else if (hasFile(fileKey.toPath())){
-                fileKey.right()
+                getFile(fileKey.toPath()).map { path.toString() }.mapLeft { InvalidResponse.UnknownError("Unable to get reference photo for $id: $it") }
             } else {
-                api.getRequest("stations/$id/reference-photo/${fileKey}", token)
+                api.getRequest("stations/$id/reference-photo/${file}", token)
                     .flatMap { validateResponse<ByteArray>(it) }
                     .flatMap {
-                        writeToFile(filePath.toPath().resolve("cache/${fileKey}"), it)
+                        writeToFile(filePath.toPath().resolve("cache/${file}"), it)
                             .map { path ->
                                 path.toString()
                             }
                             .mapLeft { err ->
-                                InvalidResponse.UnknownError("Unable to write image for $fileKey: $err")
+                                InvalidResponse.UnknownError("Unable to write image for $file: $err")
                             }
                     }
                     .mapLeft { InvalidResponse.UnknownError("Unable to get reference photo for $id: $it") }

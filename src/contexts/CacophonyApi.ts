@@ -1,6 +1,9 @@
 import { registerPlugin } from "@capacitor/core";
 import { z } from "zod";
-import { LocationSchema } from "~/database/Entities/Location";
+import {
+  ApiLocationSchema,
+  LocationSchema,
+} from "~/database/Entities/Location";
 import { Result } from ".";
 import { logError } from "./Notification";
 
@@ -76,10 +79,10 @@ export interface CacophonyPlugin {
     filename: string;
   }): Result<JSONString>;
   getReferencePhoto(options: {
-    token: string;
+    token?: string;
     station: string;
     fileKey: string;
-  }): Result<JSONString>;
+  }): Result<string>;
   deleteReferencePhoto(options: {
     token: string;
     station: string;
@@ -103,7 +106,7 @@ const SuccessResSchema = z.object({
   success: z.literal(true),
   messages: z.array(z.string()),
   stations: z.array(
-    LocationSchema.omit({ coords: true, userId: true })
+    ApiLocationSchema.omit({ coords: true, userId: true })
       .extend({
         location: z.object({ lat: z.number(), lng: z.number() }),
       })

@@ -154,18 +154,19 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     }
 
     @Serializable
-    data class StationReferencePhoto(val token: String, val station: String, val fileKey: String)
+    data class GetReferencePhoto(val token: String?, val station: String, val fileKey: String)
     fun getReferencePhoto(call: PluginCall) = runCatch(call) {
-        call.validateCall<StationReferencePhoto>("token", "station", "fileKey").map { photo ->
-            stationApi.getReferencePhoto(photo.station,photo.fileKey.replace("/","_"), photo.token)
+        call.validateCall<GetReferencePhoto>("token", "station", "fileKey").map { photo ->
+            stationApi.getReferencePhoto(photo.station,photo.fileKey, photo.token)
                 .fold(
                     { error -> call.failure(error.toString()) },
                     { call.success(it) }
                 )
         }
     }
+    data class DeleteReferencePhoto(val token: String, val station: String, val fileKey: String)
     fun deleteReferencePhoto(call: PluginCall) = runCatch(call) {
-        call.validateCall<StationReferencePhoto>("token", "station", "fileKey").map { photo ->
+        call.validateCall<DeleteReferencePhoto>("token", "station", "fileKey").map { photo ->
             stationApi.deleteReferencePhoto(photo.station,photo.fileKey.replace("/", "_"), photo.token)
                 .fold(
                     { error -> call.failure(error.toString()) },

@@ -2,7 +2,7 @@ import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
 import { boolToInt, insertIntoTable, insertManyIntoTable } from "..";
 
-const TABLE_NAME = "LocationV3";
+const TABLE_NAME = "LocationTableV3";
 
 const CoordsSchema = z.object({
   lat: z.number(),
@@ -21,7 +21,6 @@ export const LocationSchema = z.object({
   userId: z.number().positive().nullish(),
   coords: CoordsSchema,
   updatedAt: z.string(),
-  settings: SettingsSchema.nullish(),
   isProd: z.coerce.boolean().default(false),
   updateName: z.coerce.boolean().default(false),
   needsCreation: z.coerce.boolean().default(false),
@@ -33,18 +32,23 @@ export const LocationSchema = z.object({
   deleteImages: z.array(z.string()).nullish(),
 });
 
-const MutationLocationSchema = LocationSchema.extend({
-  coords: CoordsSchema.transform((val) => JSON.stringify(val)),
+export const ApiLocationSchema = LocationSchema.extend({
   settings: SettingsSchema.nullish(),
+});
+
+const MutationLocationSchema = ApiLocationSchema.extend({
+  coords: CoordsSchema.transform((val) => JSON.stringify(val)),
 });
 const LocationParse = MutationLocationSchema.partial().transform((val) => {
   // remove settings and set settings.referenceImages to string for key referenceImages
-  const { settings, ...rest } = val;
-  if (settings?.referenceImages) debugger;
+  const { settings, deleteImages, ...rest } = val;
   return {
     ...rest,
     ...(settings?.referenceImages && {
       referenceImages: JSON.stringify(settings.referenceImages),
+    }),
+    ...(deleteImages && {
+      deleteImages: JSON.stringify(deleteImages),
     }),
     id: parseInt(`${rest.id}${rest.isProd ? "1" : "0"}`),
   };
@@ -60,6 +64,7 @@ const stringToArr = z
 const QueryLocationSchema = LocationSchema.extend({
   coords: z.string().transform((val) => CoordsSchema.parse(JSON.parse(val))),
   referenceImages: stringToArr,
+  deleteImages: stringToArr,
   uploadImages: stringToArr,
 });
 
@@ -84,12 +89,12 @@ CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
 export type Location = z.infer<typeof LocationSchema>;
 export const insertLocation = insertIntoTable({
   tableName: TABLE_NAME,
-  schema: MutationLocationSchema,
+  schema: LocationParse,
 });
 export const insertLocations = insertManyIntoTable({
   tableName: TABLE_NAME,
   schema: LocationParse,
-  keys: Object.keys(MutationLocationSchema.shape),
+  keys: Object.keys(LocationSchema.shape),
 });
 const getLocationByIdSql = `SELECT * FROM ${TABLE_NAME} WHERE id = ?`;
 export const getLocationById =
@@ -112,7 +117,7 @@ export const getLocations =
   (db: SQLiteDBConnection) => async (): Promise<Location[]> => {
     const result = await db.query(getLocationsSql);
     if (!result.values) return [];
-    return result.values.map((row) => QueryLocationSchema.parse(row));
+    return result.values.map((row: unknown) => QueryLocationSchema.parse(row));
   };
 
 const deleteLocationSql = `DELETE FROM ${TABLE_NAME} WHERE id = ?`;
@@ -127,7 +132,7 @@ const updateSql = (set: [string, unknown][]) =>
     .map(([key]) => `${key} = ?`)
     .join(", ")} WHERE id = ?`;
 const upateLocationSql = (location: UpdateLocation) => {
-  const entries = Object.entries(MutationLocationSchema.parse(location)).filter(
+  const entries = Object.entries(LocationParse.parse(location)).filter(
     ([key]) => key !== "id"
   );
   const set = entries;

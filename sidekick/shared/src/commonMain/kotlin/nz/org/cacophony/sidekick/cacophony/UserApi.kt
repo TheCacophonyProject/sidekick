@@ -64,7 +64,7 @@ class UserApi(val api: Api) {
 
 
     private suspend fun refreshToken(token: AuthToken): Either<ApiError, AuthToken> =
-        api.postJSON("users/refresh-session-token", RefreshRequest(token.refreshToken), token.token)
+        api.postJSON("users/refresh-session-token", RefreshRequest(token.refreshToken))
             .flatMap { res ->
                 validateResponse<RefreshResponse>(res)
                     .map { authResponse ->

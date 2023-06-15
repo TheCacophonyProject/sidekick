@@ -1,7 +1,7 @@
 import { HttpResponse, registerPlugin } from "@capacitor/core";
 import { createEffect, createSignal, createResource } from "solid-js";
 import { Geolocation } from "@capacitor/geolocation";
-import { logError, logWarning } from "./Notification";
+import { logError, logSuccess, logWarning } from "./Notification";
 import { CallbackId, Result, URL } from ".";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
@@ -504,12 +504,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     try {
       const device = devices.get(deviceId);
       if (!device || !device.isConnected) return;
+      const currPerm = await Geolocation.checkPermissions();
+      if (currPerm.location === "denied") return;
+      const permission = await Geolocation.requestPermissions();
+      if (permission.location !== "granted") return;
       locationBeingSet.add(device.id);
       const { timestamp, coords } = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
       });
       const location = locationSchema.safeParse({ ...coords, timestamp });
       if (!location.success) {
+        locationBeingSet.delete(device.id);
         logWarning({
           message: LOCATION_ERROR,
           details: location.error.message,
@@ -525,6 +530,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         devices.set(device.id, {
           ...device,
           locationSet: true,
+        });
+        logSuccess({
+          message: `Successfully set location for ${device.name}. Please reset the device.`,
+          timeout: 6000,
         });
       }
       locationBeingSet.delete(device.id);
@@ -544,13 +553,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   ): Result<DeviceCoords<number>> => {
     try {
       const deviceObj = devices.get(device);
+
+      // If device is not connected, return error.
       if (!deviceObj || !deviceObj.isConnected) {
         return {
           success: false,
           message: "Device is not connected",
         };
       }
+
       const { url } = deviceObj;
+
+      // Define the shape of the response data.
       const locationSchema = z.object({
         latitude: z.number(),
         longitude: z.number(),
@@ -558,6 +572,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         accuracy: z.number(),
         timestamp: z.string(),
       });
+
+      // Make the request to the device.
       const res = await CapacitorHttp.get({
         url: `${url}/api/location`,
         headers: {
@@ -565,6 +581,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           ...headers,
         },
       });
+
+      // If the request was successful, return the data.
       if (res.status === 200) {
         const location = locationSchema.safeParse(JSON.parse(res.data));
         if (!location.success) {
@@ -584,12 +602,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         };
       }
     } catch (error) {
-      if (error instanceof Error) {
-        logWarning({
-          message: "Could not get location",
-          details: error.message,
-        });
-      }
       return {
         success: false,
         message: "Could not get location",
