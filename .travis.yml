@@ -1,5 +1,4 @@
 language: android
-jdk: openjdk11
 
 dist: trusty
 
@@ -10,11 +9,11 @@ cache:
 
 android:
   licenses:
-    - 'android-sdk-preview-license-.+'    
-    - 'android-sdk-license-.+'    
-    - 'google-gdk-license-.+'   
+    - "android-sdk-preview-license-.+"
+    - "android-sdk-license-.+"
+    - "google-gdk-license-.+"
   components:
-    - tools    
+    - tools
     - build-tools-33.0.2
     - android-33
     - extra-google-google_play_services
@@ -28,10 +27,14 @@ env:
     - ANDROID_HOME=~/android-sdk
 
 rvm:
-    - 2.6
+  - 2.6
 
 before_install:
   # Android dependencies
+  - curl -s "https://get.sdkman.io" | bash
+  - source "$HOME/.sdkman/bin/sdkman-init.sh"
+  - sdk install java 17-open
+  - sdk use java 17-open
   - touch $HOME/.android/repositories.cfg
   - wget "https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip" -O commandlinetools.zip
   - unzip commandlinetools.zip -d $ANDROID_HOME/
@@ -49,20 +52,19 @@ before_install:
   - wget -qO- https://get.pnpm.io/install.sh | sh -
   - source /home/travis/.bashrc
 
-install: 
+install:
   - pnpm install
   - pnpm build
   - pnpm sync
   - cd ./sidekick
-  - export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
   - ./gradlew --version
   - ./gradlew clean assembleDebug
 
 before_deploy:
-- openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
-  -in signing.tar.enc -out signing.tar -d
-- tar xvf signing.tar
-- fastlane alpha
+  - openssl aes-256-cbc -K $encrypted_41783dd8bae9_key -iv $encrypted_41783dd8bae9_iv
+    -in signing.tar.enc -out signing.tar -d
+  - tar xvf signing.tar
+  - fastlane alpha
 
 deploy:
   provider: releases
