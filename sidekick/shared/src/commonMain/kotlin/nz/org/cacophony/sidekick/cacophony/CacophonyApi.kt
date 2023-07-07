@@ -1,6 +1,7 @@
 package nz.org.cacophony.sidekick.cacophony
 
 import io.ktor.client.*
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.compression.*
@@ -28,6 +29,9 @@ class CacophonyApi: Api {
             bearer {
                 sendWithoutRequest { true }
             }
+        }
+        install(HttpTimeout) {
+            socketTimeoutMillis = 3000
         }
     }
     fun setToTest() {

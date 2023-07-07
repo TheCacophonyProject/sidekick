@@ -62,7 +62,7 @@ actual fun deleteDirectory(path: Path): Either<IOException, Unit> {
 
 actual fun deleteFile(path: Path): Either<IOException, Unit> {
     return try {
-        FileSystem.SYSTEM.delete(path, true)
+        FileSystem.SYSTEM.delete(path, false)
         Unit.right()
     } catch (e: IOException) {
         Either.Left(e)

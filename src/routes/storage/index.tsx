@@ -7,9 +7,10 @@ import ActionContainer from "~/components/ActionContainer";
 import CircleButton from "~/components/CircleButton";
 import { headerMap } from "~/components/Header";
 import { useStorage } from "~/contexts/Storage";
-import { FaRegularTrashCan } from "solid-icons/fa";
+import { FaRegularTrashCan, FaSolidStop } from "solid-icons/fa";
 import { Dialog } from "@capacitor/dialog";
 import { useUserContext } from "~/contexts/User";
+import { FiUploadCloud } from "solid-icons/fi";
 
 export default function Storage() {
   const storage = useStorage();
@@ -33,13 +34,19 @@ export default function Storage() {
 
     headerMap.set("/storage", [
       header[0],
-      <button onClick={deleteSaved} class="text-red-400">
-        <FaRegularTrashCan size={28} />
-      </button>,
+      () => (
+        <button onClick={deleteSaved} class="text-red-400">
+          <FaRegularTrashCan size={28} />
+        </button>
+      ),
     ]);
   });
 
-  const upload = async () => {
+  const toggleUpload = async () => {
+    if (storage.isUploading()) {
+      storage.stopUploading();
+      return;
+    }
     if (!user.data()) {
       const { value } = await Dialog.confirm({
         title: "Login",
@@ -126,14 +133,19 @@ export default function Storage() {
             user.isProd() ? "Upload to Cacophony" : "Upload to Cacophony Test"
           }
           loadingText="Uploading..."
-          onClick={upload}
-          disabled={
-            storage.isUploading() ||
-            (storage.unuploadedRecordings().filter(isSame).length === 0 &&
-              storage.unuploadedEvents().filter(isSame).length === 0)
-          }
+          onClick={toggleUpload}
+          disabled={false}
           loading={storage.isUploading()}
-        />
+          loadingIcon={
+            <div class="text-red-500">
+              <FaSolidStop size={36} />
+            </div>
+          }
+        >
+          <div class="text-blue-500">
+            <FiUploadCloud size={36} />
+          </div>
+        </CircleButton>
       </div>
     </section>
   );

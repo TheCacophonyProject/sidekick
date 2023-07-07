@@ -29,18 +29,24 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     if (await KeepAwake.isSupported()) {
       await KeepAwake.keepAwake();
     }
-    await Promise.all([recording.uploadRecordings(), event.uploadEvents()]);
+    await event.uploadEvents();
+    await recording.uploadRecordings();
     if (await KeepAwake.isSupported()) {
       await KeepAwake.allowSleep();
     }
     setIsUploading(false);
   };
 
+  const stopUploading = () => {
+    recording.stopUploading();
+    event.stopUploading();
+  };
   return {
     ...recording,
     ...location,
     ...event,
     uploadItems,
+    stopUploading,
     isUploading,
   };
 });

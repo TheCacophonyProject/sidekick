@@ -1,7 +1,7 @@
 import { createSignal, createMemo, onMount } from "solid-js";
 import { db } from ".";
 import { CacophonyPlugin } from "../CacophonyApi";
-import { DeviceId } from "../Device";
+import { DeviceId, DevicePlugin } from "../Device";
 import { logWarning, logError } from "../Notification";
 import {
   type Event,
@@ -23,6 +23,8 @@ export function useEventStorage() {
   const unuploadedEvents = createMemo(() =>
     savedEvents().filter((event) => !event.isUploaded)
   );
+  const [shouldUpload, setShouldUpload] = createSignal(false);
+  const stopUploading = () => setShouldUpload(false);
   const saveEvent = async (options: {
     key: number;
     type: string;
@@ -64,11 +66,14 @@ export function useEventStorage() {
   const uploadEvents = async () => {
     const user = userContext.data();
     if (!user || !userContext.isAuthorized) return;
+    setShouldUpload(true);
     let events = unuploadedEvents().filter(
       (e) => e.isProd === userContext.isProd()
     );
     const errors = [];
+    await DevicePlugin.unbindConnection();
     for (let i = 0; i < events.length; i++) {
+      if (!shouldUpload()) return;
       const event = events[i];
       const res = await CacophonyPlugin.uploadEvent({
         token: user.token,
@@ -96,6 +101,7 @@ export function useEventStorage() {
         }
       }
     }
+    await DevicePlugin.rebindConnection();
     if (errors.length > 0) {
       logWarning({
         message: "Failed to upload events",
@@ -154,6 +160,7 @@ export function useEventStorage() {
 
   return {
     savedEvents,
+    stopUploading,
     uploadedEvents,
     unuploadedEvents,
     saveEvent,

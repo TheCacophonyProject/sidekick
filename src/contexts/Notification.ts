@@ -54,12 +54,6 @@ function isErrorLog(log: AnyLog): log is ErrorLog {
 
 const logAction = async (log: AnyLog) => {
   const id = generateID();
-  const message = `message: ${log.message} details: ${log.details}`;
-  if (isErrorLog(log)) {
-    await FirebaseCrashlytics.recordException({ message });
-  } else {
-    console.warn(log);
-  }
   setNotifications([
     ...notifications(),
     {
@@ -71,10 +65,9 @@ const logAction = async (log: AnyLog) => {
   ]);
   hideNotification(id, log.timeout ?? defaultDuration);
   if (isErrorLog(log)) {
-    console.log(log.message, log.details);
+    console.error(log);
     const message = `message: ${log.message} details: ${log.details}`;
     if (log.error) {
-      console.error(log.error);
       const stacktrace = await StackTrace.fromError(log.error);
       await FirebaseCrashlytics.recordException({
         message,

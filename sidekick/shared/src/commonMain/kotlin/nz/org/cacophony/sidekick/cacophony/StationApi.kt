@@ -20,12 +20,14 @@ import io.ktor.http.Parameters
 import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.http.content.PartData
 import io.ktor.http.headersOf
+import io.ktor.util.reflect.instanceOf
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import nz.org.cacophony.sidekick.*
+import okio.IOException
 import okio.Path
 import okio.Path.Companion.toPath
 
@@ -49,10 +51,14 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
     }
 
     @Serializable
-    data class CreateStation(val name : String, val lat : Double, val lon : Double, @SerialName("from-date") val fromDate: ValidIsoString)
-    suspend fun createStation(name: String, lat: Double, lon: Double, fromDate: String, groupName: String, token: Token): Either<ApiError, String> =
+    data class Station(val name : String, val lat : Double, val lng : Double)
+    @Serializable
+    data class CreateStation(val station: Station)
+    @Serializable
+    data class CreateStationResponse(val stationId: Int, val messages: List<String>, val success: Boolean)
+    suspend fun createStation(name: String, lat: String, lng: String, fromDate: String, groupName: String, token: Token): Either<ApiError, CreateStationResponse> =
         validateIsoString(fromDate).flatMap { fromDate->
-            api.postJSON("groups/$groupName/station", CreateStation(name, lat, lon, fromDate), token)
+            api.postJSON("groups/$groupName/station?from-date=$fromDate?automatic=true", CreateStation(Station(name, lat.toDouble(), lng.toDouble())), token)
                 .flatMap { validateResponse(it) }
         }
 
@@ -82,7 +88,10 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
     data class GetReferenceImage(val success: Boolean)
     suspend fun getReferencePhoto(id: String, fileKey: String, token: Token?): Either<InvalidResponse, String>  {
         try {
-            val file = fileKey.split("/").last()
+            if (fileKey.startsWith("file://")) {
+                // remove file://
+                return fileKey.substring(7).right()
+            }
             val fileKey = fileKey.replace("/","_")
             val path = filePath.toPath().resolve("cache/${fileKey}")
             return if (hasFile(path)) {
@@ -90,15 +99,15 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
             } else if (hasFile(fileKey.toPath())){
                 getFile(fileKey.toPath()).map { path.toString() }.mapLeft { InvalidResponse.UnknownError("Unable to get reference photo for $id: $it") }
             } else {
-                api.getRequest("stations/$id/reference-photo/${file}", token)
+                api.getRequest("stations/$id/reference-photo/${fileKey}", token)
                     .flatMap { validateResponse<ByteArray>(it) }
                     .flatMap {
-                        writeToFile(filePath.toPath().resolve("cache/${file}"), it)
+                        writeToFile(path, it)
                             .map { path ->
                                 path.toString()
                             }
                             .mapLeft { err ->
-                                InvalidResponse.UnknownError("Unable to write image for $file: $err")
+                                InvalidResponse.UnknownError("Unable to write image for $path: $err")
                             }
                     }
                     .mapLeft { InvalidResponse.UnknownError("Unable to get reference photo for $id: $it") }
@@ -112,23 +121,34 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
     data class DeleteResponse(val success: Boolean)
     @Serializable
     data class DeletedReference(val localDeleted: Boolean, val serverDeleted: Boolean)
-    suspend fun deleteReferencePhoto(id: String, fileKey: String, token: Token): Either<InvalidResponse, DeletedReference>  {
+    suspend fun deleteReferencePhoto(id: String, fileKey: String, token: Token? = null): Either<InvalidResponse, DeletedReference>  {
+        if (fileKey.startsWith("file://")) {
+            deleteFile(fileKey.substring(7).toPath())
+            // remove file://
+            return DeletedReference(localDeleted = true, serverDeleted = true).right()
+        }
+        val fileKey = fileKey.replace("/","_")
         val path = filePath.toPath().resolve("cache/${fileKey}")
-        return api.deleteRequest("stations/$id/reference-photo/$fileKey", token)
-            .flatMap { res ->
-                validateResponse<DeleteResponse>(res).map {
-                return deleteFile(path).fold(
-                    { InvalidResponse.UnknownError("Unable to delete reference photo for $id: $it").left() },
-                    { DeletedReference(localDeleted = true, serverDeleted = true).right() }
-                )
-            } }
-            .mapLeft {
-                return deleteFile(path).fold(
-                    { InvalidResponse.UnknownError("Unable to delete reference photo for $id: $it").left() },
-                    { DeletedReference(localDeleted = true, serverDeleted = false).right() }
-                )
-            }
-
-
+        return deleteFile(path)
+            .map {
+                return api.deleteRequest("stations/$id/reference-photo/$fileKey", token)
+                    .fold({ DeletedReference(localDeleted = true, serverDeleted = false).right() },{
+                        validateResponse<DeleteResponse>(it)
+                            .fold(
+                                {
+                                    DeletedReference(
+                                        localDeleted = true,
+                                        serverDeleted = false
+                                    ).right()
+                                },
+                                {
+                                    DeletedReference(
+                                        localDeleted = true,
+                                        serverDeleted = true
+                                    ).right()
+                                }
+                            )
+                    })
+            }.mapLeft { InvalidResponse.UnknownError("Unable to delete reference photo for $id: $it") }
     }
 }

@@ -19,16 +19,16 @@ import {
   DevicePlugin,
   useDevice,
 } from "../../contexts/Device";
-import { RiSystemArrowRightSLine } from "solid-icons/ri";
-import { BiRegularCurrentLocation } from "solid-icons/bi";
+import { RiDeviceRouterFill, RiSystemArrowRightSLine } from "solid-icons/ri";
+import { BiRegularCurrentLocation, BiSolidError } from "solid-icons/bi";
 import { AiFillEdit } from "solid-icons/ai";
 import { Dialog as Prompt } from "@capacitor/dialog";
 import { debounce, leading } from "@solid-primitives/scheduled";
-import { FaSolidSpinner } from "solid-icons/fa";
+import { FaSolidSpinner, FaSolidStop } from "solid-icons/fa";
 import CircleButton from "../../components/CircleButton";
 import { Geolocation } from "@capacitor/geolocation";
 import { TbCameraPlus, TbCurrentLocation } from "solid-icons/tb";
-import { FiDownload } from "solid-icons/fi";
+import { FiDownload, FiMapPin } from "solid-icons/fi";
 import { useStorage } from "../../contexts/Storage";
 import {
   ImArrowLeft,
@@ -37,9 +37,9 @@ import {
   ImCog,
   ImCross,
   ImNotification,
+  ImSearch,
 } from "solid-icons/im";
 import { headerMap } from "../../components/Header";
-import { FaSolidWifi } from "solid-icons/fa";
 import BackgroundLogo from "../../components/BackgroundLogo";
 import { Recording } from "~/database/Entities/Recording";
 import { Event } from "~/database/Entities/Event";
@@ -48,8 +48,6 @@ import { logWarning } from "~/contexts/Notification";
 import { Portal } from "solid-js/web";
 import { Camera, CameraResultType } from "@capacitor/camera";
 import Dialog from "~/components/Dialog";
-import { create } from "domain";
-import { c } from "drizzle-orm/query-promise.d-e370e0a9";
 
 interface DeviceDetailsProps {
   id: string;
@@ -57,7 +55,7 @@ interface DeviceDetailsProps {
   groupName: string;
   url: string;
   isProd: boolean;
-  shouldUpdateLocation: boolean | undefined;
+  updateLocState: "loading" | "current" | "needsUpdate" | "unavailable";
 }
 
 function DeviceDetails(props: DeviceDetailsProps) {
@@ -112,48 +110,35 @@ function DeviceDetails(props: DeviceDetailsProps) {
       await context?.setDeviceToCurrLocation(props.id);
     });
   });
-
-  const download = async () => {
-    const { value } = await Prompt.confirm({
-      title: "Confirm",
-      message: `Are you sure you want to download all recordings and events from ${props.name}?`,
-    });
-    if (!value) return;
-    await context.saveItems(props.id);
-  };
-
   const [location, { refetch: refetchLocation }] = context.getLocationByDevice(
     props.id
   );
-  createEffect(() => {
-    console.log("location", location());
-  });
 
   createEffect(() => {
     on(
-      () => props.shouldUpdateLocation,
+      () => props.updateLocState,
       async (shouldUpdate) => {
-        if (!shouldUpdate) return;
+        if (shouldUpdate === "loading") return;
         refetchLocation();
       }
     );
   });
 
-  let LocationNameInput: HTMLInputElement;
+  const [LocationNameInput, setLocationNameInput] =
+    createSignal<HTMLInputElement>();
   const [isEditing, setIsEditing] = createSignal(false);
   const toggleEditing = (state = !isEditing()) => {
     setIsEditing(state);
-    if (!LocationNameInput) return;
     if (isEditing()) {
-      LocationNameInput.focus();
+      LocationNameInput()?.focus();
     } else {
-      LocationNameInput.blur();
+      LocationNameInput()?.blur();
     }
   };
 
   const [newName, setNewName] = createSignal("");
   const saveLocationName = async () => {
-    const newName = LocationNameInput.value;
+    const newName = LocationNameInput()?.value;
     if (!newName) return;
     setNewName(newName);
     toggleEditing();
@@ -164,8 +149,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
   >([]);
 
   const canSave = (): boolean =>
-    newName() !== "" ||
-    (location() !== null && photoFilesToUpload().length > 0);
+    location() === null
+      ? newName() !== ""
+      : newName() !== "" || photoFilesToUpload().length > 0;
 
   const images = () => [
     ...(location()?.referenceImages ?? []),
@@ -190,52 +176,51 @@ function DeviceDetails(props: DeviceDetailsProps) {
     }
   };
 
-  createEffect(() => {
-    console.log("location & images", images(), location());
-  });
-
   const saveLocationSettings = async () => {
     const name = newName();
     const photoPaths = photoFilesToUpload();
+    const deviceLocation = await context.getLocationCoords(props.id);
     const loc = location();
-    if (loc) {
-      if (name) {
-        await storage.updateLocationName(loc, name);
-        setNewName("");
-      }
-      if (photoPaths.length > 0) {
-        for (const { file } of photoPaths) {
-          try {
-            await storage.updateLocationPhoto(loc, file);
-            setPhotoFilesToUpload((curr) =>
-              curr.filter((photo) => photo.file !== file)
-            );
-          } catch {
-            logWarning({
-              message: "Could not save location photo",
-              details: `Could not save photo ${file} for location ${loc}`,
-            });
-          }
-        }
-      }
-    } else {
-      const deviceLocation = await context.getLocationCoords(props.id);
-      if (!deviceLocation.success) {
-        logWarning({
-          message: "Could not get device location",
-          details: deviceLocation.message,
-        });
-        return;
-      }
-      await storage.saveLocation({
+    if (!loc && deviceLocation.success) {
+      await storage.createLocation({
         name,
         coords: {
           lat: deviceLocation.data.latitude,
           lng: deviceLocation.data.longitude,
         },
         groupName: props.groupName,
+        referenceImages: photoPaths.map((photo) => photo.file),
         isProd: props.isProd,
       });
+      await refetchLocation();
+      setNewName("");
+      return;
+    }
+    if (name) {
+      const loc = location();
+      if (loc) {
+        await storage.updateLocationName(loc, name);
+        setNewName("");
+      }
+      await refetchLocation();
+    }
+    if (photoPaths.length > 0) {
+      for (const { file } of photoPaths) {
+        try {
+          const loc = location();
+          if (!loc) continue;
+          await storage.updateLocationPhoto(loc, file);
+          setPhotoFilesToUpload((curr) =>
+            curr.filter((photo) => photo.file !== file)
+          );
+        } catch {
+          logWarning({
+            message: "Could not save location photo",
+            details: `Could not save photo ${file} for location ${loc}`,
+          });
+        }
+      }
+      await refetchLocation();
     }
     toggleEditing(false);
   };
@@ -255,27 +240,32 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const [photoReference] = createResource(
     () => [location(), images(), photoIndex()] as const,
     async (values) => {
-      debugger;
       const [loc, imgs, idx] = values;
       const img = imgs[idx];
       if (!img) return "";
       if (typeof img === "string") {
         if (!loc) return "";
         const data = await storage.getReferencePhotoForLocation(loc.id, img);
-        return data ?? "";
+        return data ?? img;
       } else {
         return img.url;
       }
     }
   );
 
-  const removePhotoReference = async () => {
-    const refLength = location()?.referenceImages?.length ?? 0;
+  const isImageToUpload = () => {
     const idx = photoIndex();
-    if (idx > refLength - 1) {
+    const startOfUploads = (location()?.referenceImages ?? []).length;
+    console.log("IDX", idx >= startOfUploads);
+    return idx >= startOfUploads;
+  };
+
+  const removePhotoReference = async () => {
+    const idx = photoIndex();
+    const image = images()[idx];
+    if (typeof image === "object") {
       setPhotoFilesToUpload((curr) => {
-        const newFiles = [...curr];
-        newFiles.splice(idx - refLength, 1);
+        const newFiles = [...curr].filter((file) => file.file !== image.file);
         return newFiles;
       });
     } else {
@@ -286,10 +276,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
           message: "Are you sure you want to delete this photo?",
         });
         if (prompt.value) {
-          const res = await storage.deleteReferencePhotoForLocation(
-            loc,
-            loc.referenceImages[photoIndex()]
-          );
+          const res = await storage.deleteReferencePhotoForLocation(loc, image);
           if (res) {
             setPhotoIndex((curr) => {
               if (curr > 0) return curr - 1;
@@ -313,7 +300,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
         show={showLocationSettings()}
         onShowChange={setShowLocationSettings}
       >
-        <div class="flex w-full justify-between">
+        <div class="flex w-full content-center justify-between">
           <h1 class="text-xl font-bold text-slate-600">Location Settings</h1>
           <button
             onClick={() => setShowLocationSettings(false)}
@@ -322,6 +309,17 @@ function DeviceDetails(props: DeviceDetailsProps) {
             <ImCross size={12} />
           </button>
         </div>
+        <Show when={props.updateLocState === "needsUpdate"}>
+          <div class="flex w-full flex-col items-center">
+            <button
+              class="my-2 flex space-x-2 self-center rounded-md bg-blue-500 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => context.setDeviceToCurrLocation(props.id)}
+            >
+              <span class="text-sm">Update Location to Current</span>
+              <FiMapPin size={18} />
+            </button>
+          </div>
+        </Show>
         <div class="w-full">
           <div class="space-y-4">
             <div>
@@ -340,7 +338,23 @@ function DeviceDetails(props: DeviceDetailsProps) {
                     class="flex justify-between"
                     onClick={() => toggleEditing()}
                   >
-                    <h1 class="text-sm text-gray-800">{locationName()}</h1>
+                    <Show
+                      when={!location.loading && location()?.updateName}
+                      fallback={
+                        <>
+                          <h1 class="text-sm text-gray-800">
+                            {locationName()}
+                          </h1>
+                        </>
+                      }
+                    >
+                      {(loc) => (
+                        <h1 class="flex space-x-2 text-sm text-yellow-600">
+                          <BiSolidError size={18} />
+                          {loc()}
+                        </h1>
+                      )}
+                    </Show>
                     <button class="text-blue-600">
                       <AiFillEdit size={18} />
                     </button>
@@ -349,10 +363,10 @@ function DeviceDetails(props: DeviceDetailsProps) {
               >
                 <div class="flex">
                   <input
-                    ref={LocationNameInput}
+                    ref={setLocationNameInput}
                     type="text"
                     class="w-full rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
-                    placeholder={locationName()}
+                    placeholder={locationName() ?? "Location Name"}
                   />
                   <button
                     class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
@@ -361,7 +375,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                     <ImCross size={12} />
                   </button>
                   <button
-                    class="pl-4 pr-2 text-green-400"
+                    class="pl-4 pr-2 text-highlight"
                     onClick={saveLocationName}
                   >
                     <ImCheckmark size={18} />
@@ -425,7 +439,12 @@ function DeviceDetails(props: DeviceDetailsProps) {
                       {photoIndex() + 1}/{images().length}
                     </div>
                   </div>
-                  <div class="h-[18rem]">
+                  <div
+                    classList={{
+                      "outline-yellow-500 outline outline-2": isImageToUpload(),
+                    }}
+                    class="h-[18rem]"
+                  >
                     <Show
                       when={
                         !photoReference.loading &&
@@ -503,36 +522,51 @@ function DeviceDetails(props: DeviceDetailsProps) {
         <div class=" flex items-center space-x-6 px-2 text-blue-500">
           <Show
             when={!context.devicesDownloading.has(props.id)}
-            fallback={<FaSolidSpinner size={28} class="animate-spin" />}
+            fallback={
+              <button
+                class="text-red-500"
+                onClick={() => context.stopSaveItems(props.id)}
+              >
+                <FaSolidStop size={28} />
+              </button>
+            }
           >
             <button
               class={`${
                 disabledDownload() ? "text-slate-300" : "text-blue-500"
               }`}
               disabled={disabledDownload()}
-              onClick={() => download()}
+              onClick={() => context.saveItems(props.id)}
             >
               <FiDownload size={28} />
             </button>
           </Show>
           <button
             class="text-blue-500"
-            disabled={context.locationBeingSet.has(props.id)}
+            disabled={
+              context.locationBeingSet.has(props.id) ||
+              ["loading", "unavailable"].includes(props.updateLocState)
+            }
             onClick={() => setShowLocationSettings(true)}
           >
             <Switch>
               <Match
                 when={
-                  props.shouldUpdateLocation === undefined ||
+                  props.updateLocState === "loading" ||
                   context.locationBeingSet.has(props.id)
                 }
               >
                 <FaSolidSpinner size={28} class="animate-spin" />
               </Match>
-              <Match when={props.shouldUpdateLocation === false}>
+              <Match when={props.updateLocState === "current"}>
                 <BiRegularCurrentLocation size={28} />
               </Match>
-              <Match when={props.shouldUpdateLocation === true}>
+              <Match when={props.updateLocState === "unavailable"}>
+                <div class="text-gray-200">
+                  <BiRegularCurrentLocation size={28} />
+                </div>
+              </Match>
+              <Match when={props.updateLocState === "needsUpdate"}>
                 <div class="text-yellow-400">
                   <TbCurrentLocation size={28} />
                 </div>
@@ -586,48 +620,64 @@ function Devices() {
     }, 6000);
   };
 
+  const [apState, setApState] = createSignal<
+    "connected" | "disconnected" | "loading" | "default"
+  >("default");
+
   const connectToDeviceAP = leading(
     debounce,
-    async () => {
-      const res = await DevicePlugin.connectToDeviceAP();
-      if (res.success) {
-        searchDevice();
-      } else {
-        logWarning({
-          message: "Please ensure wifi is enabled and try again",
-        });
-      }
+    () => {
+      setApState("loading");
+      DevicePlugin.connectToDeviceAP((res) => {
+        console.log("AP CONNECTION", res);
+        if (res.success) {
+          searchDevice();
+          setApState(res.data);
+          if (res.data === "disconnected") {
+            setTimeout(() => {
+              setApState("default");
+            }, 4000);
+          }
+        } else {
+          logWarning({
+            message: "Please ensure wifi is enabled and try again",
+          });
+          setApState("default");
+        }
+      });
     },
     800
   );
-
   onMount(() => {
     // Add delete button to header
     const header = headerMap.get("/devices");
-    if (!header) return;
-
+    if (!header || header?.[1]) return;
     headerMap.set("/devices", [
       header[0],
-      <button onClick={connectToDeviceAP} class="text-blue-500">
-        <FaSolidWifi size={28} />
-      </button>,
+      () => (
+        <Show
+          when={apState() !== "loading" && apState()}
+          fallback={
+            <span class="text-blue-500">
+              <FaSolidSpinner size={28} class="animate-spin" />
+            </span>
+          }
+        >
+          {(state) => (
+            <button
+              onClick={connectToDeviceAP}
+              classList={{
+                "text-blue-500": state() === "default",
+                "text-highlight": state() === "connected",
+                "text-red-500": state() === "disconnected",
+              }}
+            >
+              <RiDeviceRouterFill size={28} />
+            </button>
+          )}
+        </Show>
+      ),
     ]);
-  });
-
-  const [pos, { refetch: refetchPos }] = createResource(async () => {
-    try {
-      const permission = await Geolocation.checkPermissions();
-      if (permission.location !== "granted") return;
-      return await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-      });
-    } catch (e) {
-      if (e instanceof Error) {
-        logWarning(e);
-      } else {
-        logWarning({ message: "Error getting current location" });
-      }
-    }
   });
 
   onMount(async () => {
@@ -640,6 +690,7 @@ function Devices() {
       clearInterval(search);
     });
   });
+
   const MIN_STATION_SEPARATION_METERS = 60;
   // The radius of the station is half the max distance between stations: any recording inside the radius can
   // be considered to belong to that station.
@@ -695,12 +746,16 @@ function Devices() {
     async (devices) => {
       try {
         if (!devices) return [];
-        const currPerm = await Geolocation.checkPermissions();
-        if (currPerm.location === "denied") return [];
-        if (currPerm.location !== "granted") {
-          const reqPerm = await Geolocation.requestPermissions();
-          if (reqPerm.location !== "granted") return [];
+        let permission = await Geolocation.checkPermissions();
+        if ((await Geolocation.checkPermissions()).location === "denied") {
+          permission = await Geolocation.requestPermissions();
+          if (permission.location === "prompt-with-rationale") {
+            permission = await Geolocation.checkPermissions();
+          } else {
+            return [];
+          }
         }
+        if (permission.location !== "granted") return [];
         const pos = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
         });
@@ -714,6 +769,7 @@ function Devices() {
             pos.coords.latitude,
             pos.coords.longitude,
           ];
+          console.log(loc, newLoc);
 
           const withinRange = isWithinRange(
             [loc.latitude, loc.longitude],
@@ -727,7 +783,10 @@ function Devices() {
         }
       } catch (e) {
         if (e instanceof Error) {
-          logWarning(e);
+          logWarning({
+            message: "Error updating device locations",
+            details: e.message,
+          });
         } else if (typeof e === "string") {
           logWarning({
             message: "Error updating device locations",
@@ -756,6 +815,7 @@ function Devices() {
         (val) => !context.locationBeingSet.has(val)
       );
       if (devicesToUpdate.length === 0 || cancel()) return;
+      if (dialogOpen()) return;
       const message =
         devicesToUpdate.length === 1
           ? `${
@@ -767,7 +827,6 @@ function Devices() {
                 ", "
               )} have different location stored. Would you like to update them to the current location?`;
 
-      if (dialogOpen()) return;
       setDialogOpen(true);
       const { value } = await Prompt.confirm({
         title: "Update Location",
@@ -775,10 +834,8 @@ function Devices() {
       });
       setDialogOpen(false);
       if (value) {
-        for (const device of context.devices.values()) {
-          if (devices.includes(device.id)) {
-            await context.setDeviceToCurrLocation(device.id);
-          }
+        for (const device of devicesToUpdate) {
+          await context.setDeviceToCurrLocation(device);
         }
       } else {
         setCancel(true);
@@ -787,19 +844,15 @@ function Devices() {
   );
 
   const shouldDeviceUpdateLocation = (device: Device) => {
-    if (devicesLocToUpdate.loading) return undefined;
-    const updated = devicesLocToUpdate();
-    const shouldUpdateLocation =
-      updated !== undefined ? updated.includes(device.id) : undefined;
-    return shouldUpdateLocation;
+    if (devicesLocToUpdate.loading) return "loading";
+    const devicesToUpdate = devicesLocToUpdate();
+    if (!devicesToUpdate) return "unavailable";
+    return devicesToUpdate
+      ? devicesToUpdate.includes(device.id)
+        ? "needsUpdate"
+        : "current"
+      : "loading";
   };
-
-  createEffect(() => {
-    console.log(devicesLocToUpdate.loading);
-    if (!devicesLocToUpdate.loading) {
-      console.log(devicesLocToUpdate());
-    }
-  });
 
   return (
     <>
@@ -816,7 +869,7 @@ function Devices() {
               url={device.url}
               isProd={device.isProd}
               groupName={device.group}
-              shouldUpdateLocation={shouldDeviceUpdateLocation(device)}
+              updateLocState={shouldDeviceUpdateLocation(device)}
             />
           )}
         </For>
@@ -829,7 +882,11 @@ function Devices() {
               loading={context.isDiscovering()}
               text="Search Devices"
               loadingText="Searching..."
-            />
+            >
+              <div class="text-blue-500">
+                <ImSearch size={28} />
+              </div>
+            </CircleButton>
           </div>
         </Portal>
       </section>
@@ -840,12 +897,12 @@ function Devices() {
             <Show when={context.devices.size <= 0}>
               <p class="mt-4 max-w-sm px-4 text-center text-neutral-600">
                 No devices detected.
-                <br /> To access a device please turn it on, wait for 2 minutes,
-                then press{" "}
-                <span class="inline-block">
-                  <FaSolidWifi />
-                </span>{" "}
-                to connect to the device's Wi-Fi
+                <br /> To access a device, press the device's power button, then
+                press the
+                <span class="mx-1 inline-block text-blue-500">
+                  <RiDeviceRouterFill />
+                </span>
+                button.
               </p>
             </Show>
           </div>

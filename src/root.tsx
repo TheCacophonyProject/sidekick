@@ -87,14 +87,14 @@ export default function Root() {
                         Error:
                         {err.message ?? "Couldn't get error message"}
                         <button
-                          class="flex items-center rounded-lg py-1 px-4 text-gray-700 shadow-md"
+                          class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
                           onClick={() => writeToClipboard(err)}
                         >
                           <span>Copy</span>
                           <BiSolidCopyAlt size={18} class="ml-1" />
                         </button>
                         <button
-                          class="flex items-center rounded-lg py-1 px-4 text-gray-700 shadow-md"
+                          class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
                           onClick={() => window.location.reload()}
                         >
                           Reload

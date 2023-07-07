@@ -7,7 +7,8 @@ import { z } from "zod";
 import { CacophonyPlugin } from "./CacophonyApi";
 import { useNavigate } from "@solidjs/router";
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
-import { u } from "drizzle-orm/column.d-c31e7ad3";
+import { DevicePlugin } from "./Device";
+
 const UserSchema = z.object({
   token: z.string(),
   id: z.string(),
@@ -62,6 +63,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     try {
       const user = data();
       if (!user) return;
+      console.log("user", user);
       const currUser = UserSchema.parse(user);
       setServer(currUser.prod ? "prod" : "test");
       const { token, id, email, refreshToken, prod } = currUser;
@@ -88,6 +90,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     await refetch();
   }
   async function login(email: string, password: string) {
+    await DevicePlugin.unbindConnection();
     const authUser = await CacophonyPlugin.authenticateUser({
       email,
       password,
@@ -97,16 +100,28 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         message: "Login failed",
         details: authUser.message,
       });
+      await DevicePlugin.rebindConnection();
       return;
     }
-    const { token, id, refreshToken } = authUser.data;
+    const result = await CacophonyPlugin.validateToken({
+      refreshToken: authUser.data.refreshToken,
+    });
+    await DevicePlugin.rebindConnection();
+    if (!result.success) {
+      logWarning({
+        message: "Login failed",
+        details: result.message,
+      });
+      return;
+    }
+    const { token, refreshToken, expiry } = result.data;
     Preferences.set({ key: "skippedLogin", value: "false" });
     mutateUser({
       token,
-      id,
+      id: authUser.data.id,
       email,
       refreshToken,
-      expiry: new Date().toISOString(),
+      expiry,
       prod: isProd(),
     });
     mutateSkip(false);
@@ -136,30 +151,21 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   });
 
   // Validate the current token.
-  async function validateCurrToken() {
+  async function validateCurrToken(warn = true) {
     const user = data();
     if (user) {
-      const { token, refreshToken, expiry, email, id } = user;
+      const { refreshToken, expiry, email, id } = user;
       // Check if token is valid
       // Expiry is  ISO 8601 timestamp
       const expiryDate = new Date(expiry).getTime();
-      const shouldRefresh = expiryDate > Date.now() + 5000;
-      console.log(
-        "Validating token",
-        user,
-        shouldRefresh,
-        expiryDate,
-        Date.now()
-      );
       if (expiryDate > Date.now() + 5000) return user;
-
-      debugger;
+      console.log("Validating token", user, expiryDate, Date.now());
       // Refresh token
+      await DevicePlugin.unbindConnection();
       const result = await CacophonyPlugin.validateToken({
-        token,
         refreshToken,
-        expiry,
       });
+      await DevicePlugin.rebindConnection();
 
       // Update user
       if (result.success) {
@@ -168,9 +174,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         mutateUser(user);
         console.log("Token refreshed");
         return user;
-      } else {
+      } else if (warn) {
         logWarning({
-          message: "Please check your internet connection, or try relogging.",
+          message:
+            "Could not validate user. Check your internet connection, or try relogging.",
           details: result.message,
         });
       }

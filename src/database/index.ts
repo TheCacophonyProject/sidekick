@@ -62,7 +62,7 @@ export const insertIntoTable =
       ", "
     )}) VALUES (${placeholders})`;
 
-    return db.run(insertSql, values);
+    return await db.run(insertSql, values);
   };
 
 export const insertManyIntoTable =

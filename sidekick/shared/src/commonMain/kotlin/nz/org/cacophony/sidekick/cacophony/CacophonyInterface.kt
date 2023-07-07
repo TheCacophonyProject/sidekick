@@ -39,7 +39,6 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     fun requestDeletion(call: PluginCall) = runCatch(call) {
         call.validateCall<RequestDeletion>("token").map { (token) ->
             userApi.requestDeletion(token)
-
                 .fold(
                     { error -> call.failure(error.toString()) },
                     { call.success() }
@@ -48,7 +47,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     }
 
     fun validateToken(call: PluginCall) = runCatch(call) {
-        getTokenFromCall(call).map { token ->
+        call.validateCall<UserApi.RefreshRequest>("refreshToken").map { token ->
             userApi.validateToken(token)
                 .fold(
                     { error -> call.failure(error.toString()) },
@@ -130,13 +129,13 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     }
 
     @Serializable
-    data class CreateStationCall(val token: String, val name: String, val lat: Double, val lon: Double, val groupName: String, val from: String)
+    data class CreateStationCall(val token: String, val name: String, val lat: String, val lng: String, val groupName: String, val fromDate: String)
     fun createStation(call: PluginCall) = runCatch(call) {
-        call.validateCall<CreateStationCall>("token", "name", "lat", "lon", "groupName", "activeAt").map { station ->
-            stationApi.createStation(station.name, station.lat, station.lon, station.groupName, station.from, station.token)
+        call.validateCall<CreateStationCall>("token", "name", "lat", "lng", "groupName", "fromDate").map { station ->
+            stationApi.createStation(station.name, station.lat, station.lng,  station.fromDate,station.groupName, station.token)
                 .fold(
                     { error -> call.failure(error.toString()) },
-                    { call.success(it) }
+                    { call.success(it.stationId) }
                 )
         }
     }
@@ -154,7 +153,7 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     }
 
     @Serializable
-    data class GetReferencePhoto(val token: String?, val station: String, val fileKey: String)
+    data class GetReferencePhoto(val token: String? = null, val station: String, val fileKey: String)
     fun getReferencePhoto(call: PluginCall) = runCatch(call) {
         call.validateCall<GetReferencePhoto>("token", "station", "fileKey").map { photo ->
             stationApi.getReferencePhoto(photo.station,photo.fileKey, photo.token)
@@ -164,13 +163,16 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
                 )
         }
     }
-    data class DeleteReferencePhoto(val token: String, val station: String, val fileKey: String)
+    @Serializable
+    data class DeleteReferencePhoto(val token: String? = null, val station: String, val fileKey: String)
     fun deleteReferencePhoto(call: PluginCall) = runCatch(call) {
         call.validateCall<DeleteReferencePhoto>("token", "station", "fileKey").map { photo ->
-            stationApi.deleteReferencePhoto(photo.station,photo.fileKey.replace("/", "_"), photo.token)
+            stationApi.deleteReferencePhoto(photo.station,photo.fileKey, photo.token)
                 .fold(
                     { error -> call.failure(error.toString()) },
-                    { call.success(it) }
+                    { res ->
+                        call.success(mapOf("serverDeleted" to res.serverDeleted, "localDeleted" to res.localDeleted))
+                    }
                 )
         }
     }

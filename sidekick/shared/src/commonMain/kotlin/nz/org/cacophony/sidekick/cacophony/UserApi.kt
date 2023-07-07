@@ -63,26 +63,16 @@ class UserApi(val api: Api) {
     )
 
 
-    private suspend fun refreshToken(token: AuthToken): Either<ApiError, AuthToken> =
-        api.postJSON("users/refresh-session-token", RefreshRequest(token.refreshToken))
+    private suspend fun refreshToken(token: RefreshRequest): Either<ApiError, AuthToken> =
+        api.postJSON("users/refresh-session-token", token)
             .flatMap { res ->
                 validateResponse<RefreshResponse>(res)
                     .map { authResponse ->
                         AuthToken(authResponse.token, authResponse.refreshToken, authResponse.expiry)
                     }
             }
+    suspend fun validateToken(token: RefreshRequest): Either<ApiError, AuthToken> = refreshToken(token)
 
-    private fun checkExpiry(token: AuthToken): Either<TokenError, AuthToken>  =
-    Duration.parseIsoStringOrNull(token.expiry!!)
-        .rightIfNotNull { InvalidIso8601Date() }
-        .flatMap { if (it.inWholeMilliseconds < getTimeMillis()) token.right() else ExpiredToken().left() }
-
-    suspend fun validateToken(token: AuthToken): Either<ApiError, AuthToken> =
-        checkExpiry(token)
-            .fold(
-                { refreshToken(token) },
-                { token.right() }
-            )
 
 
     suspend fun authenticateUser(email: Email, password: String): Either<ApiError, AuthUser> =

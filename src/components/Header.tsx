@@ -1,11 +1,11 @@
-import { JSXElement, createEffect, createSignal } from "solid-js";
+import { JSXElement, Show, createEffect, createSignal } from "solid-js";
 import { RiSystemArrowLeftSLine } from "solid-icons/ri";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useLocation, A, useNavigate } from "@solidjs/router";
 import { App } from "@capacitor/app";
 
 type Header = string;
-type HeaderButton = JSXElement;
+type HeaderButton = () => JSXElement;
 const headerMap = new ReactiveMap<string, [Header, HeaderButton?]>([
   ["/", ["Devices"]],
   ["/devices", ["Devices"]],
@@ -17,22 +17,17 @@ const headerMap = new ReactiveMap<string, [Header, HeaderButton?]>([
 
 function Header() {
   const location = useLocation();
-  const [HeaderButton, setHeaderButton] = createSignal<JSXElement>(<></>);
-  const [header, setHeader] = createSignal(
-    headerMap.get(location.pathname) || "Dashboard"
+  const [HeaderButton, setHeaderButton] = createSignal<HeaderButton>();
+  const [header, setHeader] = createSignal<string>(
+    headerMap.get(location.pathname)?.[0] ?? "Dashboard"
   );
   const [backNav, setBackNav] = createSignal<JSXElement>(<></>);
   const navigate = useNavigate();
   createEffect(() => {
     if (headerMap.has(location.pathname)) {
       const newHeader = headerMap.get(location.pathname) ?? ["Dashboard"];
-      setHeader((prevHeader) => {
-        if (prevHeader !== newHeader) {
-          setHeaderButton(newHeader[1] ?? <></>);
-          return newHeader[0] ?? "";
-        }
-        return prevHeader;
-      });
+      setHeaderButton(() => newHeader[1]);
+      setHeader(newHeader[0]);
       const link = location.pathname.split("/").slice(0, -1);
       if (link.length > 1) {
         setBackNav(
@@ -68,7 +63,7 @@ function Header() {
         <div class="flex w-6 items-center justify-center">{backNav()}</div>
         <h2 class="ml-4 text-4xl font-bold text-gray-800">{header()}</h2>
       </div>
-      {HeaderButton()}
+      {HeaderButton()?.()}
     </div>
   );
 }

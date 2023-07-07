@@ -1,11 +1,8 @@
 import { registerPlugin } from "@capacitor/core";
 import { z } from "zod";
-import {
-  ApiLocationSchema,
-  LocationSchema,
-} from "~/database/Entities/Location";
 import { Result } from ".";
 import { logError } from "./Notification";
+import { DevicePlugin } from "./Device";
 
 type AuthToken = {
   token: string;
@@ -30,7 +27,7 @@ export interface CacophonyPlugin {
     refreshToken: string;
   }>;
   requestDeletion(user: { token: string }): Result<string>;
-  validateToken(token: AuthToken): Result<AuthToken>;
+  validateToken(options: { refreshToken: string }): Result<AuthToken>;
   uploadRecording(options: {
     token: string;
     type: "thermalRaw" | "audio";
@@ -84,16 +81,17 @@ export interface CacophonyPlugin {
     fileKey: string;
   }): Result<string>;
   deleteReferencePhoto(options: {
-    token: string;
+    token?: string;
     station: string;
     fileKey: string;
   }): Result<{ localDeleted: boolean; serverDeleted: boolean }>;
   createStation(options: {
     token: string;
     name: string;
-    lat: number;
-    lng: number;
-    from: ISODateString;
+    lat: string;
+    lng: string;
+    groupName: string;
+    fromDate: ISODateString;
   }): Result<JSONString>;
   setToProductionServer(): Result;
   setToTestServer(): Result;
@@ -102,19 +100,35 @@ export interface CacophonyPlugin {
 
 export const CacophonyPlugin = registerPlugin<CacophonyPlugin>("Cacophony");
 
+const SettingsSchema = z.object({
+  referenceImages: z.array(z.string()).nullish(),
+});
+
+const ApiLocationSchema = z
+  .object({
+    id: z.number().positive(),
+    name: z.string(),
+    updatedAt: z.string(),
+    groupName: z.string(),
+    settings: SettingsSchema.nullish(),
+    location: z.object({ lat: z.number(), lng: z.number() }),
+    needsRename: z.boolean().default(false),
+  })
+  .transform((data) => {
+    const { settings, location, ...rest } = data;
+    return {
+      ...rest,
+      referenceImages: settings?.referenceImages ?? [],
+      coords: location,
+    };
+  });
+
+export type ApiLocation = z.infer<typeof ApiLocationSchema>;
+
 const SuccessResSchema = z.object({
   success: z.literal(true),
   messages: z.array(z.string()),
-  stations: z.array(
-    ApiLocationSchema.omit({ coords: true, userId: true })
-      .extend({
-        location: z.object({ lat: z.number(), lng: z.number() }),
-      })
-      .transform((val) => ({
-        ...val,
-        coords: val.location,
-      }))
-  ),
+  stations: z.array(ApiLocationSchema),
 });
 
 const FailureResSchema = z.object({
@@ -128,9 +142,12 @@ const LocationResSchema = z.discriminatedUnion("success", [
 ]);
 
 export async function getLocationsForUser(token: string) {
+  await DevicePlugin.unbindConnection();
   const locationJson = await CacophonyPlugin.getStationsForUser({ token });
+  await DevicePlugin.rebindConnection();
   if (locationJson.success) {
-    const locationRes = LocationResSchema.parse(JSON.parse(locationJson.data));
+    const json = JSON.parse(locationJson.data);
+    const locationRes = LocationResSchema.parse(json);
     if (!locationRes.success) {
       throw new Error(locationRes.messages.join(", "));
     }

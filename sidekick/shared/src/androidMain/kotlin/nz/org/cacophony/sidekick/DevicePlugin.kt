@@ -29,7 +29,10 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.device.DeviceInterface
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
+import javax.net.SocketFactory
 
 @CapacitorPlugin(name = "Device")
 class DevicePlugin: Plugin() {
@@ -40,15 +43,23 @@ class DevicePlugin: Plugin() {
     private var callQueue: MutableMap<String, CallType> = mutableMapOf()
 
     private lateinit var device: DeviceInterface;
+    private var wifiNetwork: Network? = null;
+    private var cm: ConnectivityManager? = null;
+    private lateinit var wifi: WifiManager;
+    private lateinit var multicastLock:WifiManager.MulticastLock
+
 
     override fun load() {
        device = DeviceInterface(context.applicationContext.filesDir.absolutePath)
+        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        multicastLock = wifi.createMulticastLock("multicastLock")
     }
 
     enum class CallType {
         PERMISSIONS,
         SINGLE_UPDATE,
-        DISCOVER
+        DISCOVER,
+        CONNECT,
     }
 
     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
@@ -56,7 +67,7 @@ class DevicePlugin: Plugin() {
         try {
             call.setKeepAlive(true)
             callQueue[call.callbackId] = CallType.DISCOVER
-
+            multicastLock.acquire()
             nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
             discoveryListener = object : NsdManager.DiscoveryListener {
                 override fun onDiscoveryStarted(regType: String) {
@@ -68,6 +79,7 @@ class DevicePlugin: Plugin() {
                         override fun onServiceResolved(info: NsdServiceInfo) {
                             val endpoint = "${info.serviceName}.local"
                             val result = JSObject()
+
                             result.put("endpoint", endpoint)
                             result.put("host", info.host.hostAddress)
                             call.resolve(result)
@@ -91,7 +103,6 @@ class DevicePlugin: Plugin() {
             }
 
             nsdManager.discoverServices(type, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-
         } catch (e: Exception) {
             call.reject(e.message)
         }
@@ -104,6 +115,7 @@ class DevicePlugin: Plugin() {
             val id = call.getString("id") ?: return call.reject("No Id Found")
             bridge.releaseCall(id)
             nsdManager.stopServiceDiscovery(discoveryListener)
+            multicastLock.release()
 
             result.put("success", true)
             result.put("id", id)
@@ -122,12 +134,14 @@ class DevicePlugin: Plugin() {
 
     var currNetworkCallback: ConnectivityManager.NetworkCallback? = null
 
-    @PluginMethod
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
     fun connectToDeviceAP(call: PluginCall) {
         try {
+            callQueue[call.callbackId] = CallType.DISCOVER
             val ssid = "bushnet"
             val password = "feathers"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                call.setKeepAlive(true)
                // ask for permission
                 val wifiSpecifier = WifiNetworkSpecifier.Builder()
                     .setSsid(ssid)
@@ -137,34 +151,52 @@ class DevicePlugin: Plugin() {
                     .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                     .setNetworkSpecifier(wifiSpecifier)
                     .build()
-                val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                cm.bindProcessToNetwork(null)
+                val mobileNetworkRequest = NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .build()
+
+
+                cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                cm!!.bindProcessToNetwork(null)
                 val callback = object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: android.net.Network) {
+                    override fun onAvailable(network: Network) {
                         super.onAvailable(network)
-                        cm.bindProcessToNetwork(network)
+                        cm!!.bindProcessToNetwork(network)
+                        wifiNetwork = network
                         val result = JSObject()
                         result.put("success", true)
+                        result.put("data", "connected")
                         call.resolve(result)
                     }
 
                     override fun onUnavailable() {
                         super.onUnavailable()
                         val result = JSObject()
+                        wifiNetwork = null
                         result.put("success", false)
                         result.put("message", "Failed to connect to device AP")
                         call.resolve(result)
+                        call.setKeepAlive(false)
+                        bridge.releaseCall(call.callbackId)
                     }
 
                     override fun onLost(network: Network) {
                         super.onLost(network)
-                        cm.bindProcessToNetwork(null)
-                        cm.unregisterNetworkCallback(this)
+                        val result = JSObject()
+                        result.put("success", true)
+                        result.put("data", "disconnected")
+                        cm!!.bindProcessToNetwork(null)
+                        wifiNetwork = null
+                        cm!!.unregisterNetworkCallback(this)
+                        call.resolve(result)
+                        call.setKeepAlive(false)
+                        bridge.releaseCall(call.callbackId)
                     }
                 }
                 currNetworkCallback = callback
                 val threeMinutes = 180000
-                cm.requestNetwork(networkRequest, callback, threeMinutes)
+                cm!!.requestNetwork(networkRequest, callback, threeMinutes)
             } else {
                 connectToWifiLegacy(ssid, password, {
                     val result = JSObject()
@@ -241,6 +273,11 @@ class DevicePlugin: Plugin() {
     fun setDeviceLocation(call: PluginCall) {
         device.setDeviceLocation(pluginCall(call))
     }
+
+    @PluginMethod
+    fun getDeviceLocation(call: PluginCall) {
+        device.getDeviceLocation(pluginCall(call))
+    }
     @PluginMethod
     fun getRecordings(call: PluginCall) {
         device.getRecordings(pluginCall(call))
@@ -271,5 +308,21 @@ class DevicePlugin: Plugin() {
     @PluginMethod
     fun deleteRecording(call: PluginCall) {
         device.deleteRecording(pluginCall(call))
+    }
+
+    @PluginMethod
+    fun unbindConnection(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            cm?.bindProcessToNetwork(null)
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun rebindConnection(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            cm?.bindProcessToNetwork(wifiNetwork)
+        }
+        call.resolve()
     }
 }

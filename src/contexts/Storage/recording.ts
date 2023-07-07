@@ -35,6 +35,9 @@ export function useRecordingStorage() {
     savedRecordings().filter((rec) => !rec.isUploaded)
   );
 
+  const [shouldUpload, setShouldUpload] = createSignal(false);
+  const stopUploading = () => setShouldUpload(false);
+
   const getSavedRecordings = async (options?: {
     device?: string;
     uploaded?: boolean;
@@ -72,19 +75,23 @@ export function useRecordingStorage() {
   };
 
   const uploadRecordings = async () => {
-    const user = userContext.data();
-    if (!user || !userContext.isAuthorized) return;
+    setShouldUpload(true);
     let recordings = unuploadedRecordings().filter(
       (rec) => rec.isProd === userContext.isProd()
     );
     for (let i = 0; i < recordings.length; i++) {
+      if (!shouldUpload()) return;
+      const user = userContext.data();
+      if (!user || !userContext.isAuthorized) return;
       const recording = recordings[i];
+      await DevicePlugin.unbindConnection();
       const res = await CacophonyPlugin.uploadRecording({
         token: user.token,
         type: "thermalRaw",
         device: recording.device,
         filename: recording.name,
       });
+      await DevicePlugin.rebindConnection();
 
       if (res.success) {
         recording.isUploaded = true;
@@ -189,6 +196,7 @@ export function useRecordingStorage() {
   return {
     savedRecordings,
     saveRecording,
+    stopUploading,
     uploadedRecordings,
     unuploadedRecordings,
     deleteRecording,

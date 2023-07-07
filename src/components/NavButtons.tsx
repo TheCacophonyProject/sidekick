@@ -25,7 +25,7 @@ const NavButton = (props: NavButtonProps) => {
       href={mergedProps.href}
       class="flex h-12 w-16 flex-col  items-center pt-4 outline-none transition-colors"
       style={{ "-webkit-tap-highlight-color": "transparent" }}
-      activeClass="text-blue-500"
+      activeClass="text-highlight"
       inactiveClass="text-slate-300"
     >
       <LabelledIcon size={32} icon={props.icon} label={props.label} />

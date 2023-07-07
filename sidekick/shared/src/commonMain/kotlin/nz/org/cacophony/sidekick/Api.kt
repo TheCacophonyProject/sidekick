@@ -27,7 +27,7 @@ sealed class ServerError : ApiError {
 sealed class InvalidResponse : ApiError {
     data class Server(val error: ServerError) : InvalidResponse()
     object NoContent : InvalidResponse()
-    data class ParsingError(val message: String) : InvalidResponse()
+    data class ParsingError(public val message: String) : InvalidResponse()
     data class UnknownError(val message: String) : InvalidResponse()
 }
 
@@ -47,7 +47,7 @@ suspend inline fun <reified T> validateResponse(response: HttpResponse): Either<
         HttpStatusCode.OK -> Either.catch {
             return response.body<T>().right()
         }.mapLeft {
-            InvalidResponse.ParsingError("Error validating response ${it.cause?.message}: ${it.message}")
+            return InvalidResponse.ParsingError("Error validating response ${it.cause?.message}: ${it.message}").left()
         }
         HttpStatusCode.NoContent -> InvalidResponse.NoContent.left()
         else -> handleServerError(response).left()

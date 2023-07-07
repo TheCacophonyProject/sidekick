@@ -40,7 +40,7 @@ inline fun <reified T> PluginCall.validateCall(vararg keys: String): Either<Capa
     keys.toList()
         .traverse { key ->
             getString(key)
-                .rightIfNotNull { CapacitorInterfaceError.EmptyKey(key) }
+                .right()
                 .map { key to it }
         }.map{ pairs -> pairs.associate { it.first to it.second }}.map {
                return try {
@@ -48,4 +48,4 @@ inline fun <reified T> PluginCall.validateCall(vararg keys: String): Either<Capa
                } catch (e: Exception) {
                    CapacitorInterfaceError.EmptyKey("Error decoding json").left()
                }
-        }.mapLeft { CapacitorInterfaceError.EmptyKey(it.key) }
+        }.mapLeft { CapacitorInterfaceError.EmptyKey(it) }

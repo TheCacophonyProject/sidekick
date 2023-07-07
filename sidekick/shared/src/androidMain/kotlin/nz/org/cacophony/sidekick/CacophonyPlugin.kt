@@ -57,6 +57,11 @@ class CacophonyPlugin: Plugin() {
     }
 
     @PluginMethod
+    fun createStation(call: PluginCall) {
+        cacophony.createStation(pluginCall(call))
+    }
+
+    @PluginMethod
     fun updateStation(call: PluginCall) {
         cacophony.updateStation(pluginCall(call))
     }

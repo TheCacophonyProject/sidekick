@@ -2,7 +2,7 @@ import { HttpResponse, registerPlugin } from "@capacitor/core";
 import { createEffect, createSignal, createResource } from "solid-js";
 import { Geolocation } from "@capacitor/geolocation";
 import { logError, logSuccess, logWarning } from "./Notification";
-import { CallbackId, Result, URL } from ".";
+import { CallbackId, Res, Result, URL } from ".";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
 import { useStorage } from "./Storage";
@@ -12,7 +12,6 @@ import { ReactiveSet } from "@solid-primitives/set";
 import { z } from "zod";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import { Coords, Location } from "~/database/Entities/Location";
-import { debug } from "console";
 
 export type DeviceId = string;
 export type DeviceName = string;
@@ -72,7 +71,12 @@ export interface DevicePlugin {
   downloadRecording(
     options: DeviceUrl & { recordingPath: string }
   ): Result<{ path: string; size: number }>;
-  connectToDeviceAP(): Result;
+  connectToDeviceAP(
+    callback: (res: Res<"connected" | "disconnected">) => void
+  ): Promise<CallbackId>;
+  // rebind & unbind are used when trying to use the phone's internet connection
+  rebindConnection(): Promise<void>;
+  unbindConnection(): Promise<void>;
   getTestText(): Promise<{ text: string }>;
 }
 
@@ -135,7 +139,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         id,
         host: deviceName,
         name: info.data.deviceName,
-        group,
+        group: info.data.groupName,
         type: "thermal",
         endpoint,
         isProd: !info.data.serverURL.includes("test"),
@@ -161,7 +165,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           id,
           host: deviceName,
           name: info.data.deviceName,
-          group,
+          group: info.data.groupName,
           type: "thermal",
           endpoint,
           isProd: !info.data.serverURL.includes("test"),
@@ -241,6 +245,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
   const getRecordings = async (device: ConnectedDevice): Promise<string[]> => {
     try {
+      await DevicePlugin.rebindConnection();
       if ((await Filesystem.checkPermissions()).publicStorage === "denied") {
         const permission = await Filesystem.requestPermissions();
         if (permission.publicStorage === "denied") {
@@ -248,16 +253,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         }
       }
       const { url } = device;
-      const res: HttpResponse = await CapacitorHttp.get({
-        url: `${url}/api/recordings`,
-        headers,
-        webFetchExtra: {
-          credentials: "include",
-        },
-      });
-      if (res.status !== 200) return [];
-      const recordings = JSON.parse(res.data) as string[];
-      return recordings;
+      const res = await DevicePlugin.getRecordings({ url });
+      return res.success ? res.data : [];
     } catch (error) {
       if (error instanceof Error) {
         logError({
@@ -316,6 +313,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     for (const rec of recs.filter(
       (r) => !savedRecs.find((s) => s.name === r)
     )) {
+      if (!devicesDownloading.has(device.id)) return;
       const res = await DevicePlugin.downloadRecording({
         url: device.url,
         recordingPath: rec,
@@ -462,6 +460,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       )
     );
     for (const event of events) {
+      if (!devicesDownloading.has(device.id)) return;
       storage?.saveEvent({
         key: parseInt(event.key),
         device: device.id,
@@ -490,6 +489,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
+  const stopSaveItems = async (deviceId: DeviceId) => {
+    devicesDownloading.delete(deviceId);
+  };
+
   const locationSchema = z.object({
     latitude: z.number().transform((val) => val.toString()),
     longitude: z.number().transform((val) => val.toString()),
@@ -504,9 +507,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     try {
       const device = devices.get(deviceId);
       if (!device || !device.isConnected) return;
-      const currPerm = await Geolocation.checkPermissions();
-      if (currPerm.location === "denied") return;
-      const permission = await Geolocation.requestPermissions();
+      let permission = await Geolocation.requestPermissions();
+      if (permission.location === "prompt-with-rationale") {
+        permission = await Geolocation.checkPermissions();
+      }
       if (permission.location !== "granted") return;
       locationBeingSet.add(device.id);
       const { timestamp, coords } = await Geolocation.getCurrentPosition({
@@ -574,16 +578,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       });
 
       // Make the request to the device.
-      const res = await CapacitorHttp.get({
-        url: `${url}/api/location`,
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-      });
-
+      const res = await DevicePlugin.getDeviceLocation({ url });
+      console.log(res);
       // If the request was successful, return the data.
-      if (res.status === 200) {
+      if (res.success) {
         const location = locationSchema.safeParse(JSON.parse(res.data));
         if (!location.success) {
           return {
@@ -657,26 +655,23 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     return inRange;
   };
 
-  const getLocationByDevice = (deviceId: DeviceId) => {
-    return createResource(
-      () => storage.savedLocations(),
-      async (locations): Promise<Location | undefined> => {
+  const getLocationByDevice = (deviceId: DeviceId) =>
+    createResource(
+      () => [storage.savedLocations(), devices.get(deviceId)] as const,
+      async (data): Promise<Location | null> => {
         try {
-          const device = devices.get(deviceId);
-          if (!device || !locations.length || !device.isConnected) return;
+          const [locations, device] = data;
+          if (!device || !locations?.length || !device.isConnected) return null;
           const deviceLocation = await getLocationCoords(device.id);
-          if (!deviceLocation.success) return;
-          const removeCapitalsAndSpaces = (str: string) =>
-            str.toLowerCase().replace(/\s/g, "");
-          const sameGroupLocatoins = locations.filter(
-            (loc) => removeCapitalsAndSpaces(loc.groupName) === device.group
-          );
-          const location = sameGroupLocatoins.filter(
+          if (!deviceLocation.success) return null;
+          const sameGroupLocations = locations.filter(
             (loc) =>
-              withinRange(loc.coords, deviceLocation.data) &&
-              device.isProd === loc.isProd
+              loc.groupName === device.group && loc.isProd === device.isProd
           );
-          if (!location.length) return;
+          const location = sameGroupLocations.filter((loc) =>
+            withinRange(loc.coords, deviceLocation.data)
+          );
+          if (!location.length) return null;
           return location[0];
         } catch (error) {
           if (error instanceof Error) {
@@ -691,15 +686,16 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
               details: `${error}`,
             });
           }
+          return null;
         }
       }
     );
-  };
 
   return {
     devices,
     isDiscovering,
     devicesDownloading,
+    stopSaveItems,
     locationBeingSet,
     deviceRecordings,
     deviceEventKeys,
