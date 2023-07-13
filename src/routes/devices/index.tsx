@@ -1,4 +1,4 @@
-import { BsCameraVideoFill } from "solid-icons/bs";
+import { BsCameraVideoFill, BsFileEarmarkImageFill } from "solid-icons/bs";
 import {
   createEffect,
   createMemo,
@@ -104,6 +104,20 @@ function DeviceDetails(props: DeviceDetailsProps) {
   );
 
   const [showLocationSettings, setShowLocationSettings] = createSignal(false);
+  createEffect((prev) => {
+    if (
+      props.updateLocState === "current" &&
+      prev !== "current" &&
+      prev !== "loading" &&
+      context.devices.size === 1
+    ) {
+      setShowLocationSettings(true);
+    }
+    if (props.updateLocState !== "loading") {
+      return props.updateLocState;
+    }
+    return prev;
+  }, "current");
   createEffect(() => {
     on(showLocationSettings, async (shown) => {
       if (!shown) return;
@@ -176,7 +190,10 @@ function DeviceDetails(props: DeviceDetailsProps) {
     }
   };
 
+  const [setting, setSetting] = createSignal(false);
   const saveLocationSettings = async () => {
+    if (setting()) return;
+    setSetting(true);
     const name = newName();
     const photoPaths = photoFilesToUpload();
     const deviceLocation = await context.getLocationCoords(props.id);
@@ -223,6 +240,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
       await refetchLocation();
     }
     toggleEditing(false);
+    setShowLocationSettings(false);
+    setSetting(false);
   };
 
   const locationName = () => {
@@ -256,7 +275,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const isImageToUpload = () => {
     const idx = photoIndex();
     const startOfUploads = (location()?.referenceImages ?? []).length;
-    console.log("IDX", idx >= startOfUploads);
     return idx >= startOfUploads;
   };
 
@@ -746,16 +764,23 @@ function Devices() {
     async (devices) => {
       try {
         if (!devices) return [];
-        let permission = await Geolocation.checkPermissions();
-        if ((await Geolocation.checkPermissions()).location === "denied") {
-          permission = await Geolocation.requestPermissions();
-          if (permission.location === "prompt-with-rationale") {
-            permission = await Geolocation.checkPermissions();
-          } else {
-            return [];
+        try {
+          let permission = await Geolocation.checkPermissions();
+          if (
+            permission.location === "denied" ||
+            permission.location === "prompt"
+          ) {
+            permission = await Geolocation.requestPermissions();
+            if (permission.location === "prompt-with-rationale") {
+              permission = await Geolocation.checkPermissions();
+            } else {
+              return [];
+            }
           }
+          if (permission.location !== "granted") return [];
+        } catch (e) {
+          return [];
         }
-        if (permission.location !== "granted") return [];
         const pos = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
         });
@@ -836,6 +861,9 @@ function Devices() {
       if (value) {
         for (const device of devicesToUpdate) {
           await context.setDeviceToCurrLocation(device);
+        }
+        if (devicesToUpdate.length === 1) {
+          return devicesToUpdate[0];
         }
       } else {
         setCancel(true);

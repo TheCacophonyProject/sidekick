@@ -1,8 +1,10 @@
 package nz.org.cacophony.sidekick
+import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.ConnectivityManager.NetworkCallback
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
@@ -44,8 +46,8 @@ class DevicePlugin: Plugin() {
 
     private lateinit var device: DeviceInterface;
     private var wifiNetwork: Network? = null;
+    var currNetworkCallback: ConnectivityManager.NetworkCallback? = null
     private var cm: ConnectivityManager? = null;
-    private lateinit var wifi: WifiManager;
     private lateinit var multicastLock:WifiManager.MulticastLock
 
 
@@ -79,7 +81,6 @@ class DevicePlugin: Plugin() {
                         override fun onServiceResolved(info: NsdServiceInfo) {
                             val endpoint = "${info.serviceName}.local"
                             val result = JSObject()
-
                             result.put("endpoint", endpoint)
                             result.put("host", info.host.hostAddress)
                             call.resolve(result)
@@ -104,7 +105,7 @@ class DevicePlugin: Plugin() {
 
             nsdManager.discoverServices(type, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         } catch (e: Exception) {
-            call.reject(e.message)
+            call.reject(e.toString())
         }
     }
 
@@ -132,7 +133,6 @@ class DevicePlugin: Plugin() {
         device.checkDeviceConnection(pluginCall(call))
     }
 
-    var currNetworkCallback: ConnectivityManager.NetworkCallback? = null
 
     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
     fun connectToDeviceAP(call: PluginCall) {
@@ -151,10 +151,6 @@ class DevicePlugin: Plugin() {
                     .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                     .setNetworkSpecifier(wifiSpecifier)
                     .build()
-                val mobileNetworkRequest = NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                    .build()
 
 
                 cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -162,14 +158,13 @@ class DevicePlugin: Plugin() {
                 val callback = object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
                         super.onAvailable(network)
-                        cm!!.bindProcessToNetwork(network)
                         wifiNetwork = network
+                        cm!!.bindProcessToNetwork(network)
                         val result = JSObject()
                         result.put("success", true)
                         result.put("data", "connected")
                         call.resolve(result)
                     }
-
                     override fun onUnavailable() {
                         super.onUnavailable()
                         val result = JSObject()
@@ -180,7 +175,6 @@ class DevicePlugin: Plugin() {
                         call.setKeepAlive(false)
                         bridge.releaseCall(call.callbackId)
                     }
-
                     override fun onLost(network: Network) {
                         super.onLost(network)
                         val result = JSObject()
@@ -313,7 +307,9 @@ class DevicePlugin: Plugin() {
     @PluginMethod
     fun unbindConnection(call: PluginCall) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            cm?.bindProcessToNetwork(null)
+            while (cm?.boundNetworkForProcess != null) {
+                cm?.bindProcessToNetwork(null)
+            }
         }
         call.resolve()
     }

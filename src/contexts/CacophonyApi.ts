@@ -154,7 +154,8 @@ export async function getLocationsForUser(token: string) {
     return locationRes.stations;
   } else {
     logError({
-      message: "Failed to get locations",
+      message:
+        "Unable to get locations. Please check internet and you are logged in",
       details: locationJson.message,
     });
     return [];

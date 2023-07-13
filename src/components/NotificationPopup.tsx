@@ -13,6 +13,7 @@ import { FaSolidThumbsUp, FaSolidSpinner } from "solid-icons/fa";
 import { BiSolidCopyAlt } from "solid-icons/bi";
 import { VsChevronDown } from "solid-icons/vs";
 import { Clipboard } from "@capacitor/clipboard";
+import { AiOutlineClose } from "solid-icons/ai";
 
 interface NotificationBarProps {
   notification: Notification;
@@ -80,30 +81,39 @@ function NotificationBar(props: NotificationBarProps) {
         </div>
         <Show when={props.notification.details}>
           <button
-            class="flex items-center rounded-lg py-1 px-4 text-gray-700 shadow-md"
+            class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
             onClick={writeToClipboard}
           >
             {" "}
             {copied() ? "Copied!" : "Copy"}{" "}
             <BiSolidCopyAlt size={18} class="ml-1" />
           </button>
-          <button
-            class="pl-2"
-            onClick={() => {
-              setShowDetails(!showDetails());
-            }}
-          >
-            <VsChevronDown
-              size={24}
-              style={{
-                transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
+          <div>
+            <button
+              onClick={() => {
+                hideNotification(props.notification.id);
               }}
-            />
-          </button>
+            >
+              <AiOutlineClose size={24} />
+            </button>
+            <button
+              class="pl-2"
+              onClick={() => {
+                setShowDetails(!showDetails());
+              }}
+            >
+              <VsChevronDown
+                size={24}
+                style={{
+                  transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              />
+            </button>
+          </div>
         </Show>
       </div>
       <Show when={props.notification.details && showDetails()}>
-        <p class="my-2 mx-4 h-24 overflow-scroll rounded-lg bg-slate-100 px-2 py-2 text-slate-800">
+        <p class="mx-4 my-2 h-24 overflow-scroll rounded-lg bg-slate-100 px-2 py-2 text-slate-800">
           {props.notification.details}
         </p>
       </Show>

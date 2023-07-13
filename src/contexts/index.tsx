@@ -1,5 +1,3 @@
-import { CapacitorHttp, HttpOptions } from "@capacitor/core";
-
 export type CallbackId = string;
 export type URL = string;
 export type Success<T = object | string> = { success: true; data: T };

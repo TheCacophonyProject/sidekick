@@ -31,6 +31,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     }
     await event.uploadEvents();
     await recording.uploadRecordings();
+    await location.resyncLocations();
     if (await KeepAwake.isSupported()) {
       await KeepAwake.allowSleep();
     }
@@ -41,6 +42,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     recording.stopUploading();
     event.stopUploading();
   };
+
   return {
     ...recording,
     ...location,

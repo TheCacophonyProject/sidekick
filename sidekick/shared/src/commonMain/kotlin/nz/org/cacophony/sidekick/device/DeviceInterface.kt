@@ -16,7 +16,7 @@ import okio.Path.Companion.toPath
 
 @Suppress("UNUSED")
 class DeviceInterface(private val filePath: String): CapacitorInterface {
-    private val client = HttpClient {
+    public val client = HttpClient {
         install(Auth) {
             basic {
                 sendWithoutRequest { true }

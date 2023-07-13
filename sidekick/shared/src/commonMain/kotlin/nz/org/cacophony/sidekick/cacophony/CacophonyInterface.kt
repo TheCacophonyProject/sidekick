@@ -66,7 +66,6 @@ data class CacophonyInterface(val filePath: String): CapacitorInterface {
     data class Recording(val token: String, val device: String, val type: String, val filename: String)
     fun uploadRecording(call: PluginCall) = runCatch(call) {
         call.validateCall<Recording>("token", "device","type", "filename").map { recording ->
-                println("$recording")
                 recordingApi.uploadRecording(
                     filePath.toPath().resolve("recordings/${recording.filename}"), recording.filename, recording.device, recording.token, recording.type)
                     .fold(

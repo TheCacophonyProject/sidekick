@@ -33,11 +33,16 @@ export function useLocationStorage() {
       }));
     } catch (e) {
       if (e instanceof Error) {
-        logError({ message: "Failed to get locations", error: e });
+        logError({
+          message:
+            "Unable to get locations. Please check internet and you are logged in",
+          error: e,
+        });
         return [];
       } else {
         logWarning({
-          message: "Failed to get locations",
+          message:
+            "Unable to get locations. Please check internet and you are logged in",
           details: JSON.stringify(e),
         });
         return [];
@@ -45,7 +50,7 @@ export function useLocationStorage() {
     }
   };
 
-  const [savedLocations, { mutate }] = createResource(
+  const [savedLocations, { mutate, refetch }] = createResource(
     () => [userContext.data(), userContext.data.loading] as const,
     async (data) => {
       try {
@@ -307,12 +312,14 @@ export function useLocationStorage() {
           location.updateName = newName;
           logWarning({
             message: SyncLocationMessage,
+            timeout: 20000,
           });
         }
       } else {
         location.updateName = newName;
         logWarning({
           message: SyncLocationMessage,
+          timeout: 20000,
         });
       }
       await updateLocation(db)(location);
@@ -354,15 +361,11 @@ export function useLocationStorage() {
           logSuccess({
             message: "Successfully updated location picture",
           });
-          // Delete newPhoto from cache
-          Filesystem.deleteFile({
-            path: newPhoto,
-            directory: Directory.Cache,
-          });
         } else {
           logWarning({
             message:
               "Unable to upload location photo. We will try again when you next open the app.",
+            timeout: 20000,
             details: res.message,
           });
           if (!location.uploadImages?.includes(newPhoto)) {
@@ -376,6 +379,7 @@ export function useLocationStorage() {
         logWarning({
           message:
             "Location photo could not upload but is saved. We will try again when you next open the app.",
+          timeout: 20000,
         });
         if (!location.uploadImages?.includes(newPhoto)) {
           location.uploadImages = [...(location.uploadImages ?? []), newPhoto];
@@ -441,20 +445,9 @@ export function useLocationStorage() {
       await DevicePlugin.rebindConnection();
       if (res.success) {
         return `${window.location.origin}/_capacitor_file_${res.data}`;
-      } else {
-        logWarning({
-          message: "Failed to get reference photo for location",
-          details: `${id} ${fileKey}: ${res.message}`,
-        });
-        return;
       }
     } catch (e) {
       await DevicePlugin.rebindConnection();
-      logWarning({
-        message: "Failed to get reference photo for location",
-        details: `${id} ${fileKey}: ${e}`,
-      });
-      return;
     }
   };
 
@@ -584,7 +577,7 @@ export function useLocationStorage() {
       logWarning({
         message:
           "We could not create this location on the server. We will try again when you next open the app.",
-        timeout: 4000,
+        timeout: 20000,
       });
       location.updateName = settings.name;
       location.name = null;
@@ -600,7 +593,8 @@ export function useLocationStorage() {
       await db.execute(createLocationSchema);
     } catch (e) {
       logError({
-        message: "Failed to get locations",
+        message:
+          "Unable to get locations. Please check internet and you are logged in",
         details: JSON.stringify(e),
       });
     }
@@ -610,6 +604,7 @@ export function useLocationStorage() {
     savedLocations,
     saveLocation,
     createLocation,
+    resyncLocations: refetch,
     getReferencePhotoForLocation,
     deleteReferencePhotoForLocation,
     updateLocationName,

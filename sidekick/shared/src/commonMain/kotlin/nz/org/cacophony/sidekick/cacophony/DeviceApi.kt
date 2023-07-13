@@ -73,7 +73,7 @@ class DeviceApi(private val api: Api) {
                         return validateResponse(it)
                 }
             }
-        }.mapLeft { InvalidResponse.UnknownError("Unable to upload recording for $filename") }
+        }.mapLeft { InvalidResponse.UnknownError("Unable to upload recording for $filename: $it") }
     object JsonAsStringSerializer: JsonTransformingSerializer<String>(tSerializer = String.serializer()) {
         override fun transformDeserialize(element: JsonElement): JsonElement {
             return JsonPrimitive(value = element.toString())

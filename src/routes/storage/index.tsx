@@ -1,5 +1,5 @@
 import { BsCameraVideoFill } from "solid-icons/bs";
-import { ImNotification } from "solid-icons/im";
+import { ImLocation, ImNotification } from "solid-icons/im";
 import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { Show, onMount } from "solid-js";
 import { A } from "@solidjs/router";
@@ -78,7 +78,7 @@ export default function Storage() {
         }
       >
         <A href="recordings" class="flex items-center text-gray-800">
-          <span class="w-24">
+          <span class="w-28">
             Saved: {storage.unuploadedRecordings().filter(isProd).length}{" "}
           </span>
           <span class="ml-2">
@@ -88,7 +88,7 @@ export default function Storage() {
       </ActionContainer>
       <ActionContainer icon={ImNotification} header="Events">
         <p class="flex items-center text-gray-800">
-          <span class="w-24">
+          <span class="w-28">
             Saved: {storage.unuploadedEvents().filter(isProd).length}{" "}
           </span>
           <span class="ml-2">
@@ -107,7 +107,7 @@ export default function Storage() {
           }
         >
           <A href="recordings" class="flex items-center text-gray-800">
-            <span class="w-24">
+            <span class="w-28">
               Saved: {storage.unuploadedRecordings().filter(isTest).length}{" "}
             </span>
             <span class="ml-2">
@@ -117,7 +117,7 @@ export default function Storage() {
         </ActionContainer>
         <ActionContainer icon={ImNotification} header="Test Events">
           <p class="flex items-center text-gray-800">
-            <span class="w-24">
+            <span class="w-28">
               Saved: {storage.unuploadedEvents().filter(isTest).length}{" "}
             </span>
             <span class="ml-2">
@@ -126,6 +126,25 @@ export default function Storage() {
           </p>
         </ActionContainer>
       </Show>
+      <ActionContainer icon={ImLocation} header="Locations">
+        <p class="flex items-center text-gray-800">
+          <span class="w-28">
+            To Sync:{" "}
+            {storage
+              .savedLocations()
+              ?.filter(
+                (loc) =>
+                  loc.isProd &&
+                  (loc.deleteImages?.length ||
+                    loc.updateName ||
+                    loc.uploadImages?.length)
+              ).length ?? 0}{" "}
+          </span>
+          <span class="ml-2">
+            Stored: {storage.savedLocations()?.filter(isProd).length ?? 0}
+          </span>
+        </p>
+      </ActionContainer>
 
       <div class="pb-bar fixed inset-x-0 bottom-[4vh] mx-auto flex justify-center">
         <CircleButton
