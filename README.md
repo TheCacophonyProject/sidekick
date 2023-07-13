@@ -1,30 +1,32 @@
-# SolidStart
+# Sidekick
+The application allows users to connect and manage their Cacophony Cameras.
 
-Everything you need to build a Solid project, powered by [`solid-start`](https://start.solidjs.com);
+The stack uses a unique setup of [Kotlin Multiplatform  Mobile](https://lp.jetbrains.com/kmm-for-crossplatform-developers/), and [Capacitor.js](https://capacitorjs.com/) to create a cross-platform mobile app. The app is built using [Solid.js](https://www.solidjs.com/), a declarative JavaScript library for creating user interfaces.
 
-## Creating a project
 
-```bash
-# create a new project in the current directory
-npm init solid
+## Prerequisites
 
-# create a new project in my-app
-npm init solid my-app
-```
+- [Node.js](https://nodejs.org/en/) version 18 or higher
+- [Android Studio](https://developer.android.com/studio) (For android development)
+- Xcode (For iOS development, this will require a Mac)
 
 ## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
+It's recommended to use pnpm to install dependencies. To install pnpm, run:
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+npm install -g pnpm
 ```
+You will first need to open the project in Android Studio to [./sidekick](./sidekick/) so gradle can download the dependencies, then run in root file:
+```bash
+pnpm install
+# If you want to create a release build which you can run through Android Studio
+pnpm build
+pnpm sync
+# or if you want to run the app in development mode
+pnpm dev
+```
+**Note:** Most features require a physical device, so ensure you have enabled USB debugging on your device and connected it to your machine.
 
-## Building
+## Release
 
-Solid apps are built with _adapters_, which optimise your project for deployment to different environments.
-
-By default, `npm run build` will generate a Node app that you can run with `npm start`. To use a different adapter, add it to the `devDependencies` in `package.json` and specify in your `vite.config.js`.
+Android builds are handled automatically through github releases.
+iOS builds are handled manually through Xcode.
