@@ -53,12 +53,12 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
     @Serializable
     data class Station(val name : String, val lat : Double, val lng : Double)
     @Serializable
-    data class CreateStation(val station: Station)
+    data class CreateStation(val station: Station, val automatic: Boolean = true, @SerialName("from-date") val fromDate: String? = null)
     @Serializable
     data class CreateStationResponse(val stationId: Int, val messages: List<String>, val success: Boolean)
     suspend fun createStation(name: String, lat: String, lng: String, fromDate: String, groupName: String, token: Token): Either<ApiError, CreateStationResponse> =
         validateIsoString(fromDate).flatMap { fromDate->
-            api.postJSON("groups/$groupName/station?from-date=$fromDate?automatic=true", CreateStation(Station(name, lat.toDouble(), lng.toDouble())), token)
+            api.postJSON("groups/$groupName/station", CreateStation(Station(name, lat.toDouble(), lng.toDouble()), true, fromDate), token)
                 .flatMap { validateResponse(it) }
         }
 

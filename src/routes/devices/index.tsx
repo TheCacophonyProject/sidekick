@@ -1,53 +1,54 @@
-import { BsCameraVideoFill, BsFileEarmarkImageFill } from "solid-icons/bs";
-import {
-  createEffect,
-  createMemo,
-  createResource,
-  createSignal,
-  For,
-  Match,
-  on,
-  onCleanup,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
-import ActionContainer from "../../components/ActionContainer";
-import {
-  ConnectedDevice,
-  Device,
-  DevicePlugin,
-  useDevice,
-} from "../../contexts/Device";
-import { RiDeviceRouterFill, RiSystemArrowRightSLine } from "solid-icons/ri";
-import { BiRegularCurrentLocation, BiSolidError } from "solid-icons/bi";
-import { AiFillEdit } from "solid-icons/ai";
+import { Camera, CameraResultType } from "@capacitor/camera";
 import { Dialog as Prompt } from "@capacitor/dialog";
-import { debounce, leading } from "@solid-primitives/scheduled";
-import { FaSolidSpinner, FaSolidStop } from "solid-icons/fa";
-import CircleButton from "../../components/CircleButton";
 import { Geolocation } from "@capacitor/geolocation";
-import { TbCameraPlus, TbCurrentLocation } from "solid-icons/tb";
+import { debounce, leading } from "@solid-primitives/scheduled";
+import { useNavigate } from "@solidjs/router";
+import { AiFillEdit } from "solid-icons/ai";
+import { BiRegularCurrentLocation, BiSolidError } from "solid-icons/bi";
+import { BsCameraVideoFill } from "solid-icons/bs";
+import { FaSolidSpinner, FaSolidStop } from "solid-icons/fa";
 import { FiDownload, FiMapPin } from "solid-icons/fi";
-import { useStorage } from "../../contexts/Storage";
 import {
   ImArrowLeft,
   ImArrowRight,
-  ImCheckmark,
   ImCog,
   ImCross,
   ImNotification,
   ImSearch,
 } from "solid-icons/im";
-import { headerMap } from "../../components/Header";
-import BackgroundLogo from "../../components/BackgroundLogo";
-import { Recording } from "~/database/Entities/Recording";
-import { Event } from "~/database/Entities/Event";
-import { useNavigate } from "@solidjs/router";
-import { logWarning } from "~/contexts/Notification";
+import { RiDeviceRouterFill, RiSystemArrowRightSLine } from "solid-icons/ri";
+import { TbCameraPlus, TbCurrentLocation } from "solid-icons/tb";
+import {
+  For,
+  Match,
+  Show,
+  Switch,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  on,
+  onCleanup,
+  onMount,
+} from "solid-js";
 import { Portal } from "solid-js/web";
-import { Camera, CameraResultType } from "@capacitor/camera";
 import Dialog from "~/components/Dialog";
+import { logWarning } from "~/contexts/Notification";
+import { Event } from "~/database/Entities/Event";
+import { Recording } from "~/database/Entities/Recording";
+import ActionContainer from "~/components/ActionContainer";
+import BackgroundLogo from "~/components/BackgroundLogo";
+import CircleButton from "~/components/CircleButton";
+import { headerMap } from "~/components/Header";
+import {
+  ConnectedDevice,
+  Device,
+  DevicePlugin,
+  useDevice,
+} from "~/contexts/Device";
+import { useStorage } from "~/contexts/Storage";
+import { CacophonyPlugin } from "~/contexts/CacophonyApi";
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 interface DeviceDetailsProps {
   id: string;
@@ -61,39 +62,20 @@ interface DeviceDetailsProps {
 function DeviceDetails(props: DeviceDetailsProps) {
   const context = useDevice();
   const storage = useStorage();
-  const [savedRecs, setSavedRecs] = createSignal<Recording[]>([]);
-  const [deviceRecs, setDeviceRecs] = createSignal<string[]>([]);
-  const [savedEvents, setSavedEvents] = createSignal<Event[]>([]);
-  const [eventKeys, setEventKeys] = createSignal<number[]>([]);
-
-  const [disabledDownload, setDisabledDownload] = createSignal(false);
-
-  createEffect(() => {
+  const savedRecs = () => storage.savedRecordings().filter((rec) => rec.device === props.id && !rec.isUploaded);
+  const deviceRecs = () => context.deviceRecordings.get(props.id) ?? [];
+  const savedEvents = () => storage
+    .savedEvents()
+    .filter((event) => event.device === props.id && !event.isUploaded);
+  const eventKeys = () => context.deviceEventKeys.get(props.id) ?? [];
+  const disabledDownload = () => {
     const hasRecsToDownload =
       deviceRecs().length > 0 && deviceRecs().length !== savedRecs().length;
     const hasEventsToDownload =
       eventKeys().length > 0 && savedEvents().length !== eventKeys().length;
-    setDisabledDownload(!hasRecsToDownload && !hasEventsToDownload);
-  });
+    return !hasRecsToDownload && !hasEventsToDownload;
+  }
 
-  createEffect(() => {
-    const saved = storage
-      .savedEvents()
-      .filter((event) => event.device === props.id && !event.isUploaded);
-    const device = [...(context.deviceEventKeys.get(props.id) ?? [])];
-
-    setSavedEvents(saved);
-    setEventKeys(device);
-  });
-
-  createEffect(() => {
-    const saved = storage
-      .savedRecordings()
-      .filter((rec) => rec.device === props.id && !rec.isUploaded);
-    const device = [...(context.deviceRecordings.get(props.id) ?? [])];
-    setSavedRecs(saved);
-    setDeviceRecs(device);
-  });
   const navigate = useNavigate();
   const openDeviceInterface = leading(
     debounce,
@@ -137,7 +119,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
       }
     );
   });
-
   const [LocationNameInput, setLocationNameInput] =
     createSignal<HTMLInputElement>();
   const [isEditing, setIsEditing] = createSignal(false);
@@ -151,12 +132,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
 
   const [newName, setNewName] = createSignal("");
-  const saveLocationName = async () => {
-    const newName = LocationNameInput()?.value;
-    if (!newName) return;
-    setNewName(newName);
-    toggleEditing();
-  };
 
   const [photoFilesToUpload, setPhotoFilesToUpload] = createSignal<
     { file: string; url: string }[]
@@ -167,9 +142,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
       ? newName() !== ""
       : newName() !== "" || photoFilesToUpload().length > 0;
 
-  const images = () => [
-    ...(location()?.referenceImages ?? []),
-    ...(location()?.uploadImages ?? []),
+  const photos = () => [
+    ...(location()?.referencePhotos ?? []),
+    ...(location()?.uploadPhotos ?? []),
     ...photoFilesToUpload(),
   ];
 
@@ -180,13 +155,12 @@ function DeviceDetails(props: DeviceDetailsProps) {
       resultType: CameraResultType.Uri,
       width: 500,
     });
-
     if (image.path && image.webPath) {
       setPhotoFilesToUpload((curr) => [
         ...curr,
         { file: image.path ?? "", url: image.webPath ?? "" },
       ]);
-      setPhotoIndex(images().length - 1);
+      setPhotoIndex(photos().length - 1);
     }
   };
 
@@ -206,11 +180,14 @@ function DeviceDetails(props: DeviceDetailsProps) {
           lng: deviceLocation.data.longitude,
         },
         groupName: props.groupName,
-        referenceImages: photoPaths.map((photo) => photo.file),
+        referencePhotos: photoPaths.map((photo) => photo.file),
         isProd: props.isProd,
       });
       await refetchLocation();
       setNewName("");
+      toggleEditing(false);
+      setShowLocationSettings(false);
+      setSetting(false);
       return;
     }
     if (name) {
@@ -253,11 +230,11 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
 
   const [photoIndex, setPhotoIndex] = createSignal(0);
-  const hasPicture = () => images().length > 0;
+  const hasPicture = () => photos().length > 0;
 
-  // Server Side referenceImages are first in the array
+  // Server Side referencePhotos are first in the array
   const [photoReference] = createResource(
-    () => [location(), images(), photoIndex()] as const,
+    () => [location(), photos(), photoIndex()] as const,
     async (values) => {
       const [loc, imgs, idx] = values;
       const img = imgs[idx];
@@ -274,21 +251,25 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   const isImageToUpload = () => {
     const idx = photoIndex();
-    const startOfUploads = (location()?.referenceImages ?? []).length;
+    const startOfUploads = (location()?.referencePhotos ?? []).length;
     return idx >= startOfUploads;
   };
 
   const removePhotoReference = async () => {
     const idx = photoIndex();
-    const image = images()[idx];
+    const image = photos()[idx];
+    debugger;
     if (typeof image === "object") {
       setPhotoFilesToUpload((curr) => {
-        const newFiles = [...curr].filter((file) => file.file !== image.file);
-        return newFiles;
+        return curr.filter((file) => file.file !== image.file);
+      });
+      setPhotoIndex((curr) => {
+        if (curr > 0) return curr - 1;
+        return 0;
       });
     } else {
       const loc = location();
-      if (loc && loc.referenceImages?.length) {
+      if (loc) {
         const prompt = await Prompt.confirm({
           title: "Confirm Deletion",
           message: "Are you sure you want to delete this photo?",
@@ -385,18 +366,18 @@ function DeviceDetails(props: DeviceDetailsProps) {
                     type="text"
                     class="w-full rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
                     placeholder={locationName() ?? "Location Name"}
+                    onInput={
+                      (e) => setNewName((e.target as HTMLInputElement).value)
+                    }
                   />
                   <button
                     class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
-                    onClick={() => toggleEditing()}
+                    onClick={() => {
+                      setNewName("")
+                      toggleEditing()
+                    }}
                   >
                     <ImCross size={12} />
-                  </button>
-                  <button
-                    class="pl-4 pr-2 text-highlight"
-                    onClick={saveLocationName}
-                  >
-                    <ImCheckmark size={18} />
                   </button>
                 </div>
               </Show>
@@ -436,7 +417,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         class="flex h-10 w-10 items-center justify-center rounded-r-full bg-slate-100 p-2 text-gray-500"
                         onClick={() =>
                           setPhotoIndex((i) =>
-                            i === 0 ? images().length - 1 : i - 1
+                            i === 0 ? photos().length - 1 : i - 1
                           )
                         }
                       >
@@ -446,7 +427,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         class="flex h-10 w-10 items-center justify-center rounded-l-full bg-slate-100 p-2 text-gray-500"
                         onClick={() =>
                           setPhotoIndex((i) =>
-                            i === images().length - 1 ? 0 : i + 1
+                            i === photos().length - 1 ? 0 : i + 1
                           )
                         }
                       >
@@ -454,7 +435,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                       </button>
                     </div>
                     <div class="w-fit self-center rounded-lg bg-slate-50 p-1">
-                      {photoIndex() + 1}/{images().length}
+                      {photoIndex() + 1}/{photos().length}
                     </div>
                   </div>
                   <div
@@ -550,9 +531,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
             }
           >
             <button
-              class={`${
-                disabledDownload() ? "text-slate-300" : "text-blue-500"
-              }`}
+              class={`${disabledDownload() ? "text-slate-300" : "text-blue-500"
+                }`}
               disabled={disabledDownload()}
               onClick={() => context.saveItems(props.id)}
             >
@@ -843,14 +823,13 @@ function Devices() {
       if (dialogOpen()) return;
       const message =
         devicesToUpdate.length === 1
-          ? `${
-              context.devices.get(devicesToUpdate[0])?.name
-            } has a different location stored. Would you like to update it to your current location?`
+          ? `${context.devices.get(devicesToUpdate[0])?.name
+          } has a different location stored. Would you like to update it to your current location?`
           : `${devicesToUpdate
-              .map((val) => context.devices.get(val)?.name)
-              .join(
-                ", "
-              )} have different location stored. Would you like to update them to the current location?`;
+            .map((val) => context.devices.get(val)?.name)
+            .join(
+              ", "
+            )} have different location stored. Would you like to update them to the current location?`;
 
       setDialogOpen(true);
       const { value } = await Prompt.confirm({

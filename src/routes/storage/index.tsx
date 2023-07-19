@@ -25,6 +25,7 @@ export default function Storage() {
     if (!value) return;
     await storage.deleteRecordings();
     await storage.deleteEvents({ uploaded: false });
+    await storage.deleteSyncLocations();
   };
 
   onMount(() => {
@@ -63,7 +64,6 @@ export default function Storage() {
   };
 
   const isProd = (rec: { isProd: boolean }) => rec.isProd;
-  const isSame = (rec: { isProd: boolean }) => rec.isProd === user.isProd();
   const isTest = (rec: { isProd: boolean }) => !rec.isProd;
 
   return (
@@ -128,20 +128,17 @@ export default function Storage() {
       </Show>
       <ActionContainer icon={ImLocation} header="Locations">
         <p class="flex items-center text-gray-800">
-          <span class="w-28">
-            To Sync:{" "}
+          <span class="w-32">
+            Needs to Sync:{" "}
             {storage
               .savedLocations()
               ?.filter(
                 (loc) =>
                   loc.isProd &&
-                  (loc.deleteImages?.length ||
+                  (loc.deletePhotos?.length ||
                     loc.updateName ||
-                    loc.uploadImages?.length)
+                    loc.uploadPhotos?.length)
               ).length ?? 0}{" "}
-          </span>
-          <span class="ml-2">
-            Stored: {storage.savedLocations()?.filter(isProd).length ?? 0}
           </span>
         </p>
       </ActionContainer>

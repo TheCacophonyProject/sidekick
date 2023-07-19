@@ -118,7 +118,7 @@ const ApiLocationSchema = z
     const { settings, location, ...rest } = data;
     return {
       ...rest,
-      referenceImages: settings?.referenceImages ?? [],
+      referencePhotos: settings?.referenceImages ?? [],
       coords: location,
     };
   });
@@ -141,7 +141,7 @@ const LocationResSchema = z.discriminatedUnion("success", [
   FailureResSchema,
 ]);
 
-export async function getLocationsForUser(token: string) {
+export async function getLocationsForUser(token: string): Promise<ApiLocation[]> {
   await DevicePlugin.unbindConnection();
   const locationJson = await CacophonyPlugin.getStationsForUser({ token });
   await DevicePlugin.rebindConnection();

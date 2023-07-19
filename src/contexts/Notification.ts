@@ -14,6 +14,7 @@ export type Notification = {
   message: string;
   details?: string;
   type: NotifcationType;
+  timeout?: number;
 };
 
 type TimeoutID = ReturnType<typeof setTimeout>;
@@ -26,12 +27,13 @@ const [notifications, setNotifications] = createSignal<Notification[]>([]);
 const timeoutIDs = new Map<NotificationID, TimeoutID>();
 const defaultDuration = 3000;
 
-const removeNotificationAfterDuration = (id: string, duration: number) =>
-  setTimeout(() => {
+const removeNotificationAfterDuration = (id: string, duration: number) => {
+  return setTimeout(() => {
     setNotifications(
       notifications().filter((notification) => notification.id !== id)
     );
   }, duration);
+}
 
 type LogDetails = {
   message: string;
@@ -53,6 +55,7 @@ function isErrorLog(log: AnyLog): log is ErrorLog {
 }
 
 const logAction = async (log: AnyLog) => {
+  if (notifications().find((notification) => notification.message === log.message || notification.details === log.details)) return;
   const id = generateID();
   setNotifications([
     ...notifications(),
@@ -61,6 +64,7 @@ const logAction = async (log: AnyLog) => {
       message: log.message,
       details: JSON.stringify(log.details),
       type: log.type,
+      timeout: log.timeout,
     },
   ]);
   hideNotification(id, log.timeout ?? defaultDuration);

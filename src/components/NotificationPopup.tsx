@@ -11,9 +11,8 @@ import {
 import { BiSolidError } from "solid-icons/bi";
 import { FaSolidThumbsUp, FaSolidSpinner } from "solid-icons/fa";
 import { BiSolidCopyAlt } from "solid-icons/bi";
-import { VsChevronDown } from "solid-icons/vs";
+import { VsChevronDown, VsClose } from "solid-icons/vs";
 import { Clipboard } from "@capacitor/clipboard";
-import { AiOutlineClose } from "solid-icons/ai";
 
 interface NotificationBarProps {
   notification: Notification;
@@ -35,19 +34,17 @@ function NotificationBar(props: NotificationBarProps) {
     }
   };
   const [showDetails, setShowDetails] = createSignal(false);
-  const [copied, setCopied] = createSignal(false);
   createEffect(() => {
     if (showDetails()) {
       keepNotification(props.notification.id);
     } else {
-      hideNotification(props.notification.id, 2000);
+      hideNotification(props.notification.id, props.notification.timeout ?? 2000);
     }
   });
   const writeToClipboard = async () => {
     await Clipboard.write({
       string: props.notification.details,
     });
-    setCopied(true);
   };
   return (
     <section
@@ -79,38 +76,38 @@ function NotificationBar(props: NotificationBarProps) {
           </Switch>
           <h2 class="ml-4 w-full">{props.notification.message}</h2>
         </div>
-        <Show when={props.notification.details}>
+        <div>
           <button
-            class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
-            onClick={writeToClipboard}
+            onClick={() => {
+              hideNotification(props.notification.id, 0);
+            }}
           >
-            {" "}
-            {copied() ? "Copied!" : "Copy"}{" "}
-            <BiSolidCopyAlt size={18} class="ml-1" />
+            <VsClose size={24} />
           </button>
-          <div>
+          <Show when={props.notification.details}>
             <button
-              onClick={() => {
-                hideNotification(props.notification.id);
-              }}
+              class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
+              onClick={writeToClipboard}
             >
-              <AiOutlineClose size={24} />
+              <BiSolidCopyAlt size={18} class="ml-1" />
             </button>
-            <button
-              class="pl-2"
-              onClick={() => {
-                setShowDetails(!showDetails());
-              }}
-            >
-              <VsChevronDown
-                size={24}
-                style={{
-                  transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
+            <div>
+              <button
+                class="pl-2"
+                onClick={() => {
+                  setShowDetails(!showDetails());
                 }}
-              />
-            </button>
-          </div>
-        </Show>
+              >
+                <VsChevronDown
+                  size={24}
+                  style={{
+                    transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
+              </button>
+            </div>
+          </Show>
+        </div>
       </div>
       <Show when={props.notification.details && showDetails()}>
         <p class="mx-4 my-2 h-24 overflow-scroll rounded-lg bg-slate-100 px-2 py-2 text-slate-800">

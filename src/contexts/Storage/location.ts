@@ -1,13 +1,13 @@
 import { createResource, onMount } from "solid-js";
 import {
-  insertLocations,
-  updateLocation,
-  getLocations,
   Location,
   LocationSchema,
-  insertLocation,
   createLocationSchema,
   deleteLocation,
+  getLocations,
+  insertLocation,
+  insertLocations,
+  updateLocation,
 } from "~/database/Entities/Location";
 import { db } from ".";
 import {
@@ -15,14 +15,14 @@ import {
   CacophonyPlugin,
   getLocationsForUser,
 } from "../CacophonyApi";
+import { DevicePlugin } from "../Device";
 import { logError, logSuccess, logWarning } from "../Notification";
 import { useUserContext } from "../User";
-import { Directory, Filesystem } from "@capacitor/filesystem";
-import { DevicePlugin } from "../Device";
 
 export function useLocationStorage() {
   const userContext = useUserContext();
-  const getServerLocations = async () => {
+  type ServerLocation = ApiLocation & { isProd: boolean };
+  const getServerLocations = async (): Promise<ServerLocation[]> => {
     try {
       const user = await userContext.validateCurrToken();
       if (!user) return [];
@@ -50,11 +50,105 @@ export function useLocationStorage() {
     }
   };
 
+  function getLocationsToUpdate(apiLocations: ServerLocation[], dbLocations: Location[]): Location[] {
+    return dbLocations
+      .map((dbLoc) => {
+        const diffLoc = apiLocations.find(
+          (userLoc) =>
+            dbLoc.id === userLoc.id &&
+            dbLoc.isProd === userLoc.isProd &&
+            (dbLoc.name !== userLoc.name ||
+              dbLoc.updatedAt !== userLoc.updatedAt ||
+              !dbLoc.referencePhotos?.every(
+                (refImage) =>
+                  userLoc.referencePhotos?.includes(refImage) ?? false
+              ))
+        );
+        if (diffLoc) {
+          // get difference between location and savedLocation objects
+          const locationKeys = Object.keys(
+            diffLoc
+          ) as (keyof ApiLocation)[];
+          const diff = locationKeys.reduce((result, key) => {
+            const newLoc = diffLoc[key];
+            const oldLoc = dbLoc[key];
+            if (JSON.stringify(newLoc) !== JSON.stringify(oldLoc)) {
+              result[key] = newLoc;
+            }
+            return result;
+          }, {} as Record<keyof Location, unknown>);
+
+          return {
+            ...diff,
+            isProd: dbLoc.isProd,
+            id: dbLoc.id,
+          };
+        }
+      })
+      .filter(Boolean) as Location[];
+  }
+
+  async function syncLocations(): Promise<Location[]> {
+    const locations = await getLocations(db)();
+    const user = await userContext.validateCurrToken();
+    return await Promise.all(
+      locations.map(async (location) => {
+        if (!user || location.isProd !== user?.prod) return location;
+        if (location.needsCreation) {
+          const res = await createLocation({
+            ...location,
+            name: location.updateName ?? location.name,
+            referencePhotos: location.referencePhotos ?? [],
+          });
+          if (res) {
+            deleteLocation(db)(location.id.toString());
+          }
+          return res;
+        }
+        if (location.updateName) {
+          let name = location.updateName;
+          while (locations.some((loc) => loc.name === name)) {
+            name = `${location.updateName}(${Math.floor(
+              Math.random() * 100
+            )})`;
+          }
+          const synced = await syncLocationName(location.id, name);
+          if (synced) {
+            location.name = name;
+            location.updateName = undefined;
+          } else {
+            location.updateName = name;
+          }
+        }
+        if (location.uploadPhotos?.length) {
+          const [upload, currPhotos] = await syncLocationPhotos(location);
+          location.uploadPhotos = upload;
+          location.referencePhotos = currPhotos;
+        }
+        if (location.deletePhotos?.length) {
+          const synced = await syncLocationDeletePhotos(location);
+          location.deletePhotos = [
+            ...(location.deletePhotos?.filter(
+              (img) => !synced.includes(img)
+            ) ?? []),
+          ];
+          location.referencePhotos = [
+            ...(location.referencePhotos?.filter(
+              (img) => !synced.includes(img)
+            ) ?? []),
+          ];
+        }
+        return location;
+      })
+    );
+  }
+
   const [savedLocations, { mutate, refetch }] = createResource(
     () => [userContext.data(), userContext.data.loading] as const,
     async (data) => {
       try {
-        const [user, loading] = data;
+        // Update Locations based on user
+        const [, loading] = data;
         if (loading) return [];
         const locations = await getServerLocations();
         const dbLocations = await getLocations(db)();
@@ -66,105 +160,13 @@ export function useLocationStorage() {
                 savedLocation.isProd === location.isProd
             )
         );
-        const locationsToUpdate = dbLocations
-          .map((dbLoc) => {
-            const diffLoc = locations.find(
-              (userLoc) =>
-                dbLoc.id === userLoc.id &&
-                dbLoc.isProd === userLoc.isProd &&
-                (dbLoc.name !== userLoc.name ||
-                  dbLoc.updatedAt !== userLoc.updatedAt ||
-                  !dbLoc.referenceImages?.every(
-                    (refImage) =>
-                      userLoc.referenceImages?.includes(refImage) ?? false
-                  ))
-            );
-            if (diffLoc) {
-              // get difference between location and savedLocation objects
-              const locationKeys = Object.keys(
-                diffLoc
-              ) as (keyof ApiLocation)[];
-              const diff = locationKeys.reduce((result, key) => {
-                const newLoc = diffLoc[key];
-                const oldLoc = dbLoc[key];
-                if (JSON.stringify(newLoc) !== JSON.stringify(oldLoc)) {
-                  result[key] = newLoc;
-                }
-                return result;
-              }, {} as Record<keyof Location, unknown>);
-
-              return {
-                ...diff,
-                isProd: dbLoc.isProd,
-                id: dbLoc.id,
-              };
-            }
-          })
-          .filter(Boolean) as Location[];
-
+        const locationsToUpdate = getLocationsToUpdate(locations, dbLocations);
         await insertLocations(db)(locationsToInsert);
-        await Promise.all([
-          ...locationsToUpdate.map((location) => updateLocation(db)(location)),
-        ]);
-        // Sync locations names and photos
-        const newLocations = await getLocations(db)();
-        const syncedLocations = await Promise.all(
-          newLocations.map(async (location) => {
-            if (!user || location.isProd !== user?.prod) return location;
-            if (location.needsCreation) {
-              const res = await createLocation({
-                ...location,
-                name: location.updateName ?? location.name,
-                referenceImages: location.referenceImages ?? [],
-              });
-              if (res) {
-                deleteLocation(db)(location.id.toString());
-              }
-              return res;
-            }
-            if (location.updateName) {
-              let name = location.updateName;
-              while (newLocations.some((loc) => loc.name === name)) {
-                name = `${location.updateName}(${Math.floor(
-                  Math.random() * 100
-                )})`;
-              }
-              const synced = await syncLocationName(location.id, name);
-              if (synced) {
-                location.name = name;
-                location.updateName = undefined;
-              } else {
-                location.updateName = name;
-              }
-            }
-            if (location.uploadImages?.length) {
-              const [upload, currImages] = await syncLocationPhotos(location);
-              location.uploadImages = upload;
-              location.referenceImages = currImages;
-            }
-            if (location.deleteImages?.length) {
-              const synced = await syncLocationDeleteImages(location);
-              location.deleteImages = [
-                ...(location.deleteImages?.filter(
-                  (img) => !synced.includes(img)
-                ) ?? []),
-              ];
-              location.referenceImages = [
-                ...(location.referenceImages?.filter(
-                  (img) => !synced.includes(img)
-                ) ?? []),
-              ];
-              console.log("SYNCED DELETE", synced, location);
-            }
-            return location;
-          })
-        );
-        console.log(syncedLocations);
-        return syncedLocations;
+        await Promise.all(locationsToUpdate.map(updateLocation(db)));
+        return syncLocations();
       } catch (e) {
         if (e instanceof Error) {
-          console.log(e);
-          logError({ message: "Failed to sync locations", error: e });
+          logWarning({ message: "Failed to sync locations", details: e.toString() });
           return [];
         } else {
           logWarning({
@@ -176,20 +178,21 @@ export function useLocationStorage() {
     }
   );
 
-  const syncLocationDeleteImages = async (location: Location) => {
+  // Deletes ima
+  const syncLocationDeletePhotos = async (location: Location) => {
     const user = await userContext.validateCurrToken();
-    const deleteImages = location.deleteImages ?? [];
+    const deletePhotos = location.deletePhotos ?? [];
     if (!user) return [];
     const deleted: string[] = [];
-    for (const fileKey of deleteImages) {
-      if (!location.referenceImages?.includes(fileKey)) {
-        location.deleteImages = location.deleteImages?.filter(
+    for (const fileKey of deletePhotos) {
+      if (!location.referencePhotos?.includes(fileKey)) {
+        location.deletePhotos = location.deletePhotos?.filter(
           (image) => image !== fileKey
         );
         await updateLocation(db)({
           id: location.id,
           isProd: location.isProd,
-          deleteImages: location.deleteImages,
+          deletePhotos: location.deletePhotos,
         });
         deleted.push(fileKey);
         continue;
@@ -201,20 +204,20 @@ export function useLocationStorage() {
       });
       if (res.success && res.data.serverDeleted) {
         deleted.push(fileKey);
-        location.deleteImages = deleteImages;
+        location.deletePhotos = deletePhotos;
       }
     }
     await updateLocation(db)({
       id: location.id,
       isProd: location.isProd,
-      deleteImages: location.deleteImages?.filter(
+      deletePhotos: location.deletePhotos?.filter(
         (image) => !deleted.includes(image)
       ),
     });
     return deleted;
   };
 
-  const deleteReferencePhotoForLocation = async (
+  const deleteReferencePhotosForLocation = async (
     location: Location,
     fileKey: string
   ) => {
@@ -229,23 +232,23 @@ export function useLocationStorage() {
     if (res.success) {
       const deleted = res.data;
       // This image is in cache, so just remove without syncing
-      const isImageToUpload = location.uploadImages?.includes(fileKey);
-      const referenceImages = location.referenceImages?.filter(
+      const isImageToUpload = location.uploadPhotos?.includes(fileKey);
+      const referencePhotos = location.referencePhotos?.filter(
         (image) => image !== fileKey
       );
-      const uploadImages = location.uploadImages?.filter(
+      const uploadPhotos = location.uploadPhotos?.filter(
         (image) => image !== fileKey
       );
 
       const changes = {
-        referenceImages: referenceImages ?? [],
+        referencePhotos: referencePhotos ?? [],
         ...(!deleted.serverDeleted && {
-          deleteImages: [
-            ...(location.deleteImages ?? []).filter((key) => key !== fileKey),
+          deletePhotos: [
+            ...(location.deletePhotos ?? []).filter((key) => key !== fileKey),
             fileKey,
           ],
         }),
-        ...(uploadImages && { uploadImages }),
+        ...(uploadPhotos && { uploadPhotos }),
       };
       await updateLocation(db)({
         id: location.id,
@@ -263,7 +266,6 @@ export function useLocationStorage() {
           return loc;
         })
       );
-      console.log(res.data);
       if (res.data.serverDeleted) {
         logSuccess({
           message: "Reference photo deleted",
@@ -271,8 +273,8 @@ export function useLocationStorage() {
       } else if (!isImageToUpload) {
         logWarning({
           message:
-            "Reference photo deleted from app, but not from server. We will sync it when you next open the app.",
-          timeout: 6000,
+            "Reference photo deleted from app, but not from server. Try sync again through storage.",
+          timeout: 20000,
         });
       }
       return true;
@@ -281,13 +283,14 @@ export function useLocationStorage() {
         message:
           "Failed to delete reference photo for location. You can also delete it on the Cacophony website.",
         details: `${location.id} ${fileKey}: ${res.message}`,
+        timeout: 20000,
       });
       return false;
     }
   };
 
   const SyncLocationMessage =
-    "Could not update location name. We will sync it when you next open the app.";
+    "Could not update location name. Try again through storage.";
   const updateLocationName = async (location: Location, newName: string) => {
     try {
       await DevicePlugin.unbindConnection();
@@ -329,6 +332,7 @@ export function useLocationStorage() {
     } catch (e) {
       logWarning({
         message: SyncLocationMessage,
+        timeout: 20000,
       });
       location.updateName = newName;
       await updateLocation(db)(location);
@@ -338,6 +342,7 @@ export function useLocationStorage() {
     }
   };
 
+  const UploadPhotoMessage = "Location photo saved but not uploaded, try upload again through storage."
   const updateLocationPhoto = async (location: Location, newPhoto: string) => {
     try {
       await DevicePlugin.unbindConnection();
@@ -349,13 +354,13 @@ export function useLocationStorage() {
           filename: newPhoto,
         });
         if (res.success) {
-          location.referenceImages = [
-            ...(location.referenceImages ?? []),
+          location.referencePhotos = [
+            ...(location.referencePhotos ?? []),
             res.data,
           ];
-          if (location.uploadImages) {
-            location.uploadImages = location.uploadImages.filter(
-              (imgPath) => imgPath !== newPhoto
+          if (location.uploadPhotos) {
+            location.uploadPhotos = location.uploadPhotos.filter(
+              (imgPath: string) => imgPath !== newPhoto
             );
           }
           logSuccess({
@@ -363,14 +368,13 @@ export function useLocationStorage() {
           });
         } else {
           logWarning({
-            message:
-              "Unable to upload location photo. We will try again when you next open the app.",
+            message: UploadPhotoMessage,
             timeout: 20000,
             details: res.message,
           });
-          if (!location.uploadImages?.includes(newPhoto)) {
-            location.uploadImages = [
-              ...(location.uploadImages ?? []),
+          if (!location.uploadPhotos?.includes(newPhoto)) {
+            location.uploadPhotos = [
+              ...(location.uploadPhotos ?? []),
               newPhoto,
             ];
           }
@@ -378,11 +382,11 @@ export function useLocationStorage() {
       } else {
         logWarning({
           message:
-            "Location photo could not upload but is saved. We will try again when you next open the app.",
+            UploadPhotoMessage,
           timeout: 20000,
         });
-        if (!location.uploadImages?.includes(newPhoto)) {
-          location.uploadImages = [...(location.uploadImages ?? []), newPhoto];
+        if (!location.uploadPhotos?.includes(newPhoto)) {
+          location.uploadPhotos = [...(location.uploadPhotos ?? []), newPhoto];
         }
       }
       await DevicePlugin.rebindConnection();
@@ -392,8 +396,8 @@ export function useLocationStorage() {
         message: "Failed to update location picture",
         details: JSON.stringify(e),
       });
-      if (!location.uploadImages?.includes(newPhoto)) {
-        location.uploadImages = [...(location.uploadImages ?? []), newPhoto];
+      if (!location.uploadPhotos?.includes(newPhoto)) {
+        location.uploadPhotos = [...(location.uploadPhotos ?? []), newPhoto];
       }
     }
     await updateLocation(db)(location);
@@ -404,7 +408,7 @@ export function useLocationStorage() {
 
   const getNextLocationId = () => {
     let randomId = Math.floor(Math.random() * 1000000000);
-    while (savedLocations()?.some((loc) => loc.id === randomId)) {
+    while (savedLocations()?.some((loc: Location) => loc.id === randomId)) {
       randomId = Math.floor(Math.random() * 1000000000);
     }
     return randomId;
@@ -483,14 +487,15 @@ export function useLocationStorage() {
   };
 
   const syncLocationPhotos = async (
-    location: Pick<Location, "id" | "uploadImages" | "referenceImages">
+    location: Pick<Location, "id" | "uploadPhotos" | "referencePhotos">
   ): Promise<[string[], string[]]> => {
     const user = await userContext.validateCurrToken();
-    let uploadImages: string[] = location.uploadImages ?? [];
-    if (!user) return [uploadImages, location?.referenceImages ?? []];
-    const uploadedImages: [string, string][] = (
+    let uploadPhotos: string[] = location.uploadPhotos ?? [];
+    let referencePhotos = location.referencePhotos ?? [];
+    if (!user) return [uploadPhotos, referencePhotos];
+    const uploadedPhotos: [string, string][] = (
       await Promise.all(
-        uploadImages.map(async (photo) => {
+        uploadPhotos.map(async (photo) => {
           const res = await CacophonyPlugin.uploadReferencePhoto({
             token: user.token,
             station: location.id.toString(),
@@ -502,25 +507,25 @@ export function useLocationStorage() {
         })
       )
     ).filter((res): res is [string, string] => res !== undefined);
-    uploadImages = uploadImages.filter(
-      (image) => !uploadedImages.find((img) => img[0] === image)
+
+    // remove uploaded photos from uploadPhotos
+    uploadPhotos = uploadPhotos.filter(
+      (image) => !uploadedPhotos.find((img) => img[0] === image)
     );
-    const referenceImages = [
-      ...(location?.referenceImages ?? []),
-      ...uploadedImages.map((img) => img[1]),
-    ];
+    referencePhotos = referencePhotos.concat(uploadedPhotos.map((img) => img[1]));
     await updateLocation(db)({
       id: location.id,
       isProd: user.prod ?? false,
-      uploadImages,
-      referenceImages,
+      uploadPhotos: uploadPhotos,
+      referencePhotos: referencePhotos,
     });
-    return [uploadImages, referenceImages];
+    return [uploadPhotos, referencePhotos];
   };
 
   const createLocation = async (settings: {
+    id?: number;
     groupName: string;
-    referenceImages: string[];
+    referencePhotos: string[];
     coords: { lat: number; lng: number };
     isProd: boolean;
     name?: string | null | undefined;
@@ -530,13 +535,12 @@ export function useLocationStorage() {
     const fromDate = new Date().toISOString();
     const id = getNextLocationId();
     const location: Location = {
-      ...settings,
       id,
+      ...settings,
       updatedAt: fromDate,
       needsCreation: true,
       needsRename: false,
     };
-
     if (user && user.prod === settings.isProd) {
       let success = false;
       let tries = 0;
@@ -545,7 +549,7 @@ export function useLocationStorage() {
           settings.name ??
           `New Location ${settings.groupName} ${new Date().toISOString()}`;
         if (tries > 0) name = `${name}(${Math.floor(Math.random() * 1000)})`;
-        while (savedLocations()?.some((loc) => loc.name === name)) {
+        while (savedLocations()?.some((loc: Location) => loc.name === name)) {
           name = `${name}(${Math.floor(Math.random() * 100)})`;
         }
         const res = await CacophonyPlugin.createStation({
@@ -557,14 +561,22 @@ export function useLocationStorage() {
           fromDate,
         });
         if (res.success) {
-          await syncLocationPhotos({
-            id: Number(res.data),
-            referenceImages: settings.referenceImages,
-          });
+          if (settings.id) {
+            await deleteLocation(db)(settings.id.toString(), settings.isProd);
+          }
           location.id = parseInt(res.data);
           location.name = name;
           location.updateName = null;
           location.needsCreation = false;
+          await insertLocation(db)(location);
+          const [uploadPhotos, refPhotos] = await syncLocationPhotos({
+            id: Number(res.data),
+            uploadPhotos: settings.referencePhotos,
+            referencePhotos: []
+          });
+          debugger;
+          location.referencePhotos = refPhotos;
+          location.uploadPhotos = uploadPhotos;
           success = true;
         } else if (res.message.includes("already exists") && tries < 3) {
           tries++;
@@ -576,17 +588,46 @@ export function useLocationStorage() {
     if (location.needsCreation) {
       logWarning({
         message:
-          "We could not create this location on the server. We will try again when you next open the app.",
+          "Could not create this location. You can try upload again from storage.",
         timeout: 20000,
       });
       location.updateName = settings.name;
       location.name = null;
+      if (!settings.id) {
+        await insertLocation(db)(location);
+      }
     }
     await DevicePlugin.rebindConnection();
-    await insertLocation(db)(location);
-    mutate((locations) => [...(locations ?? []), location]);
+
+    mutate((locations) => [...(locations ?? []).filter(loc => loc.id !== settings.id), location]);
     return location;
   };
+
+  const deleteSyncLocations = async () => {
+    if (!savedLocations.loading) {
+      const locs = savedLocations() ?? [];
+      await Promise.all(locs.map(async (loc) => {
+        if (loc.needsCreation) {
+          await deleteLocation(db)(loc.id.toString(), loc.isProd);
+        }
+        if (loc.uploadPhotos) {
+          await updateLocation(db)({
+            id: loc.id,
+            isProd: loc.isProd,
+            uploadPhotos: [],
+          });
+        }
+        if (loc.updateName) {
+          await updateLocation(db)({
+            id: loc.id,
+            isProd: loc.isProd,
+            updateName: null,
+          });
+        }
+      }))
+      refetch();
+    };
+  }
 
   onMount(async () => {
     try {
@@ -604,9 +645,10 @@ export function useLocationStorage() {
     savedLocations,
     saveLocation,
     createLocation,
+    deleteSyncLocations,
     resyncLocations: refetch,
     getReferencePhotoForLocation,
-    deleteReferencePhotoForLocation,
+    deleteReferencePhotoForLocation: deleteReferencePhotosForLocation,
     updateLocationName,
     updateLocationPhoto,
   };

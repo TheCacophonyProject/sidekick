@@ -2,7 +2,7 @@ import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
 import { insertIntoTable, insertManyIntoTable } from "..";
 
-const TABLE_NAME = "LocationsV6";
+const TABLE_NAME = "LocationV2";
 
 export const createLocationSchema = `
 CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
   needsCreation INTEGER NOT NULL,
   needsRename INTEGER NOT NULL,
   updateName TEXT,
-  referenceImages TEXT,
-  uploadImages TEXT,
-  deleteImages TEXT
+  referencePhotos TEXT,
+  uploadPhotos TEXT,
+  deletePhotos TEXT
 );
 `;
 
@@ -38,9 +38,11 @@ export const LocationSchema = z.object({
   updateName: z.string().nullish(),
   needsRename: z.coerce.boolean().default(false),
   needsCreation: z.coerce.boolean().default(false),
-  referenceImages: z.array(z.string()).nullish().default([]),
-  uploadImages: z.array(z.string()).nullish(),
-  deleteImages: z.array(z.string()).nullish(),
+  referencePhotos: z.array(z.string()).nullish().default([]),
+  // Photos to upload
+  uploadPhotos: z.array(z.string()).nullish(),
+  // Photos to delete
+  deletePhotos: z.array(z.string()).nullish(),
 });
 
 const StrToArr = z.string().transform((val) => {
@@ -64,17 +66,17 @@ const reverseTransformId = <T extends { id: number }>(val: T) => ({
 });
 
 export const MutationLocationSchema = LocationSchema.extend({
-  deleteImages: ArrToString,
-  uploadImages: ArrToString,
-  referenceImages: ArrToString,
+  deletePhotos: ArrToString,
+  uploadPhotos: ArrToString,
+  referencePhotos: ArrToString,
   coords: CoordsSchema.transform((val) => JSON.stringify(val)),
 });
 
 export const QueryLocationSchema = MutationLocationSchema.extend({
   coords: z.string().transform((val) => CoordsSchema.parse(JSON.parse(val))),
-  referenceImages: StrToArr,
-  deleteImages: StrToArr,
-  uploadImages: StrToArr,
+  referencePhotos: StrToArr,
+  deletePhotos: StrToArr,
+  uploadPhotos: StrToArr,
 }).transform(reverseTransformId);
 
 export type Location = z.infer<typeof LocationSchema>;
@@ -93,12 +95,12 @@ export const insertLocations = insertManyIntoTable({
 const getLocationByIdSql = `SELECT * FROM ${TABLE_NAME} WHERE id = ?`;
 export const getLocationById =
   (db: SQLiteDBConnection) =>
-  async (id: string): Promise<Location | null> => {
-    const result = await db.query(getLocationByIdSql, [id]);
-    if (!result.values || result.values.length === 0) return null;
-    const row = result.values[0];
-    return QueryLocationSchema.parse(row);
-  };
+    async (id: string): Promise<Location | null> => {
+      const result = await db.query(getLocationByIdSql, [id]);
+      if (!result.values || result.values.length === 0) return null;
+      const row = result.values[0];
+      return QueryLocationSchema.parse(row);
+    };
 
 export const hasLocation =
   (db: SQLiteDBConnection) => async (location: Location) => {
@@ -115,8 +117,8 @@ export const getLocations =
   };
 
 const deleteLocationSql = `DELETE FROM ${TABLE_NAME} WHERE id = ?`;
-export const deleteLocation = (db: SQLiteDBConnection) => async (id: string) =>
-  db.query(deleteLocationSql, [id]);
+export const deleteLocation = (db: SQLiteDBConnection) => async (id: string, isProd: boolean) =>
+  db.query(deleteLocationSql, [Number(`${id}${isProd ? "1" : "0"}`)]);
 
 const UpdateSchema = MutationLocationSchema.partial()
   .extend({

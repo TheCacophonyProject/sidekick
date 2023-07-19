@@ -18,6 +18,8 @@ const UserSchema = z.object({
   prod: z.boolean(),
 });
 
+export type User = z.infer<typeof UserSchema>;
+
 const [UserProvider, useUserContext] = createContextProvider(() => {
   const nav = useNavigate();
   const [data, { mutate: mutateUser, refetch }] = createResource(async () => {
