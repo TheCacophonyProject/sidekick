@@ -19,6 +19,55 @@ import { DevicePlugin } from "../Device";
 import { logError, logSuccess, logWarning } from "../Notification";
 import { useUserContext } from "../User";
 
+
+const MIN_STATION_SEPARATION_METERS = 60;
+// The radius of the station is half the max distance between stations: any recording inside the radius can
+// be considered to belong to that station.
+const MAX_DISTANCE_FROM_STATION_FOR_RECORDING =
+  MIN_STATION_SEPARATION_METERS / 2;
+
+function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = (lat1 * Math.PI) / 180; // Convert latitude from degrees to radians
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Returns the distance in meters
+}
+
+function isWithinRadius(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+  radius: number
+): boolean {
+  const distance = haversineDistance(lat1, lon1, lat2, lon2);
+  return distance <= radius;
+}
+
+export const isWithinRange = (
+  prevLoc: [number, number],
+  newLoc: [number, number],
+  range = MAX_DISTANCE_FROM_STATION_FOR_RECORDING
+) => {
+  const [lat, lng] = prevLoc;
+  const [latitude, longitude] = newLoc;
+  const inRange = isWithinRadius(lat, lng, latitude, longitude, range);
+  return inRange;
+};
+
 export function useLocationStorage() {
   const userContext = useUserContext();
   type ServerLocation = ApiLocation & { isProd: boolean };
@@ -53,6 +102,7 @@ export function useLocationStorage() {
   function getLocationsToUpdate(apiLocations: ServerLocation[], dbLocations: Location[]): Location[] {
     return dbLocations
       .map((dbLoc) => {
+        // Update Locations
         const diffLoc = apiLocations.find(
           (userLoc) =>
             dbLoc.id === userLoc.id &&
@@ -88,8 +138,30 @@ export function useLocationStorage() {
       .filter(Boolean) as Location[];
   }
 
+
   async function syncLocations(): Promise<Location[]> {
     const locations = await getLocations(db)();
+    for (let [i, loc] of locations.entries()) {
+      if (loc.needsCreation) {
+        const sameLoc = locations.findIndex(l => l.id !== loc.id && l.isProd === loc.isProd && l.groupName === loc.groupName && isWithinRange([loc.coords.lat, loc.coords.lng], [l.coords.lat, l.coords.lng]));
+        // remove the location that needs creation, but keep the new name and photos
+        if (sameLoc !== -1) {
+          const same = locations[sameLoc];
+          const newLoc = {
+            ...same,
+            updateName: loc.updateName ?? loc.name,
+            referencePhotos: [...(loc.referencePhotos ?? []), ...(same.referencePhotos ?? [])],
+            uploadPhotos: [...(loc.uploadPhotos ?? []), ...(same.uploadPhotos ?? [])]
+          }
+          await deleteLocation(db)(loc.id.toString(), loc.isProd);
+          await updateLocation(db)(newLoc);
+          // insert the new location
+          locations[sameLoc] = newLoc;
+          // remove the old location
+          locations.splice(i, 1);
+        }
+      }
+    }
     const user = await userContext.validateCurrToken();
     return await Promise.all(
       locations.map(async (location) => {
@@ -98,11 +170,8 @@ export function useLocationStorage() {
           const res = await createLocation({
             ...location,
             name: location.updateName ?? location.name,
-            referencePhotos: location.referencePhotos ?? [],
+            uploadPhotos: location.uploadPhotos ?? [],
           });
-          if (res) {
-            deleteLocation(db)(location.id.toString());
-          }
           return res;
         }
         if (location.updateName) {
@@ -140,7 +209,7 @@ export function useLocationStorage() {
         }
         return location;
       })
-    );
+    )
   }
 
   const [savedLocations, { mutate, refetch }] = createResource(
@@ -274,7 +343,7 @@ export function useLocationStorage() {
         logWarning({
           message:
             "Reference photo deleted from app, but not from server. Try sync again through storage.",
-          timeout: 20000,
+          timeout: 180000,
         });
       }
       return true;
@@ -283,7 +352,7 @@ export function useLocationStorage() {
         message:
           "Failed to delete reference photo for location. You can also delete it on the Cacophony website.",
         details: `${location.id} ${fileKey}: ${res.message}`,
-        timeout: 20000,
+        timeout: 180000,
       });
       return false;
     }
@@ -315,14 +384,14 @@ export function useLocationStorage() {
           location.updateName = newName;
           logWarning({
             message: SyncLocationMessage,
-            timeout: 20000,
+            timeout: 180000,
           });
         }
       } else {
         location.updateName = newName;
         logWarning({
           message: SyncLocationMessage,
-          timeout: 20000,
+          timeout: 180000,
         });
       }
       await updateLocation(db)(location);
@@ -332,7 +401,7 @@ export function useLocationStorage() {
     } catch (e) {
       logWarning({
         message: SyncLocationMessage,
-        timeout: 20000,
+        timeout: 180000,
       });
       location.updateName = newName;
       await updateLocation(db)(location);
@@ -369,7 +438,7 @@ export function useLocationStorage() {
         } else {
           logWarning({
             message: UploadPhotoMessage,
-            timeout: 20000,
+            timeout: 180000,
             details: res.message,
           });
           if (!location.uploadPhotos?.includes(newPhoto)) {
@@ -383,7 +452,7 @@ export function useLocationStorage() {
         logWarning({
           message:
             UploadPhotoMessage,
-          timeout: 20000,
+          timeout: 180000,
         });
         if (!location.uploadPhotos?.includes(newPhoto)) {
           location.uploadPhotos = [...(location.uploadPhotos ?? []), newPhoto];
@@ -519,13 +588,14 @@ export function useLocationStorage() {
       uploadPhotos: uploadPhotos,
       referencePhotos: referencePhotos,
     });
+    console.log("UPLOADED PHOTOS", uploadedPhotos, uploadPhotos, referencePhotos);
     return [uploadPhotos, referencePhotos];
   };
 
   const createLocation = async (settings: {
     id?: number;
     groupName: string;
-    referencePhotos: string[];
+    uploadPhotos: string[];
     coords: { lat: number; lng: number };
     isProd: boolean;
     name?: string | null | undefined;
@@ -536,6 +606,7 @@ export function useLocationStorage() {
     const id = getNextLocationId();
     const location: Location = {
       id,
+      referencePhotos: [],
       ...settings,
       updatedAt: fromDate,
       needsCreation: true,
@@ -562,6 +633,7 @@ export function useLocationStorage() {
         });
         if (res.success) {
           if (settings.id) {
+            // Delete old location if it exists
             await deleteLocation(db)(settings.id.toString(), settings.isProd);
           }
           location.id = parseInt(res.data);
@@ -571,13 +643,16 @@ export function useLocationStorage() {
           await insertLocation(db)(location);
           const [uploadPhotos, refPhotos] = await syncLocationPhotos({
             id: Number(res.data),
-            uploadPhotos: settings.referencePhotos,
+            uploadPhotos: settings.uploadPhotos,
             referencePhotos: []
           });
-          debugger;
           location.referencePhotos = refPhotos;
           location.uploadPhotos = uploadPhotos;
+
           success = true;
+          logSuccess({
+            message: "Location created successfully",
+          });
         } else if (res.message.includes("already exists") && tries < 3) {
           tries++;
         } else {
@@ -589,7 +664,7 @@ export function useLocationStorage() {
       logWarning({
         message:
           "Could not create this location. You can try upload again from storage.",
-        timeout: 20000,
+        timeout: 180000,
       });
       location.updateName = settings.name;
       location.name = null;

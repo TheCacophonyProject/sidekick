@@ -189,8 +189,7 @@ class DevicePlugin: Plugin() {
                     }
                 }
                 currNetworkCallback = callback
-                val threeMinutes = 180000
-                cm!!.requestNetwork(networkRequest, callback, threeMinutes)
+                cm!!.requestNetwork(networkRequest, callback)
             } else {
                 connectToWifiLegacy(ssid, password, {
                     val result = JSObject()

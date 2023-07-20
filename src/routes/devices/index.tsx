@@ -49,6 +49,7 @@ import {
 import { useStorage } from "~/contexts/Storage";
 import { CacophonyPlugin } from "~/contexts/CacophonyApi";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { isWithinRange } from "~/contexts/Storage/location";
 
 interface DeviceDetailsProps {
   id: string;
@@ -180,10 +181,11 @@ function DeviceDetails(props: DeviceDetailsProps) {
           lng: deviceLocation.data.longitude,
         },
         groupName: props.groupName,
-        referencePhotos: photoPaths.map((photo) => photo.file),
+        uploadPhotos: photoPaths.map((photo) => photo.file),
         isProd: props.isProd,
       });
       await refetchLocation();
+      setPhotoFilesToUpload([]);
       setNewName("");
       toggleEditing(false);
       setShowLocationSettings(false);
@@ -688,55 +690,6 @@ function Devices() {
       clearInterval(search);
     });
   });
-
-  const MIN_STATION_SEPARATION_METERS = 60;
-  // The radius of the station is half the max distance between stations: any recording inside the radius can
-  // be considered to belong to that station.
-  const MAX_DISTANCE_FROM_STATION_FOR_RECORDING =
-    MIN_STATION_SEPARATION_METERS / 2;
-
-  function haversineDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = (lat1 * Math.PI) / 180; // Convert latitude from degrees to radians
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // Returns the distance in meters
-  }
-
-  function isWithinRadius(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-    radius: number
-  ): boolean {
-    const distance = haversineDistance(lat1, lon1, lat2, lon2);
-    return distance <= radius;
-  }
-
-  const isWithinRange = (
-    prevLoc: [number, number],
-    newLoc: [number, number],
-    range = MAX_DISTANCE_FROM_STATION_FOR_RECORDING
-  ) => {
-    const [lat, lng] = prevLoc;
-    const [latitude, longitude] = newLoc;
-    const inRange = isWithinRadius(lat, lng, latitude, longitude, range);
-    return inRange;
-  };
-
   const [devicesLocToUpdate, { refetch: refetchLocation }] = createResource(
     () => {
       return [...context.devices.values()] as const;
