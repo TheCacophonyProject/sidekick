@@ -41,7 +41,7 @@ install_framework()
 
   if [ -L "${source}" ]; then
     echo "Symlinked..."
-    source="$(readlink "${source}")"
+    source="$(readlink -f "${source}")"
   fi
 
   if [ -d "${source}/${BCSYMBOLMAP_DIR}" ]; then
@@ -177,7 +177,9 @@ code_sign_if_enabled() {
 
 if [[ "$CONFIGURATION" == "Debug" ]]; then
   install_framework "${BUILT_PRODUCTS_DIR}/Capacitor/Capacitor.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/CapacitorApp/CapacitorApp.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorBrowser/CapacitorBrowser.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/CapacitorCamera/CapacitorCamera.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorClipboard/CapacitorClipboard.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorCommunitySqlite/CapacitorCommunitySqlite.framework"
@@ -186,13 +188,23 @@ if [[ "$CONFIGURATION" == "Debug" ]]; then
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorFilesystem/CapacitorFilesystem.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorGeolocation/CapacitorGeolocation.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorPreferences/CapacitorPreferences.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseCore/FirebaseCore.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseCoreDiagnostics/FirebaseCoreDiagnostics.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseCrashlytics/FirebaseCrashlytics.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseInstallations/FirebaseInstallations.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/GoogleDataTransport/GoogleDataTransport.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/GoogleUtilities/GoogleUtilities.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/PromisesObjC/FBLPromises.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/SQLCipher/SQLCipher.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/ZIPFoundation/ZIPFoundation.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework"
   install_framework "${PODS_ROOT}/../../shared/build/cocoapods/framework/shared.framework"
 fi
 if [[ "$CONFIGURATION" == "Release" ]]; then
   install_framework "${BUILT_PRODUCTS_DIR}/Capacitor/Capacitor.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/CapacitorApp/CapacitorApp.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorBrowser/CapacitorBrowser.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/CapacitorCamera/CapacitorCamera.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorClipboard/CapacitorClipboard.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorCommunitySqlite/CapacitorCommunitySqlite.framework"
@@ -201,8 +213,16 @@ if [[ "$CONFIGURATION" == "Release" ]]; then
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorFilesystem/CapacitorFilesystem.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorGeolocation/CapacitorGeolocation.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CapacitorPreferences/CapacitorPreferences.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseCore/FirebaseCore.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseCoreDiagnostics/FirebaseCoreDiagnostics.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseCrashlytics/FirebaseCrashlytics.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/FirebaseInstallations/FirebaseInstallations.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/GoogleDataTransport/GoogleDataTransport.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/GoogleUtilities/GoogleUtilities.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/PromisesObjC/FBLPromises.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/SQLCipher/SQLCipher.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/ZIPFoundation/ZIPFoundation.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework"
   install_framework "${PODS_ROOT}/../../shared/build/cocoapods/framework/shared.framework"
 fi
 if [ "${COCOAPODS_PARALLEL_CODE_SIGN}" == "true" ]; then

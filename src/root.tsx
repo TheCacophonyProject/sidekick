@@ -80,12 +80,14 @@ export default function Root() {
               <ErrorBoundary
                 fallback={(err) => {
                   return (
-                    <div class="flex h-full flex-col items-center justify-center">
+                    <div class="flex h-full flex-col items-center justify-center w-screen">
                       <h1 class="text-2xl font-bold">Something went wrong</h1>
                       <p class="text-lg">Please refresh the page</p>
-                      <p class="flex items-center text-lg">
+                      <p class="flex items-center text-lg text-center">
                         Error:
                         {err.message ?? "Couldn't get error message"}
+                      </p>
+                      <div class="flex items-center">
                         <button
                           class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
                           onClick={() => writeToClipboard(err)}
@@ -99,7 +101,7 @@ export default function Root() {
                         >
                           Reload
                         </button>
-                      </p>
+                      </div>
                     </div>
                   );
                 }}

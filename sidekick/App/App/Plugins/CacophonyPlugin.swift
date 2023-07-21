@@ -33,4 +33,11 @@ public class CacophonyPlugin: CAPPlugin {
     @objc func uploadEvent(_ call:CAPPluginCall) {
         cacophony.uploadEvent(call: pluginCall(call: call))
     }
+    @objc func getAppVersion(_ call: CAPPluginCall) {
+        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+            call.resolve(["data": version, "success" : true])
+        } else {
+            call.resolve(["data": "1.0", "success" : true])
+        }
+    }
 }

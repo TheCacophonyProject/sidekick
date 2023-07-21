@@ -1,13 +1,13 @@
 {
   "name": "CapacitorCommunityKeepAwake",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "summary": "Prevent your screen from getting some sleep!",
   "license": "MIT",
   "homepage": "git+https://github.com/capacitor-community/keep-awake.git",
   "authors": "Kevin Boosten <kboosten@icloud.com>",
   "source": {
     "git": "git+https://github.com/capacitor-community/keep-awake.git",
-    "tag": "3.0.0"
+    "tag": "4.0.0"
   },
   "source_files": "ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}",
   "platforms": {

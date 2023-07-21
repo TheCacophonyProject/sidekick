@@ -1,13 +1,13 @@
 {
   "name": "CapacitorClipboard",
-  "version": "4.1.0",
+  "version": "5.0.2",
   "summary": "The Clipboard API enables copy and pasting to/from the system clipboard.",
   "license": "MIT",
   "homepage": "https://capacitorjs.com",
   "authors": "Ionic <hi@ionicframework.com>",
   "source": {
     "git": "https://github.com/ionic-team/capacitor-plugins.git",
-    "tag": "@capacitor/clipboard@4.1.0"
+    "tag": "@capacitor/clipboard@5.0.2"
   },
   "source_files": [
     "ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}",

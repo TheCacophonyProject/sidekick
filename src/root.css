@@ -26,9 +26,9 @@
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
   .mt-safe {
-    margin-top: env(safe-area-inset-top);
+    margin-top: env(safe-area-inset-top, 2em);
   }
   .mb-safe {
-    margin-bottom: env(safe-area-inset-bottom);
+    margin-bottom: env(safe-area-inset-bottom, 2em);
   }
 }

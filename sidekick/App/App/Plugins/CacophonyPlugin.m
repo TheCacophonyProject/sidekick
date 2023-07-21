@@ -15,4 +15,5 @@ CAP_PLUGIN(CacophonyPlugin, "Cacophony",
     CAP_PLUGIN_METHOD(setToProductionServer, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(uploadRecording, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(uploadEvent, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(getAppVersion, CAPPluginReturnPromise);
 )
