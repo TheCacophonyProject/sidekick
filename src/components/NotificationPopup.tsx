@@ -38,7 +38,10 @@ function NotificationBar(props: NotificationBarProps) {
     if (showDetails()) {
       keepNotification(props.notification.id);
     } else {
-      hideNotification(props.notification.id, props.notification.timeout ?? 2000);
+      hideNotification(
+        props.notification.id,
+        props.notification.timeout ?? 2000
+      );
     }
   });
   const writeToClipboard = async () => {
@@ -101,13 +104,18 @@ function NotificationBar(props: NotificationBarProps) {
                 <VsChevronDown
                   size={24}
                   style={{
-                    transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
+                    transform: showDetails()
+                      ? "rotate(180deg)"
+                      : "rotate(0deg)",
                   }}
                 />
               </button>
             </div>
           </Show>
         </div>
+      </div>
+      <div class="w-full">
+        <Show when={props.notification.action}>{(Action) => <Action />}</Show>
       </div>
       <Show when={props.notification.details && showDetails()}>
         <p class="mx-4 my-2 h-24 overflow-scroll rounded-lg bg-slate-100 px-2 py-2 text-slate-800">

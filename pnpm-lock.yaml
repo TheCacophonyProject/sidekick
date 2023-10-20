@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   '@capacitor-community/firebase-crashlytics':
     specifier: ^3.0.0
@@ -64,6 +68,9 @@ dependencies:
   '@solidjs/router':
     specifier: ^0.8.2
     version: 0.8.2(solid-js@1.7.5)
+  capacitor-native-settings:
+    specifier: ^5.0.1
+    version: 5.0.1(@capacitor/core@5.0.4)
   kysely:
     specifier: ^0.24.2
     version: 0.24.2
@@ -2422,6 +2429,14 @@ packages:
   /caniuse-lite@1.0.30001489:
     resolution: {integrity: sha512-x1mgZEXK8jHIfAxm+xgdpHpk50IN3z3q3zP261/WS+uvePxW8izXuCu6AHz0lkuYTlATDehiZ/tNyYBdSQsOUQ==}
     dev: true
+
+  /capacitor-native-settings@5.0.1(@capacitor/core@5.0.4):
+    resolution: {integrity: sha512-HH7GCyaVLwWP4FEVqvOQM+cHWveQUjsA2128wfZ5yr9eOQrECVWzO5UXH9ZlikpWi1C7exnovcyEr3TlYO6l8w==}
+    peerDependencies:
+      '@capacitor/core': ^5.0.0
+    dependencies:
+      '@capacitor/core': 5.0.4
+    dev: false
 
   /chalk@2.4.2:
     resolution: {integrity: sha512-Mti+f9lpJNcwF4tWV8/OrTTtF1gZi+f8FqlyAdouralcFWFQWF2+NgCHShjkCb+IFBLq9buZwE1xckQU4peSuQ==}

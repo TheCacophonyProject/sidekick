@@ -4,7 +4,7 @@
 // such as error messages, success messages, and loading messages
 
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
-import { createSignal } from "solid-js";
+import { JSX, createSignal } from "solid-js";
 import StackTrace from "stacktrace-js";
 
 type NotifcationType = "error" | "warning" | "success" | "loading";
@@ -15,6 +15,7 @@ export type Notification = {
   details?: string;
   type: NotifcationType;
   timeout?: number;
+  action?: JSX.Element;
 };
 
 type TimeoutID = ReturnType<typeof setTimeout>;
@@ -33,12 +34,13 @@ const removeNotificationAfterDuration = (id: string, duration: number) => {
       notifications().filter((notification) => notification.id !== id)
     );
   }, duration);
-}
+};
 
 type LogDetails = {
   message: string;
   details?: string;
   timeout?: number;
+  action?: JSX.Element;
 };
 
 type LogBase = {
@@ -55,7 +57,14 @@ function isErrorLog(log: AnyLog): log is ErrorLog {
 }
 
 const logAction = async (log: AnyLog) => {
-  if (notifications().find((notification) => notification.message === log.message || notification.details === log.details)) return;
+  if (
+    notifications().find(
+      (notification) =>
+        notification.message === log.message ||
+        notification.details === log.details
+    )
+  )
+    return;
   const id = generateID();
   setNotifications([
     ...notifications(),
@@ -65,6 +74,7 @@ const logAction = async (log: AnyLog) => {
       details: JSON.stringify(log.details),
       type: log.type,
       timeout: log.timeout,
+      action: log.action,
     },
   ]);
   hideNotification(id, log.timeout ?? defaultDuration);

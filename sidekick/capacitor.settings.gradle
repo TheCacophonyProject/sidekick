@@ -34,3 +34,6 @@ project(':capacitor-geolocation').projectDir = new File('../node_modules/.pnpm/@
 
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/.pnpm/@capacitor+preferences@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/preferences/android')
+
+include ':capacitor-native-settings'
+project(':capacitor-native-settings').projectDir = new File('../node_modules/.pnpm/capacitor-native-settings@5.0.1_@capacitor+core@5.0.4/node_modules/capacitor-native-settings/android')

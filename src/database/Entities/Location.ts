@@ -57,12 +57,13 @@ const ArrToString = z
 
 const transformId = <T extends { id: number; isProd: boolean }>(val: T) => ({
   ...val,
-  id: Number(`${val.id}${val.isProd ? "1" : "0"}`),
+  id: (val.id << 1) | (val.isProd ? 1 : 0),
 });
 
 const reverseTransformId = <T extends { id: number }>(val: T) => ({
   ...val,
-  id: Number(val.id.toString().slice(0, -1)),
+  id: val.id >> 1,
+  isProd: Boolean(val.id & 1),
 });
 
 export const MutationLocationSchema = LocationSchema.extend({
@@ -95,12 +96,12 @@ export const insertLocations = insertManyIntoTable({
 const getLocationByIdSql = `SELECT * FROM ${TABLE_NAME} WHERE id = ?`;
 export const getLocationById =
   (db: SQLiteDBConnection) =>
-    async (id: string): Promise<Location | null> => {
-      const result = await db.query(getLocationByIdSql, [id]);
-      if (!result.values || result.values.length === 0) return null;
-      const row = result.values[0];
-      return QueryLocationSchema.parse(row);
-    };
+  async (id: string): Promise<Location | null> => {
+    const result = await db.query(getLocationByIdSql, [id]);
+    if (!result.values || result.values.length === 0) return null;
+    const row = result.values[0];
+    return QueryLocationSchema.parse(row);
+  };
 
 export const hasLocation =
   (db: SQLiteDBConnection) => async (location: Location) => {
@@ -117,8 +118,9 @@ export const getLocations =
   };
 
 const deleteLocationSql = `DELETE FROM ${TABLE_NAME} WHERE id = ?`;
-export const deleteLocation = (db: SQLiteDBConnection) => async (id: string, isProd: boolean) =>
-  db.query(deleteLocationSql, [Number(`${id}${isProd ? "1" : "0"}`)]);
+export const deleteLocation =
+  (db: SQLiteDBConnection) => async (id: string, isProd: boolean) =>
+    db.query(deleteLocationSql, [Number(`${id}${isProd ? "1" : "0"}`)]);
 
 const UpdateSchema = MutationLocationSchema.partial()
   .extend({

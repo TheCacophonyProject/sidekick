@@ -6,7 +6,7 @@ import { useNavigate } from "@solidjs/router";
 import { AiFillEdit } from "solid-icons/ai";
 import { BiRegularCurrentLocation, BiSolidError } from "solid-icons/bi";
 import { BsCameraVideoFill } from "solid-icons/bs";
-import { FaSolidSpinner, FaSolidStop } from "solid-icons/fa";
+import { FaRegularTrashCan, FaSolidSpinner, FaSolidStop } from "solid-icons/fa";
 import { FiDownload, FiMapPin } from "solid-icons/fi";
 import {
   ImArrowLeft,
@@ -48,8 +48,14 @@ import {
 } from "~/contexts/Device";
 import { useStorage } from "~/contexts/Storage";
 import { CacophonyPlugin } from "~/contexts/CacophonyApi";
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { isWithinRange } from "~/contexts/Storage/location";
+import { PermissionState } from "@capacitor/core";
+import {
+  AndroidSettings,
+  IOSSettings,
+  NativeSettings,
+} from "capacitor-native-settings";
 
 interface DeviceDetailsProps {
   id: string;
@@ -63,11 +69,15 @@ interface DeviceDetailsProps {
 function DeviceDetails(props: DeviceDetailsProps) {
   const context = useDevice();
   const storage = useStorage();
-  const savedRecs = () => storage.savedRecordings().filter((rec) => rec.device === props.id && !rec.isUploaded);
+  const savedRecs = () =>
+    storage
+      .savedRecordings()
+      .filter((rec) => rec.device === props.id && !rec.isUploaded);
   const deviceRecs = () => context.deviceRecordings.get(props.id) ?? [];
-  const savedEvents = () => storage
-    .savedEvents()
-    .filter((event) => event.device === props.id && !event.isUploaded);
+  const savedEvents = () =>
+    storage
+      .savedEvents()
+      .filter((event) => event.device === props.id && !event.isUploaded);
   const eventKeys = () => context.deviceEventKeys.get(props.id) ?? [];
   const disabledDownload = () => {
     const hasRecsToDownload =
@@ -75,7 +85,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
     const hasEventsToDownload =
       eventKeys().length > 0 && savedEvents().length !== eventKeys().length;
     return !hasRecsToDownload && !hasEventsToDownload;
-  }
+  };
 
   const navigate = useNavigate();
   const openDeviceInterface = leading(
@@ -86,8 +96,11 @@ function DeviceDetails(props: DeviceDetailsProps) {
     800
   );
 
+  const [showTooltip, setShowTooltip] = createSignal(false);
+
   const [showLocationSettings, setShowLocationSettings] = createSignal(false);
   createEffect((prev) => {
+    console.log("updateLocState", props.updateLocState);
     if (
       props.updateLocState === "current" &&
       prev !== "current" &&
@@ -115,6 +128,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
     on(
       () => props.updateLocState,
       async (shouldUpdate) => {
+        console.log("shouldUpdate", shouldUpdate);
         if (shouldUpdate === "loading") return;
         refetchLocation();
       }
@@ -149,19 +163,41 @@ function DeviceDetails(props: DeviceDetailsProps) {
     ...photoFilesToUpload(),
   ];
 
+  const GoToPermissions = () => (
+    <button
+      class="flex w-full justify-center space-x-2 py-2 text-center text-blue-500"
+      onClick={() =>
+        NativeSettings.open({
+          optionAndroid: AndroidSettings.Privacy,
+          optionIOS: IOSSettings.App,
+        })
+      }
+    >
+      <p>Permission Settings</p>
+    </button>
+  );
+
   const addPhotoToDevice = async () => {
-    const image = await Camera.getPhoto({
-      quality: 100,
-      allowEditing: false,
-      resultType: CameraResultType.Uri,
-      width: 500,
-    });
-    if (image.path && image.webPath) {
-      setPhotoFilesToUpload((curr) => [
-        ...curr,
-        { file: image.path ?? "", url: image.webPath ?? "" },
-      ]);
-      setPhotoIndex(photos().length - 1);
+    try {
+      const image = await Camera.getPhoto({
+        quality: 100,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        width: 500,
+      });
+      if (image.path && image.webPath) {
+        setPhotoFilesToUpload((curr) => [
+          ...curr,
+          { file: image.path ?? "", url: image.webPath ?? "" },
+        ]);
+        setPhotoIndex(photos().length - 1);
+      }
+    } catch (error) {
+      logWarning({
+        message: "Photo upload failed. Please check your device permissions.",
+        timeout: 12000,
+        action: GoToPermissions(),
+      });
     }
   };
 
@@ -260,7 +296,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
   const removePhotoReference = async () => {
     const idx = photoIndex();
     const image = photos()[idx];
-    debugger;
     if (typeof image === "object") {
       setPhotoFilesToUpload((curr) => {
         return curr.filter((file) => file.file !== image.file);
@@ -368,15 +403,15 @@ function DeviceDetails(props: DeviceDetailsProps) {
                     type="text"
                     class="w-full rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
                     placeholder={locationName() ?? "Location Name"}
-                    onInput={
-                      (e) => setNewName((e.target as HTMLInputElement).value)
+                    onInput={(e) =>
+                      setNewName((e.target as HTMLInputElement).value)
                     }
                   />
                   <button
                     class="rounded-r bg-slate-50 px-4 py-2 text-gray-500"
                     onClick={() => {
-                      setNewName("")
-                      toggleEditing()
+                      setNewName("");
+                      toggleEditing();
                     }}
                   >
                     <ImCross size={12} />
@@ -411,7 +446,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
                         class="flex h-10 w-10 items-center justify-center rounded-bl-lg bg-slate-100 p-2 text-red-500"
                         onClick={() => removePhotoReference()}
                       >
-                        <ImCross size={18} />
+                        <FaRegularTrashCan size={22} />
                       </button>
                     </div>
                     <div class="flex w-full justify-between">
@@ -533,8 +568,9 @@ function DeviceDetails(props: DeviceDetailsProps) {
             }
           >
             <button
-              class={`${disabledDownload() ? "text-slate-300" : "text-blue-500"
-                }`}
+              class={`${
+                disabledDownload() ? "text-slate-300" : "text-blue-500"
+              }`}
               disabled={disabledDownload()}
               onClick={() => context.saveItems(props.id)}
             >
@@ -542,13 +578,33 @@ function DeviceDetails(props: DeviceDetailsProps) {
             </button>
           </Show>
           <button
-            class="text-blue-500"
+            class="relative text-blue-500"
             disabled={
               context.locationBeingSet.has(props.id) ||
               ["loading", "unavailable"].includes(props.updateLocState)
             }
+            title={
+              props.updateLocState === "unavailable"
+                ? "Please enable permissions in your settings."
+                : ""
+            }
             onClick={() => setShowLocationSettings(true)}
+            onTouchStart={() =>
+              props.updateLocState === "unavailable" && setShowTooltip(true)
+            }
+            onTouchEnd={() => setShowTooltip(false)}
+            onMouseEnter={() =>
+              props.updateLocState === "unavailable" && setShowTooltip(true)
+            }
+            onMouseLeave={() => setShowTooltip(false)}
           >
+            <Show when={showTooltip()}>
+              <div class="relative">
+                <div class="absolute bottom-full right-0 mb-2 -translate-x-0.5 transform whitespace-nowrap rounded bg-gray-700 p-1 text-xs text-white">
+                  Please enable permissions in your settings.
+                </div>
+              </div>
+            </Show>
             <Switch>
               <Match
                 when={
@@ -679,7 +735,7 @@ function Devices() {
       ),
     ]);
   });
-
+  const [permission, setPermission] = createSignal<PermissionState>();
   onMount(async () => {
     searchDevice();
     const search = setInterval(() => {
@@ -701,15 +757,18 @@ function Devices() {
           let permission = await Geolocation.checkPermissions();
           if (
             permission.location === "denied" ||
-            permission.location === "prompt"
+            permission.location === "prompt" ||
+            permission.location === "prompt-with-rationale"
           ) {
             permission = await Geolocation.requestPermissions();
             if (permission.location === "prompt-with-rationale") {
               permission = await Geolocation.checkPermissions();
             } else {
+              setPermission(permission.location);
               return [];
             }
           }
+          setPermission(permission.location);
           if (permission.location !== "granted") return [];
         } catch (e) {
           return [];
@@ -776,13 +835,14 @@ function Devices() {
       if (dialogOpen()) return;
       const message =
         devicesToUpdate.length === 1
-          ? `${context.devices.get(devicesToUpdate[0])?.name
-          } has a different location stored. Would you like to update it to your current location?`
+          ? `${
+              context.devices.get(devicesToUpdate[0])?.name
+            } has a different location stored. Would you like to update it to your current location?`
           : `${devicesToUpdate
-            .map((val) => context.devices.get(val)?.name)
-            .join(
-              ", "
-            )} have different location stored. Would you like to update them to the current location?`;
+              .map((val) => context.devices.get(val)?.name)
+              .join(
+                ", "
+              )} have different location stored. Would you like to update them to the current location?`;
 
       setDialogOpen(true);
       const { value } = await Prompt.confirm({
@@ -806,7 +866,8 @@ function Devices() {
   const shouldDeviceUpdateLocation = (device: Device) => {
     if (devicesLocToUpdate.loading) return "loading";
     const devicesToUpdate = devicesLocToUpdate();
-    if (!devicesToUpdate) return "unavailable";
+    if (!devicesToUpdate?.length)
+      return permission() === "denied" ? "unavailable" : "current";
     return devicesToUpdate
       ? devicesToUpdate.includes(device.id)
         ? "needsUpdate"

@@ -23,10 +23,12 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                 credentials { BasicAuthCredentials("admin", "feathers") }
             }
         }
+
         install(ContentNegotiation) {
             json(Json {
                 prettyPrint = true
                 isLenient = true
+                ignoreUnknownKeys = true
             })
         }
         install(HttpTimeout) {

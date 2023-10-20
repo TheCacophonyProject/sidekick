@@ -58,6 +58,7 @@
     "@solid-primitives/set": "^0.4.5",
     "@solidjs/meta": "^0.28.5",
     "@solidjs/router": "^0.8.2",
+    "capacitor-native-settings": "^5.0.1",
     "kysely": "^0.24.2",
     "motion": "^10.16.2",
     "solid-icons": "^1.0.4",

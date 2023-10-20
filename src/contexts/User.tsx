@@ -4,7 +4,7 @@ import { Preferences } from "@capacitor/preferences";
 import { logSuccess, logWarning } from "./Notification";
 import { Result } from ".";
 import { z } from "zod";
-import { CacophonyPlugin } from "./CacophonyApi";
+import { AuthToken, CacophonyPlugin } from "./CacophonyApi";
 import { useNavigate } from "@solidjs/router";
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
 import { DevicePlugin } from "./Device";
@@ -35,7 +35,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         return user;
       }
     } catch (error) {
-      console.log(error);
       return null;
     }
   });
@@ -65,7 +64,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     try {
       const user = data();
       if (!user) return;
-      console.log("user", user);
       const currUser = UserSchema.parse(user);
       setServer(currUser.prod ? "prod" : "test");
       const { token, id, email, refreshToken, prod } = currUser;
@@ -81,7 +79,9 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
         }),
       });
     } catch (error) {
-      console.log(error);
+      logWarning({
+        message: "Failed to save user data",
+      });
     }
   });
 
@@ -152,38 +152,61 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     }
   });
 
-  // Validate the current token.
-  async function validateCurrToken(warn = true) {
-    const user = data();
-    if (user) {
-      const { refreshToken, expiry, email, id } = user;
-      // Check if token is valid
-      // Expiry is  ISO 8601 timestamp
-      const expiryDate = new Date(expiry).getTime();
-      if (expiryDate > Date.now() + 5000) return user;
-      console.log("Validating token", user, expiryDate, Date.now());
-      // Refresh token
-      await DevicePlugin.unbindConnection();
-      const result = await CacophonyPlugin.validateToken({
-        refreshToken,
-      });
-      await DevicePlugin.rebindConnection();
+  async function validateCurrToken(warn = true): Promise<User | undefined> {
+    try {
+      const user = data();
+      if (!user) return;
 
-      // Update user
-      if (result.success) {
-        const { token, refreshToken, expiry } = result.data;
-        const user = { id, email, token, refreshToken, expiry, prod: isProd() };
-        mutateUser(user);
-        console.log("Token refreshed");
-        return user;
-      } else if (warn) {
-        logWarning({
-          message:
-            "Could not validate user. Check your internet connection, or try relogging.",
-          details: result.message,
-        });
-      }
+      const { refreshToken, expiry, email, id } = user;
+      const expiryDate = new Date(expiry).getTime();
+
+      // Check if token is still valid for at least TOKEN_REFRESH_THRESHOLD milliseconds
+      if (expiryDate > Date.now()) return user;
+
+      await unbindAndRebind(async () => {
+        const result = await CacophonyPlugin.validateToken({ refreshToken });
+
+        if (result.success) {
+          updateUser(result.data, { id, email });
+        } else if (warn) {
+          logWarning({
+            message:
+              "Could not validate user. Check your internet connection, or try relogging.",
+            details: result.message,
+          });
+        }
+      });
+      return data() ?? undefined;
+    } catch (error) {
+      console.error("Error in validateCurrToken:", error);
     }
+  }
+
+  /**
+   * Helper function to unbind and rebind connection.
+   * @param callback The callback to execute between unbinding and rebinding.
+   */
+  async function unbindAndRebind(callback: () => Promise<void>) {
+    await DevicePlugin.unbindConnection();
+    await callback();
+    await DevicePlugin.rebindConnection();
+  }
+
+  /**
+   * Updates the user data.
+   * @param data The new data to update.
+   * @param user The current user data.
+   */
+  function updateUser(data: AuthToken, user: { id: string; email: string }) {
+    const { token, refreshToken, expiry } = data;
+    const updatedUser = {
+      ...user,
+      token,
+      refreshToken,
+      expiry,
+      prod: isProd(),
+    };
+    mutateUser(updatedUser);
   }
   const isAuthorized = () => data() && data() !== null;
 

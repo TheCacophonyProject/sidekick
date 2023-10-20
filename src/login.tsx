@@ -7,6 +7,7 @@ import { ImCog } from "solid-icons/im";
 type LoginInput = {
   type: string;
   placeholder?: string;
+  autoComplete: string;
   name: string;
   label: string;
   invalid: boolean;
@@ -20,7 +21,8 @@ const LoginInput = (props: LoginInput) => {
         {props.label}
       </label>
       <input
-        class="rounded-md border-2 py-3 px-2 shadow-inner transition-colors"
+        autocomplete={props.autoComplete}
+        class="rounded-md border-2 px-2 py-3 shadow-inner transition-colors"
         classList={{
           "border-slate-50": !props.invalid,
           "border-red-300": props.invalid,
@@ -29,6 +31,7 @@ const LoginInput = (props: LoginInput) => {
         placeholder={props.placeholder}
         name={props.name}
         onInput={(e) => props.onInput(e)}
+        required
       />
     </div>
   );
@@ -118,6 +121,7 @@ function Login() {
         <CacaophonyLogo />
       </div>
       <LoginInput
+        autoComplete="email"
         type="email"
         placeholder="example@gmail.com"
         name="email"
@@ -126,6 +130,7 @@ function Login() {
         onInput={onInput}
       />
       <LoginInput
+        autoComplete="current-password"
         type="password"
         name="password"
         label="Password"

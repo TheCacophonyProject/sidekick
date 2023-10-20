@@ -4,7 +4,7 @@ import { Result } from ".";
 import { logError } from "./Notification";
 import { DevicePlugin } from "./Device";
 
-type AuthToken = {
+export type AuthToken = {
   token: string;
   refreshToken: string;
   expiry: string;
@@ -141,7 +141,9 @@ const LocationResSchema = z.discriminatedUnion("success", [
   FailureResSchema,
 ]);
 
-export async function getLocationsForUser(token: string): Promise<ApiLocation[]> {
+export async function getLocationsForUser(
+  token: string
+): Promise<ApiLocation[]> {
   await DevicePlugin.unbindConnection();
   const locationJson = await CacophonyPlugin.getStationsForUser({ token });
   await DevicePlugin.rebindConnection();

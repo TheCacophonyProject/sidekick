@@ -28,6 +28,7 @@ export type DeviceDetails = {
   type: DeviceType;
   endpoint: string;
   isProd: boolean;
+  timeFound: Date;
 };
 
 type DeviceCoords<T extends string | number> = {
@@ -143,6 +144,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         type: "thermal",
         endpoint,
         isProd: !info.data.serverURL.includes("test"),
+        timeFound: new Date(),
       };
       const device: ConnectedDevice = {
         ...deviceDetails,
@@ -169,6 +171,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           type: "thermal",
           endpoint,
           isProd: !info.data.serverURL.includes("test"),
+          timeFound: new Date(),
         };
         const device: ConnectedDevice = {
           ...deviceDetails,
@@ -185,6 +188,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     if (isDiscovering()) return;
     setIsDiscovering(true);
     const connectedDevices: ConnectedDevice[] = [];
+    // Clear devices that have been connected for more than 10 minutes
+    for (const device of devices.values()) {
+      if (device.isConnected) {
+        const timeDiff = new Date().getTime() - device.timeFound.getTime();
+        const tenMinutes = 600000;
+        if (timeDiff > tenMinutes) {
+          devices.delete(device.id);
+        }
+      }
+    }
+
     for (const device of devices.values()) {
       if (!device.isConnected) continue;
       const connection = await DevicePlugin.checkDeviceConnection({
