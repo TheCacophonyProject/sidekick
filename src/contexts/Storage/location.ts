@@ -1,4 +1,4 @@
-import { createResource, onMount } from "solid-js";
+import { createMemo, createResource, onMount } from "solid-js";
 import {
   Location,
   LocationSchema,
@@ -18,7 +18,6 @@ import {
 import { DevicePlugin } from "../Device";
 import { logError, logSuccess, logWarning } from "../Notification";
 import { useUserContext } from "../User";
-
 
 const MIN_STATION_SEPARATION_METERS = 60;
 // The radius of the station is half the max distance between stations: any recording inside the radius can
@@ -71,35 +70,30 @@ export const isWithinRange = (
 export function useLocationStorage() {
   const userContext = useUserContext();
   type ServerLocation = ApiLocation & { isProd: boolean };
+  const message =
+    "Could not to get locations. Please check your internet connection and you are logged in.";
   const getServerLocations = async (): Promise<ServerLocation[]> => {
     try {
-      const user = await userContext.validateCurrToken();
+      const user = await userContext.getUser();
       if (!user) return [];
       const locations = await getLocationsForUser(user.token);
       return locations.map((location) => ({
         ...location,
         isProd: user.prod,
       }));
-    } catch (e) {
-      if (e instanceof Error) {
-        logError({
-          message:
-            "Unable to get locations. Please check internet and you are logged in",
-          error: e,
-        });
-        return [];
-      } else {
-        logWarning({
-          message:
-            "Unable to get locations. Please check internet and you are logged in",
-          details: JSON.stringify(e),
-        });
-        return [];
-      }
+    } catch (error) {
+      logError({
+        message,
+        error,
+      });
+      return [];
     }
   };
 
-  function getLocationsToUpdate(apiLocations: ServerLocation[], dbLocations: Location[]): Location[] {
+  function getLocationsToUpdate(
+    apiLocations: ServerLocation[],
+    dbLocations: Location[]
+  ): Location[] {
     return dbLocations
       .map((dbLoc) => {
         // Update Locations
@@ -116,9 +110,7 @@ export function useLocationStorage() {
         );
         if (diffLoc) {
           // get difference between location and savedLocation objects
-          const locationKeys = Object.keys(
-            diffLoc
-          ) as (keyof ApiLocation)[];
+          const locationKeys = Object.keys(diffLoc) as (keyof ApiLocation)[];
           const diff = locationKeys.reduce((result, key) => {
             const newLoc = diffLoc[key];
             const oldLoc = dbLoc[key];
@@ -138,21 +130,36 @@ export function useLocationStorage() {
       .filter(Boolean) as Location[];
   }
 
-
   async function syncLocations(): Promise<Location[]> {
     const locations = await getLocations(db)();
-    for (let [i, loc] of locations.entries()) {
+    for (const [i, loc] of locations.entries()) {
       if (loc.needsCreation) {
-        const sameLoc = locations.findIndex(l => l.id !== loc.id && l.isProd === loc.isProd && l.groupName === loc.groupName && isWithinRange([loc.coords.lat, loc.coords.lng], [l.coords.lat, l.coords.lng]));
+        const sameLoc = locations.findIndex(
+          (l) =>
+            l.id !== loc.id &&
+            l.isProd === loc.isProd &&
+            l.groupName === loc.groupName &&
+            isWithinRange(
+              [loc.coords.lat, loc.coords.lng],
+              [l.coords.lat, l.coords.lng]
+            )
+        );
         // remove the location that needs creation, but keep the new name and photos
         if (sameLoc !== -1) {
+          debugger;
           const same = locations[sameLoc];
           const newLoc = {
             ...same,
             updateName: loc.updateName ?? loc.name,
-            referencePhotos: [...(loc.referencePhotos ?? []), ...(same.referencePhotos ?? [])],
-            uploadPhotos: [...(loc.uploadPhotos ?? []), ...(same.uploadPhotos ?? [])]
-          }
+            referencePhotos: [
+              ...(loc.referencePhotos ?? []),
+              ...(same.referencePhotos ?? []),
+            ],
+            uploadPhotos: [
+              ...(loc.uploadPhotos ?? []),
+              ...(same.uploadPhotos ?? []),
+            ],
+          };
           await deleteLocation(db)(loc.id.toString(), loc.isProd);
           await updateLocation(db)(newLoc);
           // insert the new location
@@ -162,7 +169,7 @@ export function useLocationStorage() {
         }
       }
     }
-    const user = await userContext.validateCurrToken();
+    const user = await userContext.getUser();
     return await Promise.all(
       locations.map(async (location) => {
         if (!user || location.isProd !== user?.prod) return location;
@@ -177,11 +184,9 @@ export function useLocationStorage() {
         if (location.updateName) {
           let name = location.updateName;
           while (locations.some((loc) => loc.name === name)) {
-            name = `${location.updateName}(${Math.floor(
-              Math.random() * 100
-            )})`;
+            name = `${location.updateName}(${Math.floor(Math.random() * 100)})`;
           }
-          const synced = await syncLocationName(location.id, name);
+          const synced = await syncLocationName(location, name);
           if (synced) {
             location.name = name;
             location.updateName = undefined;
@@ -197,9 +202,8 @@ export function useLocationStorage() {
         if (location.deletePhotos?.length) {
           const synced = await syncLocationDeletePhotos(location);
           location.deletePhotos = [
-            ...(location.deletePhotos?.filter(
-              (img) => !synced.includes(img)
-            ) ?? []),
+            ...(location.deletePhotos?.filter((img) => !synced.includes(img)) ??
+              []),
           ];
           location.referencePhotos = [
             ...(location.referencePhotos?.filter(
@@ -209,16 +213,16 @@ export function useLocationStorage() {
         }
         return location;
       })
-    )
+    );
   }
 
   const [savedLocations, { mutate, refetch }] = createResource(
-    () => [userContext.data(), userContext.data.loading] as const,
+    () => [userContext.getUser()] as const,
     async (data) => {
       try {
         // Update Locations based on user
-        const [, loading] = data;
-        if (loading) return [];
+        const user = await data[0];
+        if (!user) return [];
         const locations = await getServerLocations();
         const dbLocations = await getLocations(db)();
         const locationsToInsert = locations.filter(
@@ -233,23 +237,19 @@ export function useLocationStorage() {
         await insertLocations(db)(locationsToInsert);
         await Promise.all(locationsToUpdate.map(updateLocation(db)));
         return syncLocations();
-      } catch (e) {
-        if (e instanceof Error) {
-          logWarning({ message: "Failed to sync locations", details: e.toString() });
-          return [];
-        } else {
-          logWarning({
-            message: "Failed to sync locations",
-          });
-          return [];
-        }
+      } catch (error) {
+        logError({
+          message: "Failed to sync locations",
+          error,
+        });
+        return [];
       }
     }
   );
 
   // Deletes ima
   const syncLocationDeletePhotos = async (location: Location) => {
-    const user = await userContext.validateCurrToken();
+    const user = await userContext.getUser();
     const deletePhotos = location.deletePhotos ?? [];
     if (!user) return [];
     const deleted: string[] = [];
@@ -291,7 +291,7 @@ export function useLocationStorage() {
     fileKey: string
   ) => {
     await DevicePlugin.unbindConnection();
-    const user = await userContext.validateCurrToken(false);
+    const user = await userContext.getUser();
     const res = await CacophonyPlugin.deleteReferencePhoto({
       ...(user && { token: user.token }),
       station: location.id.toString(),
@@ -343,7 +343,6 @@ export function useLocationStorage() {
         logWarning({
           message:
             "Reference photo deleted from app, but not from server. Try sync again through storage.",
-          timeout: 180000,
         });
       }
       return true;
@@ -352,7 +351,6 @@ export function useLocationStorage() {
         message:
           "Failed to delete reference photo for location. You can also delete it on the Cacophony website.",
         details: `${location.id} ${fileKey}: ${res.message}`,
-        timeout: 180000,
       });
       return false;
     }
@@ -363,7 +361,7 @@ export function useLocationStorage() {
   const updateLocationName = async (location: Location, newName: string) => {
     try {
       await DevicePlugin.unbindConnection();
-      const validToken = await userContext.validateCurrToken();
+      const validToken = await userContext.getUser();
       if (validToken) {
         while (savedLocations()?.some((loc) => loc.name === newName)) {
           newName = `${newName}(${Math.floor(Math.random() * 100)})`;
@@ -384,14 +382,12 @@ export function useLocationStorage() {
           location.updateName = newName;
           logWarning({
             message: SyncLocationMessage,
-            timeout: 180000,
           });
         }
       } else {
         location.updateName = newName;
         logWarning({
           message: SyncLocationMessage,
-          timeout: 180000,
         });
       }
       await updateLocation(db)(location);
@@ -401,7 +397,6 @@ export function useLocationStorage() {
     } catch (e) {
       logWarning({
         message: SyncLocationMessage,
-        timeout: 180000,
       });
       location.updateName = newName;
       await updateLocation(db)(location);
@@ -411,14 +406,15 @@ export function useLocationStorage() {
     }
   };
 
-  const UploadPhotoMessage = "Location photo saved but not uploaded, try upload again through storage."
+  const UploadPhotoMessage =
+    "Location photo saved but not uploaded, try upload again through storage.";
   const updateLocationPhoto = async (location: Location, newPhoto: string) => {
     try {
       await DevicePlugin.unbindConnection();
-      const validToken = await userContext.validateCurrToken(false);
-      if (validToken) {
+      const user = await userContext.getUser();
+      if (user) {
         const res = await CacophonyPlugin.uploadReferencePhoto({
-          token: validToken.token,
+          token: user.token,
           station: location.id.toString(),
           filename: newPhoto,
         });
@@ -438,7 +434,6 @@ export function useLocationStorage() {
         } else {
           logWarning({
             message: UploadPhotoMessage,
-            timeout: 180000,
             details: res.message,
           });
           if (!location.uploadPhotos?.includes(newPhoto)) {
@@ -450,9 +445,7 @@ export function useLocationStorage() {
         }
       } else {
         logWarning({
-          message:
-            UploadPhotoMessage,
-          timeout: 180000,
+          message: UploadPhotoMessage,
         });
         if (!location.uploadPhotos?.includes(newPhoto)) {
           location.uploadPhotos = [...(location.uploadPhotos ?? []), newPhoto];
@@ -509,7 +502,7 @@ export function useLocationStorage() {
   const getReferencePhotoForLocation = async (id: number, fileKey: string) => {
     try {
       await DevicePlugin.unbindConnection();
-      const user = await userContext.validateCurrToken(false);
+      const user = await userContext.getUser();
       const res = await CacophonyPlugin.getReferencePhoto({
         ...(user?.token && { token: user.token }),
         station: id.toString(),
@@ -524,8 +517,8 @@ export function useLocationStorage() {
     }
   };
 
-  const syncLocationName = async (id: number, updateName: string) => {
-    const user = await userContext.validateCurrToken();
+  const syncLocationName = async (loc: Location, updateName: string) => {
+    const user = await userContext.getUser();
     if (!user) return;
     let name = updateName;
     try {
@@ -533,13 +526,13 @@ export function useLocationStorage() {
         name = i === 0 ? name : `${updateName}(${i})`;
         const res = await CacophonyPlugin.updateStation({
           token: user.token,
-          id: id.toString(),
+          id: loc.id.toString(),
           name,
         });
         if (res.success) {
           await updateLocation(db)({
-            id,
-            isProd: user.prod,
+            id: loc.id,
+            isProd: loc.isProd,
             updateName: undefined,
           });
           return true;
@@ -547,8 +540,8 @@ export function useLocationStorage() {
       }
     } catch (e) {
       await updateLocation(db)({
-        id,
-        isProd: user.prod,
+        id: loc.id,
+        isProd: loc.isProd,
         updateName: name,
       });
     }
@@ -558,7 +551,7 @@ export function useLocationStorage() {
   const syncLocationPhotos = async (
     location: Pick<Location, "id" | "uploadPhotos" | "referencePhotos">
   ): Promise<[string[], string[]]> => {
-    const user = await userContext.validateCurrToken();
+    const user = await userContext.getUser();
     let uploadPhotos: string[] = location.uploadPhotos ?? [];
     let referencePhotos = location.referencePhotos ?? [];
     if (!user) return [uploadPhotos, referencePhotos];
@@ -581,14 +574,21 @@ export function useLocationStorage() {
     uploadPhotos = uploadPhotos.filter(
       (image) => !uploadedPhotos.find((img) => img[0] === image)
     );
-    referencePhotos = referencePhotos.concat(uploadedPhotos.map((img) => img[1]));
+    referencePhotos = referencePhotos.concat(
+      uploadedPhotos.map((img) => img[1])
+    );
     await updateLocation(db)({
       id: location.id,
       isProd: user.prod ?? false,
       uploadPhotos: uploadPhotos,
       referencePhotos: referencePhotos,
     });
-    console.log("UPLOADED PHOTOS", uploadedPhotos, uploadPhotos, referencePhotos);
+    console.log(
+      "UPLOADED PHOTOS",
+      uploadedPhotos,
+      uploadPhotos,
+      referencePhotos
+    );
     return [uploadPhotos, referencePhotos];
   };
 
@@ -601,7 +601,7 @@ export function useLocationStorage() {
     name?: string | null | undefined;
   }): Promise<Location> => {
     await DevicePlugin.unbindConnection();
-    const user = await userContext.validateCurrToken();
+    const user = await userContext.getUser();
     const fromDate = new Date().toISOString();
     const id = getNextLocationId();
     const location: Location = {
@@ -644,7 +644,7 @@ export function useLocationStorage() {
           const [uploadPhotos, refPhotos] = await syncLocationPhotos({
             id: Number(res.data),
             uploadPhotos: settings.uploadPhotos,
-            referencePhotos: []
+            referencePhotos: [],
           });
           location.referencePhotos = refPhotos;
           location.uploadPhotos = uploadPhotos;
@@ -663,8 +663,7 @@ export function useLocationStorage() {
     if (location.needsCreation) {
       logWarning({
         message:
-          "Could not create this location. You can try upload again from storage.",
-        timeout: 180000,
+          "Unable to establish this location. Please try uploading from storage when you're online again.",
       });
       location.updateName = settings.name;
       location.name = null;
@@ -674,44 +673,55 @@ export function useLocationStorage() {
     }
     await DevicePlugin.rebindConnection();
 
-    mutate((locations) => [...(locations ?? []).filter(loc => loc.id !== settings.id), location]);
+    mutate((locations) => [
+      ...(locations ?? []).filter((loc) => loc.id !== settings.id),
+      location,
+    ]);
     return location;
   };
 
   const deleteSyncLocations = async () => {
     if (!savedLocations.loading) {
       const locs = savedLocations() ?? [];
-      await Promise.all(locs.map(async (loc) => {
-        if (loc.needsCreation) {
-          await deleteLocation(db)(loc.id.toString(), loc.isProd);
-        }
-        if (loc.uploadPhotos) {
-          await updateLocation(db)({
-            id: loc.id,
-            isProd: loc.isProd,
-            uploadPhotos: [],
-          });
-        }
-        if (loc.updateName) {
-          await updateLocation(db)({
-            id: loc.id,
-            isProd: loc.isProd,
-            updateName: null,
-          });
-        }
-      }))
+      await Promise.all(
+        locs.map(async (loc) => {
+          if (loc.needsCreation) {
+            await deleteLocation(db)(loc.id.toString(), loc.isProd);
+          }
+          if (loc.uploadPhotos) {
+            await updateLocation(db)({
+              id: loc.id,
+              isProd: loc.isProd,
+              uploadPhotos: [],
+            });
+          }
+          if (loc.updateName) {
+            await updateLocation(db)({
+              id: loc.id,
+              isProd: loc.isProd,
+              updateName: null,
+            });
+          }
+        })
+      );
       refetch();
-    };
-  }
+    }
+  };
+
+  const hasItemsToUpload = createMemo(() => {
+    const locs = savedLocations();
+    return (
+      locs?.some((loc) => loc.uploadPhotos?.length || loc.updateName) ?? false
+    );
+  });
 
   onMount(async () => {
     try {
       await db.execute(createLocationSchema);
-    } catch (e) {
+    } catch (error) {
       logError({
-        message:
-          "Unable to get locations. Please check internet and you are logged in",
-        details: JSON.stringify(e),
+        message,
+        error,
       });
     }
   });
@@ -726,5 +736,6 @@ export function useLocationStorage() {
     deleteReferencePhotoForLocation: deleteReferencePhotosForLocation,
     updateLocationName,
     updateLocationPhoto,
+    hasItemsToUpload,
   };
 }

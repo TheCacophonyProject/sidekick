@@ -33,7 +33,7 @@ import {
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import Dialog from "~/components/Dialog";
-import { logWarning } from "~/contexts/Notification";
+import { logError, logWarning } from "~/contexts/Notification";
 import { Event } from "~/database/Entities/Event";
 import { Recording } from "~/database/Entities/Recording";
 import ActionContainer from "~/components/ActionContainer";
@@ -56,6 +56,7 @@ import {
   IOSSettings,
   NativeSettings,
 } from "capacitor-native-settings";
+import { GoToPermissions } from "~/components/GoToPermissions";
 
 interface DeviceDetailsProps {
   id: string;
@@ -100,7 +101,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
 
   const [showLocationSettings, setShowLocationSettings] = createSignal(false);
   createEffect((prev) => {
-    console.log("updateLocState", props.updateLocState);
     if (
       props.updateLocState === "current" &&
       prev !== "current" &&
@@ -128,7 +128,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
     on(
       () => props.updateLocState,
       async (shouldUpdate) => {
-        console.log("shouldUpdate", shouldUpdate);
         if (shouldUpdate === "loading") return;
         refetchLocation();
       }
@@ -163,20 +162,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
     ...photoFilesToUpload(),
   ];
 
-  const GoToPermissions = () => (
-    <button
-      class="flex w-full justify-center space-x-2 py-2 text-center text-blue-500"
-      onClick={() =>
-        NativeSettings.open({
-          optionAndroid: AndroidSettings.Privacy,
-          optionIOS: IOSSettings.App,
-        })
-      }
-    >
-      <p>Permission Settings</p>
-    </button>
-  );
-
   const addPhotoToDevice = async () => {
     try {
       const image = await Camera.getPhoto({
@@ -195,12 +180,10 @@ function DeviceDetails(props: DeviceDetailsProps) {
     } catch (error) {
       logWarning({
         message: "Photo upload failed. Please check your device permissions.",
-        timeout: 12000,
-        action: GoToPermissions(),
+        action: <GoToPermissions />,
       });
     }
   };
-
   const [setting, setSetting] = createSignal(false);
   const saveLocationSettings = async () => {
     if (setting()) return;
@@ -245,10 +228,11 @@ function DeviceDetails(props: DeviceDetailsProps) {
           setPhotoFilesToUpload((curr) =>
             curr.filter((photo) => photo.file !== file)
           );
-        } catch {
-          logWarning({
+        } catch (error) {
+          logError({
             message: "Could not save location photo",
             details: `Could not save photo ${file} for location ${loc}`,
+            error,
           });
         }
       }
@@ -685,7 +669,6 @@ function Devices() {
     () => {
       setApState("loading");
       DevicePlugin.connectToDeviceAP((res) => {
-        console.log("AP CONNECTION", res);
         if (res.success) {
           searchDevice();
           setApState(res.data);
@@ -773,9 +756,14 @@ function Devices() {
         } catch (e) {
           return [];
         }
+
         const pos = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
+        }).catch(() => {
+          return null;
         });
+        if (!pos) return [];
+
         const devicesToUpdate: string[] = [];
         for (const device of devices.values()) {
           if (!device.isConnected) continue;
@@ -786,28 +774,27 @@ function Devices() {
             pos.coords.latitude,
             pos.coords.longitude,
           ];
-          console.log(loc, newLoc);
 
           const withinRange = isWithinRange(
             [loc.latitude, loc.longitude],
             newLoc
           );
-          console.log(withinRange);
           if (!withinRange) {
             devicesToUpdate.push(device.id);
           }
           return devicesToUpdate;
         }
-      } catch (e) {
-        if (e instanceof Error) {
+      } catch (error) {
+        if (error instanceof Error) {
           logWarning({
-            message: "Error updating device locations",
-            details: e.message,
+            message:
+              "Could not update device locations. Check location permissions and try again.",
+            action: <GoToPermissions />,
           });
-        } else if (typeof e === "string") {
+        } else if (typeof error === "string") {
           logWarning({
-            message: "Error updating device locations",
-            details: e,
+            message: "Could not update device locations",
+            details: error,
           });
         }
 
@@ -874,10 +861,9 @@ function Devices() {
         : "current"
       : "loading";
   };
-
   return (
     <>
-      <section class="pb-bar pt-bar pt-[ relative z-20 space-y-2 overflow-y-auto px-2">
+      <section class="pb-bar pt-bar relative z-20 space-y-2 overflow-y-auto px-2">
         <For
           each={devices().filter(
             (dev): dev is ConnectedDevice => dev.isConnected
@@ -896,7 +882,7 @@ function Devices() {
         </For>
         <div class="h-32" />
         <Portal>
-          <div class="pb-bar fixed inset-x-0 bottom-[4vh] z-20 mx-auto flex justify-center">
+          <div class="pb-bar fixed inset-x-0 bottom-2 z-20 mx-auto flex justify-center">
             <CircleButton
               onClick={searchDevice}
               disabled={context.isDiscovering()}

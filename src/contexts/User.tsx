@@ -152,11 +152,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     }
   });
 
-  async function validateCurrToken(warn = true): Promise<User | undefined> {
+  async function getUser(warn = false): Promise<User | undefined> {
     try {
       const user = data();
       if (!user) return;
-
       const { refreshToken, expiry, email, id } = user;
       const expiryDate = new Date(expiry).getTime();
 
@@ -168,12 +167,15 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 
         if (result.success) {
           updateUser(result.data, { id, email });
-        } else if (warn) {
-          logWarning({
-            message:
-              "Could not validate user. Check your internet connection, or try relogging.",
-            details: result.message,
-          });
+        } else {
+          if (warn) {
+            logWarning({
+              message:
+                "Could not validate user. Please check your internet connection, or try relogging.",
+              details: result.message,
+            });
+          }
+          return undefined;
         }
       });
       return data() ?? undefined;
@@ -208,7 +210,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     };
     mutateUser(updatedUser);
   }
-  const isAuthorized = () => data() && data() !== null;
 
   function skip() {
     Preferences.set({ key: "skippedLogin", value: "true" });
@@ -217,11 +218,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   }
 
   async function requestDeletion(): Result<string> {
-    const usr = data();
-    if (!usr) return Promise.reject("No user to delete");
-    await validateCurrToken();
+    const user = await getUser();
+    if (!user) throw new Error("User not found");
     const value = await CacophonyPlugin.requestDeletion({
-      token: usr.token,
+      token: user.token,
     });
     logSuccess({
       message: "Account deletion requested.",
@@ -246,9 +246,8 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 
   return {
     data,
-    isAuthorized,
     skippedLogin,
-    validateCurrToken,
+    getUser,
     isProd,
     login,
     logout,

@@ -57,8 +57,6 @@ export default function Storage() {
       await user.logout();
       return;
     }
-    await user.validateCurrToken();
-    if (!user.isAuthorized()) return;
 
     await storage.uploadItems();
   };
@@ -143,7 +141,7 @@ export default function Storage() {
         </p>
       </ActionContainer>
 
-      <div class="pb-bar fixed inset-x-0 bottom-[4vh] mx-auto flex justify-center">
+      <div class="pb-bar fixed inset-x-0 bottom-2 mx-auto flex justify-center">
         <CircleButton
           text={
             user.isProd() ? "Upload to Cacophony" : "Upload to Cacophony Test"

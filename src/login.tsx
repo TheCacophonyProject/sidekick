@@ -104,7 +104,7 @@ function Login() {
   return (
     <form
       ref={form}
-      class="flex h-screen w-screen flex-col justify-center gap-y-4 bg-white px-8 text-lg"
+      class="mx-auto flex h-screen w-screen max-w-screen-sm flex-col justify-center gap-y-4 bg-white px-8 text-lg"
       onSubmit={onSubmit}
     >
       <Show when={!user?.isProd()}>

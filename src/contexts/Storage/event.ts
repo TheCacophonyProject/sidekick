@@ -64,8 +64,8 @@ export function useEventStorage() {
   };
 
   const uploadEvents = async () => {
-    const user = userContext.data();
-    if (!user || !userContext.isAuthorized) return;
+    const user = await userContext.getUser();
+    if (!user) return;
     setShouldUpload(true);
     let events = unuploadedEvents().filter(
       (e) => e.isProd === userContext.isProd()
@@ -130,30 +130,24 @@ export function useEventStorage() {
       await deleteEventsFromDb(db)(events);
       const currEvents = await getSavedEvents();
       setSavedEvents(currEvents);
-    } catch (e) {
-      if (e instanceof Error) {
-        logError({
-          message: "Failed to delete events",
-          details: e.message,
-          error: e,
-        });
-      } else {
-        logError({
-          message: "Failed to delete events",
-          details: JSON.stringify(e),
-        });
-      }
+    } catch (error) {
+      logError({
+        message: "Failed to delete events",
+        error,
+      });
     }
   };
+
+  const hasItemsToUpload = createMemo(() => unuploadedEvents().length > 0);
 
   onMount(async () => {
     try {
       await db.execute(createEventSchema);
       setSavedEvents(await getSavedEvents());
-    } catch (e) {
+    } catch (error) {
       logError({
         message: "Failed to get events",
-        details: JSON.stringify(e),
+        error,
       });
     }
   });
@@ -168,5 +162,6 @@ export function useEventStorage() {
     uploadEvents,
     deleteEvent,
     deleteEvents,
+    hasItemsToUpload,
   };
 }

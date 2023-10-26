@@ -43,6 +43,14 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     event.stopUploading();
   };
 
+  const hasItemsToUpload = () => {
+    return (
+      recording.hasItemsToUpload() ||
+      event.hasItemsToUpload() ||
+      location.hasItemsToUpload()
+    );
+  };
+
   return {
     ...recording,
     ...location,
@@ -50,6 +58,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     uploadItems,
     stopUploading,
     isUploading,
+    hasItemsToUpload,
   };
 });
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

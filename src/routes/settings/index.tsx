@@ -12,7 +12,7 @@ import { Geolocation } from "@capacitor/geolocation";
 
 function Settings() {
   const userContext = useUserContext();
-  const action = () => (
+  const Action = () => (
     <div class="text-blue-500">
       <Show when={userContext.data()}>
         <A href="user">
@@ -41,10 +41,10 @@ function Settings() {
     }
   });
   return (
-    <section class="pt-bar h-full space-y-2 bg-gray-200 px-2">
+    <section class="pt-bar mt-2 h-full space-y-2 bg-gray-200 px-2">
       <div class="space-y-2 rounded-xl bg-slate-50 p-2">
         <h1 class="ml-2 text-xl text-neutral-500">Account</h1>
-        <ActionContainer icon={BsPersonFill} action={action}>
+        <ActionContainer icon={BsPersonFill} action={<Action />}>
           <div class="pt-2">
             <Show
               when={userContext?.data()?.email}

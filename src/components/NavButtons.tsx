@@ -3,7 +3,8 @@ import LabelledIcon, { LabelledIconProps } from "./LabelledIcon";
 import { BiSolidDashboard } from "solid-icons/bi";
 import { BsCameraVideoFill, BsHddStackFill } from "solid-icons/bs";
 import { IoSettingsSharp } from "solid-icons/io";
-import { createEffect, mergeProps } from "solid-js";
+import { Show, createEffect, mergeProps } from "solid-js";
+import { useStorage } from "~/contexts/Storage";
 
 interface NavButtonProps extends LabelledIconProps {
   href?: string;
@@ -17,13 +18,10 @@ const formatLink = (link: string) =>
 
 const NavButton = (props: NavButtonProps) => {
   const mergedProps = mergeProps({ href: formatLink(props.label) }, props);
-  createEffect(() => {
-    console.log(mergedProps.href);
-  });
   return (
     <A
       href={mergedProps.href}
-      class="flex h-12 w-16 flex-col  items-center pt-4 outline-none transition-colors"
+      class="relative flex h-12 w-16 flex-col  items-center pt-4 outline-none transition-colors"
       style={{ "-webkit-tap-highlight-color": "transparent" }}
       activeClass="text-highlight"
       inactiveClass="text-slate-300"
@@ -39,7 +37,17 @@ const DashboardNav = () => (
 
 const DevicesNav = () => <NavButton icon={BsCameraVideoFill} label="Devices" />;
 
-const StorageNav = () => <NavButton icon={BsHddStackFill} label="Storage" />;
+const StorageNav = () => {
+  const storage = useStorage();
+  return (
+    <div class="relative">
+      <Show when={storage.hasItemsToUpload()}>
+        <div class="absolute right-0 top-0 h-4 w-4 rounded-full bg-red-500" />
+      </Show>
+      <NavButton icon={BsHddStackFill} label="Storage" />
+    </div>
+  );
+};
 
 const SettingsNav = () => <NavButton icon={IoSettingsSharp} label="Settings" />;
 

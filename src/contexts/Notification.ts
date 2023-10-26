@@ -49,7 +49,7 @@ type LogBase = {
 
 type Log = LogBase & LogDetails;
 
-type ErrorLog = { type: "error"; error?: Error } & LogDetails;
+type ErrorLog = { type: "error"; error: unknown | Error } & LogDetails;
 
 type AnyLog = Log | ErrorLog;
 function isErrorLog(log: AnyLog): log is ErrorLog {
@@ -57,6 +57,7 @@ function isErrorLog(log: AnyLog): log is ErrorLog {
 }
 
 const logAction = async (log: AnyLog) => {
+  // Remove duplicate notifications
   if (
     notifications().find(
       (notification) =>
@@ -65,23 +66,30 @@ const logAction = async (log: AnyLog) => {
     )
   )
     return;
+
   const id = generateID();
+  const details = `${log.details ? `${log.details}\n` : ""}${
+    isErrorLog(log) ? `${log.error}` : ""
+  }`;
   setNotifications([
     ...notifications(),
     {
       id,
       message: log.message,
-      details: JSON.stringify(log.details),
+      details,
       type: log.type,
       timeout: log.timeout,
       action: log.action,
     },
   ]);
-  hideNotification(id, log.timeout ?? defaultDuration);
+
+  if (log.type === "success" || log.type === "loading" || log.timeout) {
+    hideNotification(id, log.timeout ?? defaultDuration);
+  }
+
   if (isErrorLog(log)) {
-    console.error(log);
     const message = `message: ${log.message} details: ${log.details}`;
-    if (log.error) {
+    if (log.error && log.error instanceof Error) {
       const stacktrace = await StackTrace.fromError(log.error);
       await FirebaseCrashlytics.recordException({
         message,
@@ -103,6 +111,7 @@ const logLoading = (loadingLog: LogDetails) =>
   logAction({ ...loadingLog, type: "loading" });
 
 const hideNotification = (id: NotificationID, delay = defaultDuration) => {
+  // log call stack
   // find the notification and give new timeoutID
   if (timeoutIDs.has(id)) {
     clearTimeout(timeoutIDs.get(id));

@@ -58,7 +58,7 @@ export const insertIntoTable =
     const keys = Object.keys(validatedObj);
     const placeholders = keys.map(() => "?").join(", ");
     const values = keys.map((key) => validatedObj[key as keyof T]);
-    const insertSql = `INSERT INTO ${tableName} (${keys.join(
+    const insertSql = `INSERT OR REPLACE INTO ${tableName} (${keys.join(
       ", "
     )}) VALUES (${placeholders})`;
 
@@ -88,7 +88,7 @@ export const insertManyIntoTable =
     const values = validatedObjs.flatMap((obj) =>
       keys.map((key) => obj[key as keyof T])
     );
-    const insertSql = `INSERT INTO ${tableName} (${keys.join(
+    const insertSql = `INSERT OR REPLACE INTO ${tableName} (${keys.join(
       ", "
     )}) VALUES ${placeholders};`;
 

@@ -23,8 +23,5 @@
 				"biometricSubTitle": "Log in using your biometric"
 			}
 		}
-	},
-	"server": {
-		"url": "http://localhost:5173"
 	}
 }

@@ -37,17 +37,19 @@ function NotificationBar(props: NotificationBarProps) {
   createEffect(() => {
     if (showDetails()) {
       keepNotification(props.notification.id);
-    } else {
-      hideNotification(
-        props.notification.id,
-        props.notification.timeout ?? 2000
-      );
+    } else if (props.notification.timeout) {
+      hideNotification(props.notification.id, props.notification.timeout);
     }
   });
+  const [copied, setCopied] = createSignal(false);
   const writeToClipboard = async () => {
     await Clipboard.write({
       string: props.notification.details,
     });
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 6000);
   };
   return (
     <section
@@ -79,38 +81,27 @@ function NotificationBar(props: NotificationBarProps) {
           </Switch>
           <h2 class="ml-4 w-full">{props.notification.message}</h2>
         </div>
-        <div>
+        <div class="space-y-2">
           <button
             onClick={() => {
               hideNotification(props.notification.id, 0);
             }}
           >
-            <VsClose size={24} />
+            <VsClose size={26} />
           </button>
           <Show when={props.notification.details}>
             <button
-              class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
-              onClick={writeToClipboard}
+              onClick={() => {
+                setShowDetails(!showDetails());
+              }}
             >
-              <BiSolidCopyAlt size={18} class="ml-1" />
-            </button>
-            <div>
-              <button
-                class="pl-2"
-                onClick={() => {
-                  setShowDetails(!showDetails());
+              <VsChevronDown
+                size={26}
+                style={{
+                  transform: showDetails() ? "rotate(180deg)" : "rotate(0deg)",
                 }}
-              >
-                <VsChevronDown
-                  size={24}
-                  style={{
-                    transform: showDetails()
-                      ? "rotate(180deg)"
-                      : "rotate(0deg)",
-                  }}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </Show>
         </div>
       </div>
@@ -118,9 +109,18 @@ function NotificationBar(props: NotificationBarProps) {
         <Show when={props.notification.action}>{(Action) => <Action />}</Show>
       </div>
       <Show when={props.notification.details && showDetails()}>
-        <p class="mx-4 my-2 h-24 overflow-scroll rounded-lg bg-slate-100 px-2 py-2 text-slate-800">
-          {props.notification.details}
-        </p>
+        <div class="relative">
+          <p class="mx-4 my-2 h-24 overflow-scroll rounded-lg bg-slate-100 px-2 py-2 text-slate-800">
+            <button
+              class="absolute right-6 flex items-center rounded-lg bg-white px-4 py-1 text-gray-700 shadow-md"
+              onClick={writeToClipboard}
+            >
+              {copied() ? "Copied!" : "Copy"}{" "}
+              <BiSolidCopyAlt size={18} class="ml-1" />
+            </button>
+            {props.notification.details}
+          </p>
+        </div>
       </Show>
     </section>
   );

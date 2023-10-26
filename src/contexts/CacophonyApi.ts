@@ -1,7 +1,7 @@
 import { registerPlugin } from "@capacitor/core";
 import { z } from "zod";
 import { Result } from ".";
-import { logError } from "./Notification";
+import { logError, logWarning } from "./Notification";
 import { DevicePlugin } from "./Device";
 
 export type AuthToken = {
@@ -155,11 +155,6 @@ export async function getLocationsForUser(
     }
     return locationRes.stations;
   } else {
-    logError({
-      message:
-        "Unable to get locations. Please check internet and you are logged in",
-      details: locationJson.message,
-    });
     return [];
   }
 }

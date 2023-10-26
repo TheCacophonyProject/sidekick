@@ -81,8 +81,8 @@ export function useRecordingStorage() {
     );
     for (let i = 0; i < recordings.length; i++) {
       if (!shouldUpload()) return;
-      const user = userContext.data();
-      if (!user || !userContext.isAuthorized) return;
+      const user = await userContext.getUser();
+      if (!user) return;
       const recording = recordings[i];
       await DevicePlugin.unbindConnection();
       const res = await CacophonyPlugin.uploadRecording({
@@ -181,14 +181,18 @@ export function useRecordingStorage() {
     }
   };
 
+  const hasItemsToUpload = createMemo(() => {
+    return unuploadedRecordings().length > 0;
+  });
+
   onMount(async () => {
     try {
       await db.execute(createRecordingSchema);
       setSavedRecordings(await getSavedRecordings());
-    } catch (e) {
+    } catch (error) {
       logError({
         message: "Failed to create recording schema",
-        details: JSON.stringify(e),
+        error,
       });
     }
   });
@@ -203,5 +207,6 @@ export function useRecordingStorage() {
     deleteRecordings,
     uploadRecordings,
     getSavedRecordings,
+    hasItemsToUpload,
   };
 }

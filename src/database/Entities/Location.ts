@@ -120,7 +120,7 @@ export const getLocations =
 const deleteLocationSql = `DELETE FROM ${TABLE_NAME} WHERE id = ?`;
 export const deleteLocation =
   (db: SQLiteDBConnection) => async (id: string, isProd: boolean) =>
-    db.query(deleteLocationSql, [Number(`${id}${isProd ? "1" : "0"}`)]);
+    db.run(deleteLocationSql, [transformId({ id: Number(id), isProd }).id]);
 
 const UpdateSchema = MutationLocationSchema.partial()
   .extend({
@@ -150,5 +150,5 @@ export const updateLocation =
   (db: SQLiteDBConnection) => async (location: UpdateLocation) => {
     const loc = UpdateSchema.parse(location);
     const [sql, values] = upateLocationSql(loc);
-    return db.query(sql, [...values, loc.id]);
+    return db.run(sql, [...values, loc.id]);
   };

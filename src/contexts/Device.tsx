@@ -130,7 +130,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     host: string
   ): Promise<ConnectedDevice | undefined> => {
     const [deviceName] = endpoint.split(".");
-    const [, group] = deviceName.split("-");
     const url = `http://${deviceName}.local`;
     const info = await DevicePlugin.getDeviceInfo({ url });
     const connection = await DevicePlugin.checkDeviceConnection({ url });
@@ -270,12 +269,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       const res = await DevicePlugin.getRecordings({ url });
       return res.success ? res.data : [];
     } catch (error) {
-      if (error instanceof Error) {
-        logError({
-          message: "Could not get recordings",
-          error,
-        });
-      }
+      logError({
+        message: "Could not get recordings",
+        error,
+      });
       return [];
     }
   };
@@ -308,7 +305,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       if (error instanceof Error) {
         logError({
           message: "Could not delete recordings",
-          error: error,
+          error,
         });
       } else {
         logWarning({
@@ -396,17 +393,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       ];
       await storage.deleteEvents({ events: deletedEvents });
     } catch (error) {
-      if (error instanceof Error) {
-        logError({
-          message: "Could not delete events",
-          error: error,
-        });
-      } else {
-        logError({
-          message: "Could not delete events",
-          details: JSON.stringify(error),
-        });
-      }
+      logError({
+        message: "Could not delete events",
+        error,
+      });
     }
   };
 
@@ -446,18 +436,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       );
       return eventsWithDevice;
     } catch (error) {
-      if (error instanceof Error) {
-        logError({
-          message: "Could not get events",
-          details: error.message,
-          error,
-        });
-      } else {
-        logError({
-          message: "Could not get events",
-          details: JSON.stringify(error),
-        });
-      }
+      logError({
+        message: "Could not get events",
+        error,
+      });
       return [];
     }
   };
@@ -593,7 +575,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
       // Make the request to the device.
       const res = await DevicePlugin.getDeviceLocation({ url });
-      console.log(res);
       // If the request was successful, return the data.
       if (res.success) {
         const location = locationSchema.safeParse(JSON.parse(res.data));
@@ -705,6 +686,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       }
     );
 
+  const isDeviceConnected = async (device: ConnectedDevice) => {
+    const { url } = device;
+    const res = await DevicePlugin.checkDeviceConnection({ url });
+    return res.success;
+  };
+
   return {
     devices,
     isDiscovering,
@@ -715,6 +702,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     deviceEventKeys,
     startDiscovery,
     stopDiscovery,
+    isDeviceConnected,
     setDeviceToCurrLocation,
     deleteUploadedRecordings,
     getLocationByDevice,
@@ -723,5 +711,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     getLocationCoords,
   };
 });
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const defineUseDevice = () => useDevice()!;
 export { defineUseDevice as useDevice, DeviceProvider };

@@ -8,7 +8,7 @@ const ActionContainer = (props: {
   action?: JSX.Element;
 }) => {
   return (
-    <div class="h-min-2 relative flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
+    <div class="h-min-2 relative mt-2 flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
       <div class="flex w-full flex-row items-center gap-x-4">
         {props.icon && (
           <div class="text-gray-700">

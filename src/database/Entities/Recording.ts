@@ -1,5 +1,6 @@
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { z } from "zod";
+import { logError } from "~/contexts/Notification";
 
 const DBName = "RecordingTableV1";
 
@@ -46,48 +47,54 @@ const RecordingsSchema = z.array(RecordingSchema);
 
 export const getRecordings =
   (db: SQLiteDBConnection) =>
-    async (options?: {
-      id?: string;
-      name?: string;
-      uploaded?: boolean;
-      device?: string;
-    }): Promise<Recording[]> => {
-      try {
-        const sql = `SELECT * FROM ${DBName}`;
-        const where = [];
-        if (options?.id) {
-          where.push(`id = '${options.id}'`);
-        }
-        if (options?.name) {
-          where.push(`name = '${options.name}'`);
-        }
-        if (options?.uploaded) {
-          where.push(`isUploaded = ${options.uploaded ? 1 : 0}`);
-        }
-        if (options?.device) {
-          where.push(`device = '${options.device}'`);
-        }
-        const whereClause =
-          where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
-        const query = `${sql}${whereClause};`;
-        const result = await db.query(query);
-        const recordings = RecordingsSchema.safeParse(
-          result.values?.map((v) => ({
-            ...v,
-            isUploaded: !!v.isUploaded,
-            isProd: !!v.isProd,
-          })) ?? []
-        );
-        if (!recordings.success) return [];
-        return recordings.data;
-      } catch (error) {
-        console.log(error);
-        return [];
+  async (options?: {
+    id?: string;
+    name?: string;
+    uploaded?: boolean;
+    device?: string;
+  }): Promise<Recording[]> => {
+    try {
+      const sql = `SELECT * FROM ${DBName}`;
+      const where = [];
+      if (options?.id) {
+        where.push(`id = '${options.id}'`);
       }
-    };
+      if (options?.name) {
+        where.push(`name = '${options.name}'`);
+      }
+      if (options?.uploaded) {
+        where.push(`isUploaded = ${options.uploaded ? 1 : 0}`);
+      }
+      if (options?.device) {
+        where.push(`device = '${options.device}'`);
+      }
+      const whereClause =
+        where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
+      const query = `${sql}${whereClause};`;
+      const result = await db.query(query);
+      const recordings = RecordingsSchema.safeParse(
+        result.values?.map((v) => ({
+          ...v,
+          isUploaded: !!v.isUploaded,
+          isProd: !!v.isProd,
+        })) ?? []
+      );
+      if (!recordings.success) return [];
+      return recordings.data;
+    } catch (error) {
+      logError({
+        message: "Could not get recordings",
+        error,
+      });
+      return [];
+    }
+  };
 
 export const insertRecording =
-  (db: SQLiteDBConnection) => async (recording: Omit<DownloadedRecording, "id"|"isUploaded"|"uploadId">) => {
+  (db: SQLiteDBConnection) =>
+  async (
+    recording: Omit<DownloadedRecording, "id" | "isUploaded" | "uploadId">
+  ) => {
     const sql = `INSERT INTO ${DBName} (id, name, path, groupName, device, deviceName, size, isProd) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
     const values = [
       `${recording.device}-${recording.name}`,
@@ -105,8 +112,9 @@ export const insertRecording =
 export const updateRecording =
   (db: SQLiteDBConnection) => async (recording: Recording) => {
     if (!recording.isUploaded || !recording.uploadId) return;
-    const sql = `UPDATE ${DBName} SET isUploaded = ${recording.isUploaded ? 1 : 0
-      }, uploadId = '${recording.uploadId}' WHERE id = '${recording.id}';`;
+    const sql = `UPDATE ${DBName} SET isUploaded = ${
+      recording.isUploaded ? 1 : 0
+    }, uploadId = '${recording.uploadId}' WHERE id = '${recording.id}';`;
     return db.query(sql);
   };
 

@@ -23,8 +23,5 @@
 				"biometricSubTitle": "Log in using your biometric"
 			}
 		}
-	},
-	"server": {
-		"url": "http://192.168.86.217:5173"
 	}
 }
