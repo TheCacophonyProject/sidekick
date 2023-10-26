@@ -48,11 +48,10 @@ before_install:
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
-  - corepack enable
-  - corepack prepare pnpm@latest-8 --activate
-  - pnpm config set store-dir ~/.pnpm-store
   - nvm install 16
   - nvm use 16
+  - npm install -g pnpm
+  - pnpm config set store-dir ~/.pnpm-store
   - source /home/travis/.bashrc
 
 install:
