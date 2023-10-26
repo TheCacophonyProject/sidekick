@@ -6,6 +6,7 @@ cache:
   npm: false
   directories:
     - "./node_modules"
+    - "~/.pnpm-store"
 
 android:
   licenses:
@@ -47,9 +48,11 @@ before_install:
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
+  - corepack enable
+  - corepack prepare pnpm@latest-8 --activate
+  - pnpm config set store-dir ~/.pnpm-store
   - nvm install 16
   - nvm use 16
-  - wget -qO- https://get.pnpm.io/install.sh | sh -
   - source /home/travis/.bashrc
 
 install:
