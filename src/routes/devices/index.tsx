@@ -1,4 +1,5 @@
 import { Camera, CameraResultType } from "@capacitor/camera";
+import { PermissionState } from "@capacitor/core";
 import { Dialog as Prompt } from "@capacitor/dialog";
 import { Geolocation } from "@capacitor/geolocation";
 import { debounce, leading } from "@solid-primitives/scheduled";
@@ -32,13 +33,11 @@ import {
   onMount,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import Dialog from "~/components/Dialog";
-import { logError, logWarning } from "~/contexts/Notification";
-import { Event } from "~/database/Entities/Event";
-import { Recording } from "~/database/Entities/Recording";
 import ActionContainer from "~/components/ActionContainer";
 import BackgroundLogo from "~/components/BackgroundLogo";
 import CircleButton from "~/components/CircleButton";
+import Dialog from "~/components/Dialog";
+import { GoToPermissions } from "~/components/GoToPermissions";
 import { headerMap } from "~/components/Header";
 import {
   ConnectedDevice,
@@ -46,17 +45,9 @@ import {
   DevicePlugin,
   useDevice,
 } from "~/contexts/Device";
+import { logError, logWarning } from "~/contexts/Notification";
 import { useStorage } from "~/contexts/Storage";
-import { CacophonyPlugin } from "~/contexts/CacophonyApi";
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { isWithinRange } from "~/contexts/Storage/location";
-import { PermissionState } from "@capacitor/core";
-import {
-  AndroidSettings,
-  IOSSettings,
-  NativeSettings,
-} from "capacitor-native-settings";
-import { GoToPermissions } from "~/components/GoToPermissions";
 
 interface DeviceDetailsProps {
   id: string;
@@ -186,6 +177,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
   const [setting, setSetting] = createSignal(false);
   const saveLocationSettings = async () => {
+    debugger;
     if (setting()) return;
     setSetting(true);
     const name = newName();
@@ -264,6 +256,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
       if (typeof img === "string") {
         if (!loc) return "";
         const data = await storage.getReferencePhotoForLocation(loc.id, img);
+        console.log(data);
+        debugger;
         return data ?? img;
       } else {
         return img.url;
@@ -552,9 +546,8 @@ function DeviceDetails(props: DeviceDetailsProps) {
             }
           >
             <button
-              class={`${
-                disabledDownload() ? "text-slate-300" : "text-blue-500"
-              }`}
+              class={`${disabledDownload() ? "text-slate-300" : "text-blue-500"
+                }`}
               disabled={disabledDownload()}
               onClick={() => context.saveItems(props.id)}
             >
@@ -652,17 +645,33 @@ function Devices() {
   );
   const [cancel, setCancel] = createSignal(false);
 
-  const searchDevice = () => {
-    refetchLocation();
-    context.startDiscovery();
-    setTimeout(() => {
-      context.stopDiscovery();
-    }, 6000);
-  };
 
   const [apState, setApState] = createSignal<
     "connected" | "disconnected" | "loading" | "default"
   >("default");
+
+  const searchDevice = () => {
+    refetchLocation();
+    context.startDiscovery();
+    setTimeout(async () => {
+      context.stopDiscovery();
+    }, 6000);
+  };
+
+  createEffect((prev: Device[]) => {
+    const devices = [...context.devices.values()];
+    console.log(prev, devices)
+    if (prev.length > 0 && devices.length === 0) {
+      if (apState() === "connected") {
+        DevicePlugin.hasConnection().then((res) => {
+          if (!res.success) {
+            setApState("disconnected")
+          }
+        })
+      }
+    }
+    return devices;
+  }, [...context.devices.values()]);
 
   const connectToDeviceAP = leading(
     debounce,
@@ -822,14 +831,13 @@ function Devices() {
       if (dialogOpen()) return;
       const message =
         devicesToUpdate.length === 1
-          ? `${
-              context.devices.get(devicesToUpdate[0])?.name
-            } has a different location stored. Would you like to update it to your current location?`
+          ? `${context.devices.get(devicesToUpdate[0])?.name
+          } has a different location stored. Would you like to update it to your current location?`
           : `${devicesToUpdate
-              .map((val) => context.devices.get(val)?.name)
-              .join(
-                ", "
-              )} have different location stored. Would you like to update them to the current location?`;
+            .map((val) => context.devices.get(val)?.name)
+            .join(
+              ", "
+            )} have different location stored. Would you like to update them to the current location?`;
 
       setDialogOpen(true);
       const { value } = await Prompt.confirm({

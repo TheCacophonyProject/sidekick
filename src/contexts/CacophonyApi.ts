@@ -2,7 +2,7 @@ import { registerPlugin } from "@capacitor/core";
 import { z } from "zod";
 import { Result } from ".";
 import { logError, logWarning } from "./Notification";
-import { DevicePlugin } from "./Device";
+import { DevicePlugin, unbindAndRebind } from "./Device";
 
 export type AuthToken = {
   token: string;
@@ -144,9 +144,7 @@ const LocationResSchema = z.discriminatedUnion("success", [
 export async function getLocationsForUser(
   token: string
 ): Promise<ApiLocation[]> {
-  await DevicePlugin.unbindConnection();
-  const locationJson = await CacophonyPlugin.getStationsForUser({ token });
-  await DevicePlugin.rebindConnection();
+  const locationJson = await unbindAndRebind(() => CacophonyPlugin.getStationsForUser({ token }))
   if (locationJson.success) {
     const json = JSON.parse(locationJson.data);
     const locationRes = LocationResSchema.parse(json);

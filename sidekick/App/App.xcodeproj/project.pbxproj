@@ -17,7 +17,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		784681D329AF0EF1000124AB /* CacophonyPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784681D129AF0EF1000124AB /* CacophonyPlugin.swift */; };
 		784681D429AF0EF1000124AB /* CacophonyPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 784681D229AF0EF1000124AB /* CacophonyPlugin.m */; };
-		784BB2072A67A29B00FA4E5F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 784BB2062A67A29B00FA4E5F /* GoogleService-Info.plist */; };
+		784F1A8D2AEF4BFE007CB84E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 784F1A8C2AEF4BFE007CB84E /* GoogleService-Info.plist */; };
 		788E42CC2946CDA2005A5ED6 /* PluginCall.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788E42CB2946CDA2005A5ED6 /* PluginCall.swift */; };
 		788E42D22947FC70005A5ED6 /* DevicePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788E42D12947FC6F005A5ED6 /* DevicePlugin.swift */; };
 		788E42D529496F3D005A5ED6 /* DevicePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 788E42D429496F3D005A5ED6 /* DevicePlugin.m */; };
@@ -49,7 +49,7 @@
 		78297C4829A2DA170089245A /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		784681D129AF0EF1000124AB /* CacophonyPlugin.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CacophonyPlugin.swift; sourceTree = "<group>"; };
 		784681D229AF0EF1000124AB /* CacophonyPlugin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CacophonyPlugin.m; sourceTree = "<group>"; };
-		784BB2062A67A29B00FA4E5F /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		784F1A8C2AEF4BFE007CB84E /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		785898B6293574A200E59EB3 /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		788E42CB2946CDA2005A5ED6 /* PluginCall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginCall.swift; sourceTree = "<group>"; };
 		788E42D12947FC6F005A5ED6 /* DevicePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePlugin.swift; sourceTree = "<group>"; };
@@ -92,7 +92,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
-				784BB2062A67A29B00FA4E5F /* GoogleService-Info.plist */,
+				784F1A8C2AEF4BFE007CB84E /* GoogleService-Info.plist */,
 				78297C4829A2DA170089245A /* App.entitlements */,
 				785898AC2935728A00E59EB3 /* Plugins */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
@@ -157,6 +157,8 @@
 			dependencies = (
 			);
 			name = App;
+			packageProductDependencies = (
+			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
@@ -186,6 +188,8 @@
 				Base,
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
+			packageReferences = (
+			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -206,7 +210,7 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
-				784BB2072A67A29B00FA4E5F /* GoogleService-Info.plist in Resources */,
+				784F1A8D2AEF4BFE007CB84E /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,6 +227,10 @@
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
 				"$(SRCROOT)/$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
 			);
 			outputFileListPaths = (
 			);
@@ -436,7 +444,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = "nz.org.cacophony.cacophony-sidekick";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -466,7 +474,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "nz.org.cacophony.cacophony-sidekick";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

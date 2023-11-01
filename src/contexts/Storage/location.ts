@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { createMemo, createResource, onMount } from "solid-js";
 import {
   Location,
@@ -15,7 +16,7 @@ import {
   CacophonyPlugin,
   getLocationsForUser,
 } from "../CacophonyApi";
-import { DevicePlugin } from "../Device";
+import { DevicePlugin, unbindAndRebind } from "../Device";
 import { logError, logSuccess, logWarning } from "../Notification";
 import { useUserContext } from "../User";
 
@@ -501,19 +502,20 @@ export function useLocationStorage() {
 
   const getReferencePhotoForLocation = async (id: number, fileKey: string) => {
     try {
-      await DevicePlugin.unbindConnection();
-      const user = await userContext.getUser();
-      const res = await CacophonyPlugin.getReferencePhoto({
-        ...(user?.token && { token: user.token }),
-        station: id.toString(),
-        fileKey,
+      const res = await unbindAndRebind(async () => {
+        const user = await userContext.getUser();
+        return CacophonyPlugin.getReferencePhoto({
+          ...(user?.token && { token: user.token }),
+          station: id.toString(),
+          fileKey,
+        });
       });
-      await DevicePlugin.rebindConnection();
+
       if (res.success) {
-        return `${window.location.origin}/_capacitor_file_${res.data}`;
+        return Capacitor.convertFileSrc(res.data);
       }
     } catch (e) {
-      await DevicePlugin.rebindConnection();
+      console.error(e)
     }
   };
 

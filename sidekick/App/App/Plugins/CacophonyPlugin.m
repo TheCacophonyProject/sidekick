@@ -14,6 +14,12 @@ CAP_PLUGIN(CacophonyPlugin, "Cacophony",
     CAP_PLUGIN_METHOD(setToTestServer, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(setToProductionServer, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(uploadRecording, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(getStationsForUser, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(updateStation, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(getReferencePhoto, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(uploadReferencePhoto, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(deleteReferencePhoto, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(createStation, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(uploadEvent, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(getAppVersion, CAPPluginReturnPromise);
 )

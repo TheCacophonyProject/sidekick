@@ -8,6 +8,7 @@
 import Capacitor
 import shared
 var documentPath = String(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].absoluteString.dropFirst(7));
+
 @objc(CacophonyPlugin)
 public class CacophonyPlugin: CAPPlugin {
     @objc let cacophony = CacophonyInterface(filePath: documentPath)
@@ -32,6 +33,24 @@ public class CacophonyPlugin: CAPPlugin {
     }
     @objc func uploadEvent(_ call:CAPPluginCall) {
         cacophony.uploadEvent(call: pluginCall(call: call))
+    }
+    @objc func getStationsForUser(_ call:CAPPluginCall) {
+        cacophony.getStationsForUser(call: pluginCall(call: call))
+    }
+    @objc func updateStation(_ call:CAPPluginCall) {
+        cacophony.updateStation(call: pluginCall(call: call))
+    }
+    @objc func uploadReferencePhoto(_ call:CAPPluginCall) {
+        cacophony.uploadReferencePhoto(call: pluginCall(call: call))
+    }
+    @objc func getReferencePhoto(_ call:CAPPluginCall) {
+        cacophony.getReferencePhoto(call: pluginCall(call: call))
+    }
+    @objc func deleteReferencePhoto(_ call:CAPPluginCall) {
+        cacophony.deleteReferencePhoto(call: pluginCall(call: call))
+    }
+    @objc func createStation(_ call:CAPPluginCall) {
+        cacophony.createStation(call: pluginCall(call: call))
     }
     @objc func getAppVersion(_ call: CAPPluginCall) {
         if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {

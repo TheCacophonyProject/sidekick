@@ -7,7 +7,7 @@ import { z } from "zod";
 import { AuthToken, CacophonyPlugin } from "./CacophonyApi";
 import { useNavigate } from "@solidjs/router";
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
-import { DevicePlugin } from "./Device";
+import { DevicePlugin, unbindAndRebind } from "./Device";
 
 const UserSchema = z.object({
   token: z.string(),
@@ -182,16 +182,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     } catch (error) {
       console.error("Error in validateCurrToken:", error);
     }
-  }
-
-  /**
-   * Helper function to unbind and rebind connection.
-   * @param callback The callback to execute between unbinding and rebinding.
-   */
-  async function unbindAndRebind(callback: () => Promise<void>) {
-    await DevicePlugin.unbindConnection();
-    await callback();
-    await DevicePlugin.rebindConnection();
   }
 
   /**

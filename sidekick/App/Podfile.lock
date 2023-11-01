@@ -25,6 +25,8 @@ PODS:
     - Capacitor
   - CapacitorGeolocation (5.0.2):
     - Capacitor
+  - CapacitorNativeSettings (5.0.1):
+    - Capacitor
   - CapacitorPreferences (5.0.2):
     - Capacitor
   - Firebase/CoreOnly (8.12.1):
@@ -90,6 +92,7 @@ DEPENDENCIES:
   - "CapacitorDialog (from `../../node_modules/.pnpm/@capacitor+dialog@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/dialog`)"
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/filesystem`)"
   - "CapacitorGeolocation (from `../../node_modules/.pnpm/@capacitor+geolocation@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/geolocation`)"
+  - "CapacitorNativeSettings (from `../../node_modules/.pnpm/capacitor-native-settings@5.0.1_@capacitor+core@5.0.4/node_modules/capacitor-native-settings`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/preferences`)"
   - shared (from `../shared`)
 
@@ -132,6 +135,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+filesystem@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/filesystem"
   CapacitorGeolocation:
     :path: "../../node_modules/.pnpm/@capacitor+geolocation@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/geolocation"
+  CapacitorNativeSettings:
+    :path: "../../node_modules/.pnpm/capacitor-native-settings@5.0.1_@capacitor+core@5.0.4/node_modules/capacitor-native-settings"
   CapacitorPreferences:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@5.0.2_@capacitor+core@5.0.4/node_modules/@capacitor/preferences"
   shared:
@@ -150,6 +155,7 @@ SPEC CHECKSUMS:
   CapacitorDialog: 01c49f7f4b37e7ad59e38fd317a6e5f006f23cdc
   CapacitorFilesystem: 3a7bb944feb5b7e9473adeb08662c73141510aa8
   CapacitorGeolocation: 8532cd1585dbf0b5b721fa65ea51a36bf9a71e92
+  CapacitorNativeSettings: 6e94ed3c0465206756f320df18efc52f053ce3c7
   CapacitorPreferences: 0ad8838944f900284900d9647d9b0145c89ca27d
   Firebase: 580d09e8edafc3073ebf09c03fd42e4d80d35fe9
   FirebaseCore: 8138de860a90ca7eec5e324da5788fb0ebf1d93c
@@ -164,6 +170,6 @@ SPEC CHECKSUMS:
   SQLCipher: 57fa9f863fa4a3ed9dd3c90ace52315db8c0fdca
   ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: 5908623443aadf431514b6aed96afc978f369c17
+PODFILE CHECKSUM: 06c5b64a32798aa58d0fab24dc3b457b8e7d7277
 
-COCOAPODS: 1.12.1
+COCOAPODS: 1.14.2

@@ -78,10 +78,25 @@ export interface DevicePlugin {
   // rebind & unbind are used when trying to use the phone's internet connection
   rebindConnection(): Promise<void>;
   unbindConnection(): Promise<void>;
+  hasConnection(): Result;
   getTestText(): Promise<{ text: string }>;
 }
 
 export const DevicePlugin = registerPlugin<DevicePlugin>("Device");
+
+/**
+ * Helper function to unbind and rebind connection to device hotspot.
+ * @param callback The callback to execute between unbinding and rebinding.
+ * @returns The return value from the callback.
+ */
+export function unbindAndRebind<T>(callback: () => Promise<T>): Promise<T> {
+  return DevicePlugin.unbindConnection()
+    .then(() => callback())
+    .then(result => {
+      return DevicePlugin.rebindConnection().then(() => result);
+    });
+}
+
 
 // Device Action Outputs
 export type DeviceInfo = {

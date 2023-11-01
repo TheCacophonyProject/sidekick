@@ -1,7 +1,7 @@
 import { createSignal, createMemo, onMount } from "solid-js";
 import { db } from ".";
 import { CacophonyPlugin } from "../CacophonyApi";
-import { DeviceId, DevicePlugin } from "../Device";
+import { DeviceId, DevicePlugin, unbindAndRebind } from "../Device";
 import { logWarning, logError } from "../Notification";
 import {
   type Event,
@@ -70,38 +70,38 @@ export function useEventStorage() {
     let events = unuploadedEvents().filter(
       (e) => e.isProd === userContext.isProd()
     );
-    const errors = [];
-    await DevicePlugin.unbindConnection();
-    for (let i = 0; i < events.length; i++) {
-      if (!shouldUpload()) return;
-      const event = events[i];
-      const res = await CacophonyPlugin.uploadEvent({
-        token: user.token,
-        device: event.device,
-        eventId: event.key,
-        type: event.type,
-        details: event.details,
-        timeStamp: event.timestamp,
-      });
-      if (res.success) {
-        event.isUploaded = true;
-        await updateEvent(db)(event);
-        setSavedEvents((prev) => {
-          return [...prev.filter((e) => e.key !== event.key), event];
+    const errors: string[] = [];
+    await unbindAndRebind(async () => {
+      for (let i = 0; i < events.length; i++) {
+        if (!shouldUpload()) return;
+        const event = events[i];
+        const res = await CacophonyPlugin.uploadEvent({
+          token: user.token,
+          device: event.device,
+          eventId: event.key,
+          type: event.type,
+          details: event.details,
+          timeStamp: event.timestamp,
         });
-      } else {
-        if (res.message.includes("AuthError")) {
-          logWarning({
-            message: "Your account does not have access to upload events",
-            details: res.message,
+        if (res.success) {
+          event.isUploaded = true;
+          await updateEvent(db)(event);
+          setSavedEvents((prev) => {
+            return [...prev.filter((e) => e.key !== event.key), event];
           });
-          events = events.filter((e) => e.device !== event.device);
         } else {
-          errors.push(res.message);
+          if (res.message.includes("AuthError")) {
+            logWarning({
+              message: "Your account does not have access to upload events",
+              details: res.message,
+            });
+            events = events.filter((e) => e.device !== event.device);
+          } else {
+            errors.push(res.message);
+          }
         }
       }
-    }
-    await DevicePlugin.rebindConnection();
+    });
     if (errors.length > 0) {
       logWarning({
         message: "Failed to upload events",
@@ -123,10 +123,10 @@ export function useEventStorage() {
       const events = options?.events
         ? options.events
         : await getSavedEvents(
-            options?.uploaded !== undefined
-              ? { uploaded: options.uploaded }
-              : {}
-          );
+          options?.uploaded !== undefined
+            ? { uploaded: options.uploaded }
+            : {}
+        );
       await deleteEventsFromDb(db)(events);
       const currEvents = await getSavedEvents();
       setSavedEvents(currEvents);

@@ -12,7 +12,7 @@ import {
 } from "~/database/Entities/Recording";
 import { db } from ".";
 import { CacophonyPlugin } from "../CacophonyApi";
-import { DeviceDetails, DevicePlugin } from "../Device";
+import { DeviceDetails, DevicePlugin, unbindAndRebind } from "../Device";
 import { logError, logWarning } from "../Notification";
 import { createMemo, createSignal, onMount } from "solid-js";
 import { useUserContext } from "../User";
@@ -84,14 +84,12 @@ export function useRecordingStorage() {
       const user = await userContext.getUser();
       if (!user) return;
       const recording = recordings[i];
-      await DevicePlugin.unbindConnection();
-      const res = await CacophonyPlugin.uploadRecording({
+      const res = await unbindAndRebind(() => CacophonyPlugin.uploadRecording({
         token: user.token,
         type: "thermalRaw",
         device: recording.device,
         filename: recording.name,
-      });
-      await DevicePlugin.rebindConnection();
+      }));
 
       if (res.success) {
         recording.isUploaded = true;

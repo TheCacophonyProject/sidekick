@@ -30,10 +30,10 @@
     padding-right: calc(env(safe-area-inset-right));
   }
   .pt-bar {
-    padding-top: calc(5.5rem + env(safe-area-inset-top));
+    padding-top: calc(3.5rem + env(safe-area-inset-top));
   }
   .pb-bar {
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
   .mt-bar {
     margin-top: calc(6rem + env(safe-area-inset-top));

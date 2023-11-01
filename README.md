@@ -7,6 +7,7 @@ The stack uses a unique setup of [Kotlin Multiplatform  Mobile](https://lp.jetbr
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/en/) version 18 or higher
+- Java 17
 - [Android Studio](https://developer.android.com/studio) (For android development)
 - Xcode (For iOS development, this will require a Mac)
 
@@ -29,4 +30,8 @@ pnpm dev
 ## Release
 
 Android builds are handled automatically through github releases.
-iOS builds are handled manually through Xcode.
+iOS builds are handled manually through Xcode Archive.
+
+Note that the versions must be incremented in the following files:
+- [./sidekick/app/build.gradle.kts](./sidekick/app/build.gradle.kts)
+- [./sidekick/App/App.xcodeproj/project.pbxproj](./sidekick/App/App.xcodeproj/project.pbxproj)

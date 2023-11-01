@@ -25,6 +25,8 @@ public class DevicePlugin: CAPPlugin {
         case failed
     }
     @objc let device = DeviceInterface(filePath: documentPath)
+    let configuration = NEHotspotConfiguration(ssid: "bushnet", passphrase: "feathers", isWEP: false)
+    var isConnected = false;
     
     private var callQueue: [String: CallType] = [:]
     func createBrowser() -> NWBrowser {
@@ -58,20 +60,38 @@ public class DevicePlugin: CAPPlugin {
     @objc func checkDeviceConnection(_ call: CAPPluginCall) {
         device.checkDeviceConnection(call: pluginCall(call: call))
     }
+
     
     @objc func connectToDeviceAP(_ call: CAPPluginCall) {
-        let ssid = "bushnet"
-        let passphrase = "feathers"
-        let configuration = NEHotspotConfiguration(ssid: ssid, passphrase: passphrase, isWEP: false)
+        guard let bridge = self.bridge else { return call.reject("Could not access bridge") }
+        configuration.joinOnce = true
+        call.keepAlive = true
+        callQueue[call.callbackId] = .discover
         
         NEHotspotConfigurationManager.shared.apply(configuration) { error in
             if let error = error {
                 call.resolve(["success": false, "error": "\(error.localizedDescription)"])
+                bridge.releaseCall(withID: call.callbackId)
+                return
+            }
+            
+            if #available(iOS 14.0, *) {
+                NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
+                    if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
+                        // Successfully connected to the desired network
+                        call.resolve(["success": true, "data": "connected"])
+                    } else {
+                        // The device might have connected to a different network
+                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                    }
+                }
             } else {
-                call.resolve(["success": true])
+                // Fallback on earlier versions
+                call.resolve(["success": true, "data": "default"])
             }
         }
     }
+
     
     @objc func getDeviceInfo(_ call: CAPPluginCall) {
         device.getDeviceInfo(call: pluginCall(call: call))
@@ -105,5 +125,37 @@ public class DevicePlugin: CAPPlugin {
     
     @objc func downloadRecording(_ call: CAPPluginCall) {
         device.downloadRecording(call: pluginCall(call: call))
+    }
+    
+    @objc func deleteRecording(_ call: CAPPluginCall) {
+        device.deleteRecording(call: pluginCall(call: call))
+    }
+    
+    @objc func deleteRecordings(_ call: CAPPluginCall) {
+        device.deleteRecordings(call: pluginCall(call: call))
+    }
+    @objc func unbindConnection(_ call: CAPPluginCall) {
+        call.resolve()
+    }
+    
+    @objc func rebindConnection(_ call: CAPPluginCall) {
+        call.resolve()
+    }
+    
+    @objc func hasConnection(_ call: CAPPluginCall) {
+        if #available(iOS 14.0, *) {
+            NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
+                if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
+                    // Successfully connected to the desired network
+                    call.resolve(["success": true, "data": "connected"])
+                } else {
+                    // The device might have connected to a different network
+                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                }
+            }
+        } else {
+            // Fallback on earlier versions
+            call.resolve(["success": true, "data": "default"])
+        }
     }
 }
