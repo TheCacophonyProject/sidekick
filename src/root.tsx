@@ -80,10 +80,10 @@ export default function Root() {
               <ErrorBoundary
                 fallback={(err) => {
                   return (
-                    <div class="flex h-full flex-col items-center justify-center w-screen">
+                    <div class="flex h-full w-screen flex-col items-center justify-center">
                       <h1 class="text-2xl font-bold">Something went wrong</h1>
                       <p class="text-lg">Please refresh the page</p>
-                      <p class="flex items-center text-lg text-center">
+                      <p class="flex items-center text-center text-lg">
                         Error:
                         {err.message ?? "Couldn't get error message"}
                       </p>
