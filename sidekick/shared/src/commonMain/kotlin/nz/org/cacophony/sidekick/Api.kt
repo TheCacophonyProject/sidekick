@@ -201,9 +201,10 @@ suspend inline fun Api.delete(
 }
 
 
+
 inline fun <reified T> decodeToJSON(json: String): Either<InvalidResponse.ParsingError, T> {
     return Either.catch {
-        return Json.decodeFromString<T>(json).right()
+        return Json {ignoreUnknownKeys = true}.decodeFromString<T>(json).right()
     }.mapLeft {
         InvalidResponse.ParsingError("Error parsing JSON ${it.cause?.message}: ${it.message}")
     }
