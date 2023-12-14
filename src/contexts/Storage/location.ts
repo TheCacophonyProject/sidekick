@@ -135,7 +135,7 @@ export function useLocationStorage() {
     const locations = await getLocations(db)();
     for (const [i, loc] of locations.entries()) {
       if (loc.needsCreation) {
-        const sameLoc = locations.findIndex(
+        const existingLoc = locations.findIndex(
           (l) =>
             l.id !== loc.id &&
             l.isProd === loc.isProd &&
@@ -146,9 +146,9 @@ export function useLocationStorage() {
             )
         );
         // remove the location that needs creation, but keep the new name and photos
-        if (sameLoc !== -1) {
-          debugger;
-          const same = locations[sameLoc];
+        // in case the user created a new location getting the server version
+        if (existingLoc !== -1) {
+          const same = locations[existingLoc];
           const newLoc = {
             ...same,
             updateName: loc.updateName ?? loc.name,
@@ -164,7 +164,7 @@ export function useLocationStorage() {
           await deleteLocation(db)(loc.id.toString(), loc.isProd);
           await updateLocation(db)(newLoc);
           // insert the new location
-          locations[sameLoc] = newLoc;
+          locations[existingLoc] = newLoc;
           // remove the old location
           locations.splice(i, 1);
         }

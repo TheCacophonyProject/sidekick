@@ -1,17 +1,40 @@
+import { KeepAwake } from "@capacitor-community/keep-awake";
 import { HttpResponse, registerPlugin } from "@capacitor/core";
-import { createEffect, createSignal, createResource } from "solid-js";
-import { Geolocation } from "@capacitor/geolocation";
-import { logError, logSuccess, logWarning } from "./Notification";
-import { CallbackId, Res, Result, URL } from ".";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
-import { useStorage } from "./Storage";
-import { ReactiveMap } from "@solid-primitives/map";
+import { Geolocation } from "@capacitor/geolocation";
 import { createContextProvider } from "@solid-primitives/context";
+import { ReactiveMap } from "@solid-primitives/map";
+import { debounce, leading } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
+import { createEffect, createResource, createSignal } from "solid-js";
 import { z } from "zod";
-import { KeepAwake } from "@capacitor-community/keep-awake";
+import { GoToPermissions } from "~/components/GoToPermissions";
 import { Coords, Location } from "~/database/Entities/Location";
+import { CallbackId, Res, Result, URL } from ".";
+import { logError, logSuccess, logWarning } from "./Notification";
+import { useStorage } from "./Storage";
+import { isWithinRange } from "./Storage/location";
+
+const WifiNetwork = z
+  .object({
+    SSID: z.string(),
+    Quality: z.string(),
+    "Signal Level": z.string(),
+    Security: z.string().optional(),
+  })
+  .transform((val) => {
+    // Quality is a string of the form "xx/70" where xx is the signal level
+    const quality = Math.round((parseInt(val.Quality) / 70) * 100);
+    const isSecured = !val.Security || val.Security !== "Unknown";
+    return {
+      SSID: val.SSID,
+      quality,
+      signalLevel: val["Signal Level"],
+      isSecured,
+    };
+  });
+export type WifiNetwork = z.infer<typeof WifiNetwork>;
 
 export type DeviceId = string;
 export type DeviceName = string;
@@ -92,11 +115,10 @@ export const DevicePlugin = registerPlugin<DevicePlugin>("Device");
 export function unbindAndRebind<T>(callback: () => Promise<T>): Promise<T> {
   return DevicePlugin.unbindConnection()
     .then(() => callback())
-    .then(result => {
+    .then((result) => {
       return DevicePlugin.rebindConnection().then(() => result);
     });
 }
-
 
 // Device Action Outputs
 export type DeviceInfo = {
@@ -213,6 +235,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       }
     }
 
+    // Check if devices are still connected
     for (const device of devices.values()) {
       if (!device.isConnected) continue;
       const connection = await DevicePlugin.checkDeviceConnection({
@@ -222,7 +245,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         clearUploaded(device);
         connectedDevices.push(device);
       } else {
-        devices.delete(device.id);
+        // modify device to be disconnected
+        devices.set(device.id, {
+          ...device,
+          isConnected: false,
+        });
       }
     }
 
@@ -266,6 +293,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       setCallbackID();
       setIsDiscovering(false);
     }
+  };
+
+  const searchDevice = () => {
+    startDiscovery();
+    setTimeout(async () => {
+      stopDiscovery();
+    }, 6000);
   };
 
   const Authorization = "Basic YWRtaW46ZmVhdGhlcnM=";
@@ -682,7 +716,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
             withinRange(loc.coords, deviceLocation.data)
           );
           if (!location.length) return null;
-          return location[0];
+          return location.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
         } catch (error) {
           if (error instanceof Error) {
             logError({
@@ -707,6 +741,278 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     return res.success;
   };
 
+  const [permission, { refetch: refetchLocationPermission }] = createResource(
+    async () => {
+      try {
+        let permission = await Geolocation.checkPermissions();
+        if (
+          permission.location === "denied" ||
+          permission.location === "prompt" ||
+          permission.location === "prompt-with-rationale"
+        ) {
+          permission = await Geolocation.requestPermissions();
+          if (permission.location === "prompt-with-rationale") {
+            permission = await Geolocation.checkPermissions();
+          }
+        }
+        return permission.location;
+      } catch (e) {
+        return "denied";
+      }
+    }
+  );
+
+  const [devicesLocToUpdate] = createResource(
+    () => {
+      return [[...devices.values()], permission()] as const;
+    },
+    async ([devices, permission]) => {
+      try {
+        if (!devices || !permission) return [];
+        if (permission === "denied") return [];
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+        }).catch(() => {
+          return null;
+        });
+        if (!pos) return [];
+
+        const devicesToUpdate: string[] = [];
+        for (const device of devices) {
+          if (!device.isConnected) continue;
+          const locationRes = await getLocationCoords(device.id);
+          if (!locationRes.success) continue;
+          const loc = locationRes.data;
+          const newLoc: [number, number] = [
+            pos.coords.latitude,
+            pos.coords.longitude,
+          ];
+
+          const withinRange = isWithinRange(
+            [loc.latitude, loc.longitude],
+            newLoc
+          );
+          if (!withinRange) {
+            devicesToUpdate.push(device.id);
+          }
+          return devicesToUpdate;
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          logWarning({
+            message:
+              "Could not update device locations. Check location permissions and try again.",
+            action: <GoToPermissions />,
+          });
+        } else if (typeof error === "string") {
+          logWarning({
+            message: "Could not update device locations",
+            details: error,
+          });
+        }
+
+        return [];
+      }
+    }
+  );
+
+  type DeviceLocationStatus =
+    | "loading"
+    | "current"
+    | "needsUpdate"
+    | "unavailable";
+  const shouldDeviceUpdateLocation = (
+    deviceId: DeviceId
+  ): DeviceLocationStatus => {
+    if (devicesLocToUpdate.loading) return "loading";
+    const devicesToUpdate = devicesLocToUpdate();
+    if (!devicesToUpdate?.length)
+      return permission() === "denied" ? "unavailable" : "current";
+    return devicesToUpdate
+      ? devicesToUpdate.includes(deviceId)
+        ? "needsUpdate"
+        : "current"
+      : "loading";
+  };
+  const getWifiNetworks = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return [];
+      const { url } = device;
+      const res = await CapacitorHttp.get({
+        url: `${url}/api/network/wifi`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      if (res.status !== 200) return [];
+      const networks = WifiNetwork.array().safeParse(JSON.parse(res.data));
+      return networks.success
+        ? networks.data.filter((network) => network.SSID)
+        : [];
+    } catch (error) {
+      console.log({
+        message: "Could not get wifi networks",
+        error,
+      });
+      return [];
+    }
+  };
+
+  const getCurrentWifiNetwork = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return null;
+      const { url } = device;
+      const res = await CapacitorHttp.get({
+        url: `${url}/api/network/wifi/current`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      if (res.status !== 200) return null;
+      const network = z
+        .object({ SSID: z.string() })
+        .safeParse(JSON.parse(res.data));
+      return network.success ? network.data : null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const disconnectFromWifi = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return false;
+      const { url } = device;
+      const res = await CapacitorHttp.delete({
+        url: `${url}/api/network/wifi/current`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      return res.status === 200;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Connect post req /network/wifi
+  const connectToWifi = async (
+    deviceId: DeviceId,
+    ssid: string,
+    password?: string
+  ) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return false;
+      const { url } = device;
+      const res = await CapacitorHttp.post({
+        url: `${url}/api/network/wifi`,
+        headers: { ...headers, "Content-Type": "application/json" },
+        webFetchExtra: {
+          credentials: "include",
+        },
+        data: { ssid, password },
+      });
+      return res.status === 200;
+    } catch (error) {
+      return false;
+    }
+  };
+  
+  const ConnectionRes = z.object({
+    connection: z.boolean(),
+  });
+  
+  const checkDeviceWifiInternetConnection = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return false;
+      const { url } = device;
+      const res = await CapacitorHttp.get({
+        url: `${url}/api/wifi-check`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      return res.status === 200;
+    } catch (error) {
+      return false;
+    }
+  };
+  const checkDeviceModemInternetConnection = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return false;
+      const { url } = device;
+      const res = await CapacitorHttp.get({
+        url: `${url}/api/modem-check`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      return ConnectionRes.parse(res.data).connection;
+    } catch (error) {
+      return false;
+    }
+  };
+
+
+  // Access point
+
+  const [apState, setApState] = createSignal<
+    "connected" | "disconnected" | "loading" | "default"
+  >("default");
+
+  createEffect(
+    (prev: Device[]) => {
+      const currDevices = [...devices.values()];
+      if (prev.length > 0 && currDevices.length === 0) {
+        if (apState() === "connected") {
+          DevicePlugin.hasConnection().then((res) => {
+            if (!res.success) {
+              setApState("disconnected");
+            }
+          });
+        }
+      }
+      return currDevices;
+    },
+    [...devices.values()]
+  );
+
+
+  const connectToDeviceAP = leading(
+    debounce,
+    async () => {
+      setApState("loading");
+      const res = await DevicePlugin.connectToDeviceAP((res) => {
+        if (res.success) {
+          searchDevice();
+          setApState(res.data);
+          if (res.data === "disconnected") {
+            setTimeout(() => {
+              setApState("default");
+            }, 4000);
+          }
+        } else {
+          logWarning({
+            message:
+              "Please try again, or connect to 'bushnet' with password 'feathers' in your wifi settings. Alternatively, set up a hotspot named 'Bushnet' password: 'feathers'.",
+          });
+          setApState("default");
+        }
+      });
+    },
+    800
+  );
+
   return {
     devices,
     isDiscovering,
@@ -724,6 +1030,19 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     getEvents,
     saveItems,
     getLocationCoords,
+    devicesLocToUpdate,
+    shouldDeviceUpdateLocation,
+    // Wifi
+    getWifiNetworks,
+    getCurrentWifiNetwork,
+    connectToWifi,
+    disconnectFromWifi,
+    checkDeviceWifiInternetConnection,
+    checkDeviceModemInternetConnection,
+    // Access point
+    connectToDeviceAP,
+    apState,
+    searchDevice,
   };
 });
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

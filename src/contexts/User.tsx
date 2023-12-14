@@ -152,15 +152,17 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     }
   });
 
-  async function getUser(warn = false): Promise<User | undefined> {
+  async function getUser(warn = true): Promise<User | undefined> {
     try {
       const user = data();
       if (!user) return;
       const { refreshToken, expiry, email, id } = user;
       const expiryDate = new Date(expiry).getTime();
+      // log when it will expire in minutes
+      const minutes = Math.floor((expiryDate - Date.now()) / 1000 / 60);
+      console.log("User token expires in:", minutes, "minutes");
 
-      // Check if token is still valid for at least TOKEN_REFRESH_THRESHOLD milliseconds
-      if (expiryDate > Date.now()) return user;
+      if (expiryDate - 5000 > Date.now()) return user;
 
       await unbindAndRebind(async () => {
         const result = await CacophonyPlugin.validateToken({ refreshToken });
@@ -173,12 +175,27 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
               message:
                 "Could not validate user. Please check your internet connection, or try relogging.",
               details: result.message,
+              //tailwind classes
+              action: (
+                <div class="flex w-full justify-center py-2">
+                  <button
+                    class="text-blue-500"
+                    onClick={async () => {
+                      await logout();
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              ),
             });
           }
           return undefined;
         }
       });
-      return data() ?? undefined;
+      const updatedUser = data();
+      if (updatedUser) return updatedUser;
+      await logout();
     } catch (error) {
       console.error("Error in validateCurrToken:", error);
     }

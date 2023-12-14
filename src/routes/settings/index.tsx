@@ -4,11 +4,10 @@ import { BsPersonFill } from "solid-icons/bs";
 import { ImCog, ImMobile } from "solid-icons/im";
 import ActionContainer from "~/components/ActionContainer";
 import { A } from "@solidjs/router";
-import { RiSystemArrowRightSLine } from "solid-icons/ri";
+import { RiArrowsArrowRightSLine } from "solid-icons/ri";
 import { Dialog } from "@capacitor/dialog";
 import { BiRegularLogOut } from "solid-icons/bi";
 import { CacophonyPlugin } from "~/contexts/CacophonyApi";
-import { Geolocation } from "@capacitor/geolocation";
 
 function Settings() {
   const userContext = useUserContext();
@@ -16,7 +15,7 @@ function Settings() {
     <div class="text-blue-500">
       <Show when={userContext.data()}>
         <A href="user">
-          <RiSystemArrowRightSLine size={32} />
+          <RiArrowsArrowRightSLine size={32} />
         </A>
       </Show>
     </div>

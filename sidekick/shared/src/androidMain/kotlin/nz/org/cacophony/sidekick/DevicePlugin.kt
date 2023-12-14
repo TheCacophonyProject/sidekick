@@ -1,10 +1,7 @@
 package nz.org.cacophony.sidekick
-import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
-import android.net.ConnectivityManager.NetworkCallback
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
@@ -13,17 +10,8 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSpecifier
-import android.net.wifi.WifiNetworkSuggestion
 import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
-import android.provider.Settings.ACTION_WIFI_ADD_NETWORKS
-import android.provider.Settings.EXTRA_WIFI_NETWORK_LIST
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResult
-import androidx.annotation.RequiresPermission
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -31,10 +19,6 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import nz.org.cacophony.sidekick.device.DeviceInterface
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.net.URL
-import javax.net.SocketFactory
 
 @CapacitorPlugin(name = "Device")
 class DevicePlugin: Plugin() {
@@ -44,7 +28,7 @@ class DevicePlugin: Plugin() {
     private lateinit var discoveryListener: NsdManager.DiscoveryListener
     private var callQueue: MutableMap<String, CallType> = mutableMapOf()
 
-    private lateinit var device: DeviceInterface;
+    private lateinit var device: DeviceInterface
     private var wifiNetwork: Network? = null;
     var currNetworkCallback: ConnectivityManager.NetworkCallback? = null
     private var cm: ConnectivityManager? = null;
@@ -138,6 +122,7 @@ class DevicePlugin: Plugin() {
     fun connectToDeviceAP(call: PluginCall) {
         try {
             callQueue[call.callbackId] = CallType.DISCOVER
+            call.setKeepAlive(true)
             val ssid = "bushnet"
             val password = "feathers"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

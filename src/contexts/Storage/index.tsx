@@ -1,11 +1,11 @@
-import { CapacitorSQLite, SQLiteConnection } from "@capacitor-community/sqlite";
-import { createSignal } from "solid-js";
-import { createContextProvider } from "@solid-primitives/context";
 import { KeepAwake } from "@capacitor-community/keep-awake";
+import { CapacitorSQLite, SQLiteConnection } from "@capacitor-community/sqlite";
+import { createContextProvider } from "@solid-primitives/context";
+import { createSignal } from "solid-js";
 import { openConnection } from "../../database";
-import { useRecordingStorage } from "./recording";
-import { useLocationStorage } from "./location";
 import { useEventStorage } from "./event";
+import { useLocationStorage } from "./location";
+import { useRecordingStorage } from "./recording";
 
 const DatabaseName = "Cacophony";
 
@@ -61,6 +61,5 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
     hasItemsToUpload,
   };
 });
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const definiteUseStorage = () => useStorage()!;
 export { StorageProvider, definiteUseStorage as useStorage };

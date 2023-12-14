@@ -1,7 +1,7 @@
 import { Browser } from "@capacitor/browser";
 import { BsCameraVideoFill } from "solid-icons/bs";
-import { RiSystemArrowRightSLine } from "solid-icons/ri";
 import { FaSolidAngleDown } from "solid-icons/fa";
+import { RiArrowsArrowRightSLine } from "solid-icons/ri";
 import { For, Show, createMemo, createSignal, mergeProps } from "solid-js";
 import ActionContainer from "~/components/ActionContainer";
 import { useStorage } from "~/contexts/Storage";
@@ -26,7 +26,7 @@ function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
     <div class="mt-2 rounded-lg bg-slate-50 px-2">
       <div
         class="flex items-center  justify-between px-4 py-4 text-slate-800"
-        onClick={() => setToggle(!toggle())}
+        onClick={(e) => setToggle(!toggle())}
       >
         <h1 class="text-2xl font-bold ">{props.deviceId}</h1>
         <FaSolidAngleDown
@@ -46,7 +46,7 @@ function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
                     openRecording(recording.uploadId, recording.isProd)
                   }
                 >
-                  <RiSystemArrowRightSLine size={32} />
+                  <RiArrowsArrowRightSLine size={32} />
                 </button>
               }
             >

@@ -1,6 +1,6 @@
 import { BsCameraVideoFill } from "solid-icons/bs";
 import { ImLocation, ImNotification } from "solid-icons/im";
-import { RiSystemArrowRightSLine } from "solid-icons/ri";
+import { RiArrowsArrowRightSLine } from "solid-icons/ri";
 import { Show, onMount } from "solid-js";
 import { A } from "@solidjs/router";
 import ActionContainer from "~/components/ActionContainer";
@@ -36,7 +36,7 @@ export default function Storage() {
     headerMap.set("/storage", [
       header[0],
       () => (
-        <button onClick={deleteSaved} class="text-red-400">
+        <button type="button" onClick={deleteSaved} class="text-red-400">
           <FaRegularTrashCan size={28} />
         </button>
       ),
@@ -71,7 +71,7 @@ export default function Storage() {
         header="Recordings"
         action={
           <A href="recordings" class="text-blue-500">
-            <RiSystemArrowRightSLine size={32} />
+            <RiArrowsArrowRightSLine size={32} />
           </A>
         }
       >
@@ -100,7 +100,7 @@ export default function Storage() {
           header="Test Recordings"
           action={
             <A href="recordings" class="text-blue-500">
-              <RiSystemArrowRightSLine size={32} />
+              <RiArrowsArrowRightSLine size={32} />
             </A>
           }
         >

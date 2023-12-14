@@ -1,8 +1,7 @@
-import { JSXElement, Show, createEffect, createSignal } from "solid-js";
-import { RiSystemArrowLeftSLine } from "solid-icons/ri";
-import { ReactiveMap } from "@solid-primitives/map";
-import { useLocation, A, useNavigate } from "@solidjs/router";
 import { App } from "@capacitor/app";
+import { ReactiveMap } from "@solid-primitives/map";
+import { A, useLocation, useNavigate } from "@solidjs/router";
+import { JSXElement, createEffect, createSignal } from "solid-js";
 
 type Header = string;
 type HeaderButton = () => JSXElement;
@@ -21,7 +20,7 @@ function Header() {
   const [header, setHeader] = createSignal<string>(
     headerMap.get(location.pathname)?.[0] ?? "Dashboard"
   );
-  const [backNav, setBackNav] = createSignal<JSXElement>(<></>);
+  const [backNav, setBackNav] = createSignal<JSXElement>();
   const navigate = useNavigate();
   createEffect(() => {
     if (headerMap.has(location.pathname)) {
@@ -35,14 +34,14 @@ function Header() {
             href={link.join("/")}
             class="flex items-center text-xl text-blue-500"
           >
-            <RiSystemArrowLeftSLine size={32} />
+            <RiArrowsArrowLeftSLine size={32} />
           </A>
         );
         App.addListener("backButton", () => {
           navigate(link.join("/"));
         });
       } else {
-        setBackNav(<></>);
+        setBackNav();
         App.removeAllListeners();
         App.addListener("backButton", () => {
           if (location.pathname !== "/devices") {
