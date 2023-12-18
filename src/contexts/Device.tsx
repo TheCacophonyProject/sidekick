@@ -716,7 +716,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
             withinRange(loc.coords, deviceLocation.data)
           );
           if (!location.length) return null;
-          return location.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+          return location.sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )[0];
         } catch (error) {
           if (error instanceof Error) {
             logError({
@@ -923,11 +926,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       return false;
     }
   };
-  
+
   const ConnectionRes = z.object({
     connection: z.boolean(),
   });
-  
+
   const checkDeviceWifiInternetConnection = async (deviceId: DeviceId) => {
     try {
       const device = devices.get(deviceId);
@@ -963,6 +966,34 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
+  const InterfaceSchema = z.object({
+    name: z.string(),
+    addresses: z.array(z.string()),
+    mtu: z.number(),
+    macAddress: z.string(),
+    flags: z.string(),
+  });
+
+  const getDeviceInterfaces = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return [];
+      const { url } = device;
+      const res = await CapacitorHttp.get({
+        url: `${url}/api/network/interfaces`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      return res.status === 200
+        ? InterfaceSchema.array().parse(JSON.parse(res.data))
+        : [];
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  };
 
   // Access point
 
@@ -986,7 +1017,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     },
     [...devices.values()]
   );
-
 
   const connectToDeviceAP = leading(
     debounce,
@@ -1013,6 +1043,24 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     800
   );
 
+  const takeTestRecording = async (deviceId: DeviceId) => {
+    try {
+      const device = devices.get(deviceId);
+      if (!device || !device.isConnected) return false;
+      const { url } = device;
+      const res = await CapacitorHttp.put({
+        url: `${url}/api/camera/snapshot-recording`,
+        headers: { ...headers, "Content-Type": "application/json" },
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      return res.status === 200;
+    } catch (error) {
+      return false;
+    }
+  };
+
   return {
     devices,
     isDiscovering,
@@ -1033,6 +1081,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     devicesLocToUpdate,
     shouldDeviceUpdateLocation,
     // Wifi
+    getDeviceInterfaces,
     getWifiNetworks,
     getCurrentWifiNetwork,
     connectToWifi,
@@ -1043,6 +1092,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     connectToDeviceAP,
     apState,
     searchDevice,
+    // Camera
+    takeTestRecording,
   };
 });
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
