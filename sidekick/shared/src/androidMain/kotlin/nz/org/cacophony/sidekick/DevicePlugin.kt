@@ -305,4 +305,20 @@ class DevicePlugin: Plugin() {
         }
         call.resolve()
     }
+
+    @PluginMethod
+    fun reregisterDevice(call: PluginCall) {
+        device.reregister(pluginCall(call))
+    }
+
+    @PluginMethod
+    fun updateRecordingWindow(call: PluginCall) {
+        device.updateRecordingWindow(pluginCall(call))
+    }
+
+    @PluginMethod
+    fun updateWifi(call: PluginCall) {
+        device.updateWifi(pluginCall(call))
+    }
+
 }

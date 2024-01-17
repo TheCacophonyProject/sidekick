@@ -74,44 +74,44 @@ export default function Root() {
   return (
     <main class="h-screen bg-gray-200">
       <Router>
-        <UserProvider>
-          <StorageProvider>
-            <DeviceProvider>
-              <ErrorBoundary
-                fallback={(err) => {
-                  return (
-                    <div class="flex h-full w-screen flex-col items-center justify-center">
-                      <h1 class="text-2xl font-bold">Something went wrong</h1>
-                      <p class="text-lg">Please refresh the page</p>
-                      <p class="flex items-center text-center text-lg">
-                        Error:
-                        {err.message ?? "Couldn't get error message"}
-                      </p>
-                      <div class="flex items-center">
-                        <button
-                          class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
-                          onClick={() => writeToClipboard(err)}
-                        >
-                          <span>Copy</span>
-                          <BiSolidCopyAlt size={18} class="ml-1" />
-                        </button>
-                        <button
-                          class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
-                          onClick={() => window.location.reload()}
-                        >
-                          Reload
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }}
-              >
+        <ErrorBoundary
+          fallback={(err) => {
+            return (
+              <div class="z-20 flex h-full w-screen flex-col items-center justify-center bg-white">
+                <h1 class="text-2xl font-bold">Something went wrong</h1>
+                <p class="text-lg">Please refresh the page</p>
+                <p class="flex items-center text-center text-lg">
+                  Error:
+                  {err.message ?? "Couldn't get error message"}
+                </p>
+                <div class="flex items-center">
+                  <button
+                    class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
+                    onClick={() => writeToClipboard(err)}
+                  >
+                    <span>Copy</span>
+                    <BiSolidCopyAlt size={18} class="ml-1" />
+                  </button>
+                  <button
+                    class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
+                    onClick={() => window.location.reload()}
+                  >
+                    Reload
+                  </button>
+                </div>
+              </div>
+            );
+          }}
+        >
+          <UserProvider>
+            <StorageProvider>
+              <DeviceProvider>
                 <AppRoutes />
                 <NotificationPopup />
-              </ErrorBoundary>
-            </DeviceProvider>
-          </StorageProvider>
-        </UserProvider>
+              </DeviceProvider>
+            </StorageProvider>
+          </UserProvider>
+        </ErrorBoundary>
       </Router>
     </main>
   );

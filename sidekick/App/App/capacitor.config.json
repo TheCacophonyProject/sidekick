@@ -4,6 +4,10 @@
 	"webDir": "dist",
 	"bundledWebRuntime": false,
 	"backgroundColor": "#f9fafb",
+	"server": {
+		"hostname": "cacophony.org.nz",
+		"androidScheme": "https"
+	},
 	"android": {
 		"path": "sidekick"
 	},

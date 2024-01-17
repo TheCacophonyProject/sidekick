@@ -25,6 +25,7 @@ export interface CacophonyPlugin {
     id: string;
     email: string;
     refreshToken: string;
+    expiry: string;
   }>;
   requestDeletion(user: { token: string }): Result<string>;
   validateToken(options: { refreshToken: string }): Result<AuthToken>;
@@ -144,7 +145,9 @@ const LocationResSchema = z.discriminatedUnion("success", [
 export async function getLocationsForUser(
   token: string
 ): Promise<ApiLocation[]> {
-  const locationJson = await unbindAndRebind(() => CacophonyPlugin.getStationsForUser({ token }))
+  const locationJson = await unbindAndRebind(() =>
+    CacophonyPlugin.getStationsForUser({ token })
+  );
   if (locationJson.success) {
     const json = JSON.parse(locationJson.data);
     const locationRes = LocationResSchema.parse(json);

@@ -123,10 +123,10 @@ export function useEventStorage() {
       const events = options?.events
         ? options.events
         : await getSavedEvents(
-          options?.uploaded !== undefined
-            ? { uploaded: options.uploaded }
-            : {}
-        );
+            options?.uploaded !== undefined
+              ? { uploaded: options.uploaded }
+              : {}
+          );
       await deleteEventsFromDb(db)(events);
       const currEvents = await getSavedEvents();
       setSavedEvents(currEvents);

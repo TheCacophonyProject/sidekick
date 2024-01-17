@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor } from "@capacitor/core";
 import { createMemo, createResource, onMount } from "solid-js";
 import {
   Location,
@@ -218,11 +218,11 @@ export function useLocationStorage() {
   }
 
   const [savedLocations, { mutate, refetch }] = createResource(
-    () => [userContext.getUser()] as const,
+    () => [userContext.data()] as const,
     async (data) => {
       try {
         // Update Locations based on user
-        const user = await data[0];
+        const user = data;
         if (!user) return [];
         const locations = await getServerLocations();
         const dbLocations = await getLocations(db)();
@@ -515,7 +515,7 @@ export function useLocationStorage() {
         return Capacitor.convertFileSrc(res.data);
       }
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
   };
 

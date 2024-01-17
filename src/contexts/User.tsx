@@ -14,8 +14,8 @@ const UserSchema = z.object({
 	token: z.string(),
 	id: z.string(),
 	email: z.string(),
+	expiry: z.string().optional(),
 	refreshToken: z.string(),
-	expiry: z.string(),
 	prod: z.boolean(),
 });
 
@@ -33,11 +33,14 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 					return null;
 				}
 				const user = UserSchema.parse(JSON.parse(storedUser.value));
-				return user;
+				const validUser = await getValidUser(user);
+
+				return validUser;
 			}
 		} catch (error) {
-			return null;
+			console.error("Error getting user data:", error);
 		}
+		return null;
 	});
 
 	const [skippedLogin, { mutate: mutateSkip }] = createResource(async () => {
@@ -74,12 +77,12 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 					token,
 					id,
 					email,
-					expiry: currUser.expiry,
 					refreshToken,
 					prod,
 				}),
 			});
 		} catch (error) {
+			console.error("Error saving user data:", error);
 			logWarning({
 				message: "Failed to save user data",
 			});
@@ -92,32 +95,22 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		mutateSkip(false);
 		await refetch();
 	}
+
 	async function login(email: string, password: string) {
 		await DevicePlugin.unbindConnection();
 		const authUser = await CacophonyPlugin.authenticateUser({
 			email,
 			password,
 		});
+		await DevicePlugin.rebindConnection();
 		if (!authUser.success) {
 			logWarning({
 				message: "Login failed",
 				details: authUser.message,
 			});
-			await DevicePlugin.rebindConnection();
 			return;
 		}
-		const result = await CacophonyPlugin.validateToken({
-			refreshToken: authUser.data.refreshToken,
-		});
-		await DevicePlugin.rebindConnection();
-		if (!result.success) {
-			logWarning({
-				message: "Login failed",
-				details: result.message,
-			});
-			return;
-		}
-		const { token, refreshToken, expiry } = result.data;
+		const { token, refreshToken, expiry } = authUser.data;
 		Preferences.set({ key: "skippedLogin", value: "false" });
 		mutateUser({
 			token,
@@ -130,7 +123,9 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		mutateSkip(false);
 	}
 
-	const [server, setServer] = createSignal<"test" | "prod">("prod");
+	const [server, setServer] = createSignal<"test" | "prod" | "loading">(
+		"loading",
+	);
 	const isProd = () => server() === "prod";
 
 	const [changeServer] = createResource(server, async (server) => {
@@ -153,49 +148,87 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		}
 	});
 
-	async function getUser(warn = true): Promise<User | undefined> {
+	interface JwtTokenPayload<
+		T =
+			| "user"
+			| "device"
+			| "reset-password"
+			| "confirm-email"
+			| "join-group"
+			| "invite-new-user"
+			| "invite-existing-user"
+			| "refresh",
+	> {
+		exp: number;
+		iat: number;
+		_type: T;
+		createdAt: Date;
+		expiresAt: Date;
+	}
+
+	const decodeJWT = (jwtString: string): JwtTokenPayload | null => {
+		const parts = jwtString.split(".");
+		if (parts.length !== 3) {
+			return null;
+		}
 		try {
-			const user = data();
-			if (!user) return;
-			const { refreshToken, expiry, email, id } = user;
-			const expiryDate = new Date(expiry).getTime();
-			// log when it will expire in minutes
-			const minutes = Math.floor((expiryDate - Date.now()) / 1000 / 60);
-			console.log("User token expires in:", minutes, "minutes");
+			const decodedToken = JSON.parse(atob(parts[1]));
+			return {
+				...decodedToken,
+				expiresAt: new Date(decodedToken.exp * 1000),
+				createdAt: new Date(decodedToken.iat * 1000),
+			};
+		} catch (e) {
+			return null;
+		}
+	};
 
-			if (expiryDate - 5000 > Date.now()) return user;
+	async function getValidUser(user: User): Promise<User | undefined> {
+		try {
+			const { token, refreshToken, email, id } = user;
+			const decodedToken = decodeJWT(token);
+			if (!decodedToken) return;
+			const now = new Date();
+			if (decodedToken.expiresAt.getTime() < now.getTime() + 5000) {
+				return await unbindAndRebind(async () => {
+					const result = await CacophonyPlugin.validateToken({ refreshToken });
 
-			await unbindAndRebind(async () => {
-				const result = await CacophonyPlugin.validateToken({ refreshToken });
-
-				if (result.success) {
-					updateUser(result.data, { id, email });
-				} else {
-					if (warn) {
-						logWarning({
-							message:
-								"Could not validate user. Please check your internet connection, or try relogging.",
-							details: result.message,
-							//tailwind classes
-							action: (
-								<div class="flex w-full justify-center py-2">
-									<button
-										class="text-blue-500"
-										onClick={async () => {
-											await logout();
-										}}
-									>
-										Logout
-									</button>
-								</div>
-							),
-						});
+					if (result.success) {
+						return {
+							token: result.data.token,
+							refreshToken,
+							id,
+							email,
+							expiry: result.data.expiry,
+							prod: isProd(),
+						} satisfies User;
+					} else {
+						if (result.message.includes("Failed")) {
+							await logout();
+						}
+						return undefined;
 					}
-					return undefined;
-				}
-			});
-			const updatedUser = data();
-			if (updatedUser) return updatedUser;
+				});
+			} else {
+				return user;
+			}
+		} catch (error) {
+			console.error("Error in validateCurrToken:", error);
+		}
+	}
+
+	async function getUser(warn = false): Promise<User | undefined | null> {
+		try {
+			if (data.loading) return;
+			const user = data();
+			if (!user) {
+				return;
+			}
+			const validUser = await getValidUser(user);
+			if (validUser) {
+				mutateUser(validUser);
+				return validUser;
+			}
 			await logout();
 		} catch (error) {
 			console.error("Error in validateCurrToken:", error);
@@ -247,6 +280,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 	}
 
 	function getServerUrl() {
+		if (server() === "loading") return "";
 		return isProd()
 			? "https://api.cacophony.org.nz"
 			: "https://api-test.cacophony.org.nz";
@@ -270,16 +304,21 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 	]);
 	const [groups] = createResource(
 		() => [data(), getServerUrl()] as const,
-		async ([user, url]) => {
-			if (!user) return;
-			const res = await CapacitorHttp.request({
-				method: "GET",
-				url: `${url}/api/v1/groups`,
-				headers: {
-					Authorization: user.token,
-				},
+		async ([_, url]) => {
+			debugger;
+			const user = await getUser();
+			if (!url || !user) return [];
+			const res = await unbindAndRebind(async () => {
+				const res = await CapacitorHttp.request({
+					method: "GET",
+					url: `${url}/api/v1/groups`,
+					headers: {
+						Authorization: user.token,
+					},
+				});
+				return res;
 			});
-			console.log("GROUPS", res);
+			if (!res) return [];
 			const result = GroupsResSchema.safeParse(res.data);
 			if (!result.success || result.data.success === false) {
 				console.error("Error getting groups:", result);

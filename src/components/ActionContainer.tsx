@@ -3,12 +3,19 @@ import { JSX, Show } from "solid-js";
 
 const ActionContainer = (props: {
   icon?: IconTypes;
+  disabled?: boolean;
   header?: string;
   children: JSX.Element;
   action?: JSX.Element;
 }) => {
   return (
-    <div class="h-min-2 relative mb-2 mt-2 flex flex-row items-center justify-between rounded-xl bg-white px-3 py-4">
+    <div
+      classList={{
+        "bg-neutral-100": props.disabled,
+        "bg-white": !props.disabled,
+      }}
+      class="h-min-2 relative mb-2 mt-2 flex flex-row items-center justify-between rounded-xl px-3 py-4"
+    >
       <div class="flex w-full flex-row items-center gap-x-4">
         {props.icon && (
           <div class="text-gray-700">

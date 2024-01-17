@@ -201,4 +201,58 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                     )
             }
     }
+
+    @Serializable
+    data class NewDevice(val group: String, val device: String)
+    fun reregister(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call)
+            .map { deviceApi ->
+                call.validateCall<NewDevice>("group", "device")
+                    .map { device ->
+                        deviceApi.reregister(device.group, device.device)
+                            .fold(
+                                { error -> call.failure(error.toString()) },
+                                {
+                                    call.success()
+                                }
+                            )
+                    }
+            }
+    }
+
+@Serializable
+data class RecordingWindow(val on: String, val off: String)
+    fun updateRecordingWindow(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call)
+            .map { deviceApi ->
+                call.validateCall<RecordingWindow>("on", "off")
+                    .map { window ->
+                        deviceApi.updateRecordingWindow(window.on, window.off)
+                            .fold(
+                                { error -> call.failure(error.toString()) },
+                                {
+                                    call.success()
+                                }
+                            )
+                    }
+            }
+    }
+
+    @Serializable
+    data class Wifi(val ssid: String, val password: String)
+    fun updateWifi(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call)
+            .map { deviceApi ->
+                call.validateCall<Wifi>("ssid", "password")
+                    .map { wifi ->
+                        deviceApi.updateWifiNetwork(wifi.ssid, wifi.password)
+                            .fold(
+                                { error -> call.failure(error.toString()) },
+                                {
+                                    call.success()
+                                }
+                            )
+                    }
+            }
+    }
 }

@@ -3,6 +3,7 @@ package nz.org.cacophony.sidekick.device
 import arrow.core.*
 import io.ktor.client.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.formData
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
@@ -110,4 +111,24 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             InvalidResponse.ParsingError("Unable to connect to host: $e").left()
         }
     }
+
+    suspend fun reregister(group: String, device: String): Either<ApiError, String> =
+        submitForm("reregister",Parameters.build {
+            append("name", device)
+            append("group", group)
+        }).flatMap { validateResponse(it) }
+
+    suspend fun updateRecordingWindow(on: String, off: String): Either<ApiError, String> =
+        submitForm("config", Parameters.build {
+            append("section", "windows")
+            // Json string of "power-on" and "power-off" times
+            append("config", "{\"power-on\":\"$on\",\"power-off\":\"$off\"}")
+        }).flatMap { validateResponse(it) }
+
+    suspend fun updateWifiNetwork(ssid: String, password: String): Either<ApiError, String> =
+        submitForm("wifi-networks", Parameters.build {
+            // Json string of "ssid" and "password"
+            append("ssid", ssid)
+            append("psk", password)
+        }).flatMap { validateResponse(it) }
 }
