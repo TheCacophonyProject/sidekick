@@ -6,8 +6,7 @@
 	"backgroundColor": "#f9fafb",
 	"server": {
 		"hostname": "cacophony.org.nz",
-		"androidScheme": "https",
-		"url": "http://localhost:5173"
+		"androidScheme": "http"
 	},
 	"android": {
 		"path": "sidekick"

@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   backgroundColor: "#f9fafb",
   server: {
     hostname: "cacophony.org.nz",
-    androidScheme: "https",
+    androidScheme: "http",
   },
   android: {
     path: "sidekick",
