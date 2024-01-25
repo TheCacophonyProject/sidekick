@@ -34,6 +34,7 @@ import {
 } from "solid-icons/tb";
 import {
 	For,
+	JSX,
 	Match,
 	Show,
 	Switch,
@@ -315,11 +316,13 @@ function CameraSettingsTab() {
 	}
 
 	const camera = createMemo(() => context.getDeviceCamera(id()));
+	const [isRecieving, setIsRecieving] = createSignal(false);
 	onMount(() => {
 		const cam = camera();
 		if (cam) {
 			cam.toggle();
 			cam.run((frame) => {
+				if (!isRecieving()) setIsRecieving(true);
 				requestAnimationFrame(() => processFrame(frame));
 			});
 		}
@@ -329,20 +332,21 @@ function CameraSettingsTab() {
 	const isDefault = () => {
 		const defaultValue = "12:00";
 		const windows = config()?.values.windows;
-		if (!windows) return false;
+		const windowsDefault = config()?.defaults.windows;
+		if (!windows || !windowsDefault) return false;
 		if (
-			windows.StartRecording === defaultValue &&
-			windows.StopRecording === defaultValue &&
-			windows.PowerOn === defaultValue &&
-			windows.PowerOff === defaultValue
+			windows.StartRecording === windowsDefault.StartRecording &&
+			windows.StopRecording === windowsDefault.StopRecording &&
+			windows.PowerOn === windowsDefault.PowerOn &&
+			windows.PowerOff === windowsDefault.PowerOff
 		)
 			return true;
 		return false;
 	};
 
 	const is24Hours = () => {
-		const start = "00:00";
-		const stop = "23:59";
+		const start = "12:00";
+		const stop = "12:00";
 		const windows = config()?.values.windows;
 		if (!windows) return false;
 		if (windows.PowerOn === start && windows.PowerOff === stop) return true;
@@ -356,8 +360,8 @@ function CameraSettingsTab() {
 	const setTo24Hours = async () => {
 		try {
 			setShowCustom(false);
-			const on = "00:00";
-			const off = "23:59";
+			const on = "12:00";
+			const off = "12:00";
 			const res = await context.setRecordingWindow(id(), on, off);
 			if (res) {
 				console.log("Success");
@@ -370,8 +374,10 @@ function CameraSettingsTab() {
 	const setToDefault = async () => {
 		try {
 			setShowCustom(false);
-			const on = "12:00";
-			const off = "12:00";
+			const defaults = config()?.defaults;
+			if (!defaults) return;
+			const on = defaults.windows?.PowerOn ?? "-30min";
+			const off = defaults.windows?.PowerOff ?? "+30min";
 			const res = await context.setRecordingWindow(id(), on, off);
 			if (res) {
 				console.log("Success");
@@ -448,22 +454,37 @@ function CameraSettingsTab() {
 
 	return (
 		<section>
-			<div class="relative">
-				<canvas
-					ref={frameCanvas}
-					id="frameCanvas"
-					width="160"
-					height="120"
-					class="w-full"
-				/>
-				<canvas
-					ref={trackCanvas}
-					id="trackCanvas"
-					width="160"
-					height="120"
-					class="absolute left-0 top-0 z-10 w-full"
-				/>
-			</div>
+			<Show
+				when={isRecieving()}
+				fallback={
+					<div
+						style={{
+							height: "269px",
+						}}
+						class="h-full bg-slate-50 flex items-center justify-center gap-x-2"
+					>
+						<FaSolidSpinner class="animate-spin" size={32} />
+						<p>Starting Camera...</p>
+					</div>
+				}
+			>
+				<div class="relative">
+					<canvas
+						ref={frameCanvas}
+						id="frameCanvas"
+						width="160"
+						height="120"
+						class="w-full"
+					/>
+					<canvas
+						ref={trackCanvas}
+						id="trackCanvas"
+						width="160"
+						height="120"
+						class="absolute left-0 top-0 z-10 w-full"
+					/>
+				</div>
+			</Show>
 			<button
 				ref={triggerTrap}
 				style="position: relative;display: none"
@@ -499,6 +520,7 @@ function CameraSettingsTab() {
 				<div class="flex w-full justify-between">
 					<div class="flex items-center gap-x-2">
 						<input
+							id="default"
 							type="radio"
 							name="recording-window"
 							value="default"
@@ -509,6 +531,7 @@ function CameraSettingsTab() {
 					</div>
 					<div class="flex items-center gap-x-2">
 						<input
+							id="24-hours"
 							type="radio"
 							name="recording-window"
 							value="24-hours"
@@ -519,6 +542,7 @@ function CameraSettingsTab() {
 					</div>
 					<div class="flex items-center gap-x-2">
 						<input
+							id="custom"
 							type="radio"
 							name="recording-window"
 							value="custom"
@@ -1008,7 +1032,7 @@ function WifiSettingsTab() {
 	const [hasModem, { refetch: refetchHasModem }] = createResource(async () => {
 		const interfaces = await context.getDeviceInterfaces(device()?.id ?? "");
 		console.log(interfaces);
-		return interfaces.find((iface) => iface.name === "usb0") !== undefined;
+		return interfaces?.find((iface) => iface.name === "usb0") !== undefined;
 	});
 	const [password, setPassword] = createSignal("");
 
@@ -1102,6 +1126,11 @@ function WifiSettingsTab() {
 			console.log(error);
 		}
 	};
+	createEffect(() => {
+		if (wifiNetworks.error) {
+			refetchWifiNetowrks();
+		}
+	});
 
 	// Interval check for current wifi
 	onMount(() => {
@@ -1116,6 +1145,8 @@ function WifiSettingsTab() {
 		() => currentWifi(),
 		async (wifi) => {
 			if (!wifi) return "no-wifi";
+			setDisconnected(false);
+			setErrorConnecting(null);
 			const res = await context.checkDeviceWifiInternetConnection(
 				params.deviceSettings,
 			);
@@ -1350,12 +1381,11 @@ function GeneralSettingsTab() {
 	const context = useDevice();
 	const [params] = useSearchParams();
 	const device = () => context.devices.get(params.deviceSettings);
-	const id = () => device()?.id ?? "";
+	const id = () => device()?.saltId ?? device()?.id ?? "";
 	const name = () => device()?.name ?? "";
 	const groupName = () => device()?.group ?? "";
 	const setGroup = async (v: string) => {
-		console.log("Set Group", v);
-		await context.changeGroup(id(), v);
+		const res = await context.changeGroup(id(), v);
 	};
 	const [canUpdate, { refetch }] = createResource(
 		async () => await context.canUpdateDevice(id()),
@@ -1368,13 +1398,18 @@ function GeneralSettingsTab() {
 		onCleanup(() => clearInterval(interval));
 	});
 
-	createEffect(() => {
-		console.log("Groups", user.groups());
+	const [canChangeGroup] = createResource(async () => {
+		const res = await context.checkDeviceWifiInternetConnection(id());
+		return res;
 	});
+
+	const message = () =>
+		canChangeGroup() === false
+			? "Device must be connected to WiFi to change group"
+			: "";
 
 	return (
 		<div class="flex w-full flex-col space-y-2 px-2 py-4">
-			<FieldWrapper type="text" value={id()} title="Id" />
 			<FieldWrapper type="text" value={name()} title="Name" />
 			<FieldWrapper
 				type="dropdown"
@@ -1382,7 +1417,10 @@ function GeneralSettingsTab() {
 				title="Group"
 				onChange={(v) => setGroup(v)}
 				options={user.groups()?.map(({ groupName }) => groupName) ?? []}
+				disabled={canChangeGroup.loading || !canChangeGroup()}
+				message={message()}
 			/>
+			<FieldWrapper type="text" value={id()} title="ID" />
 			<button
 				classList={{
 					"bg-blue-500 py-2 px-4 text-white rounded-md": Boolean(canUpdate?.()),
@@ -1392,11 +1430,15 @@ function GeneralSettingsTab() {
 				class="flex w-full items-center justify-center space-x-2 rounded-md py-3 text-white bg-blue-500 px-4 "
 				onClick={() => context.updateDevice(id())}
 			>
-				{context.isDeviceUpdating(id()) ? "Updating..." : "Update"}
+				{canUpdate?.()
+					? context.isDeviceUpdating(id())
+						? "Updating..."
+						: "Software Update"
+					: "No Update Available"}
 			</button>
 			<A
 				class="flex w-full items-center justify-center py-2 text-center text-lg text-blue-600"
-				href={`/devices/${id()}`}
+				href={`/devices/${device()?.id}`}
 			>
 				<span>Advanced</span>
 				<RiArrowsArrowRightSLine size={26} />
@@ -1407,22 +1449,26 @@ function GeneralSettingsTab() {
 
 function DeviceSettingsModal() {
 	const context = useDevice();
+	const user = useUserContext();
 	const [params, setParams] = useSearchParams();
 	const currTab = () => params.tab ?? "General";
-	const navItems = [
-		"General",
-		"Network",
-		"Location",
-		"Camera",
-		"Audio",
-	] as const;
+	const navItems = () => {
+		const items = ["General", "Network", "Location", "Camera"] as const;
+		if (user.dev()) {
+			return [...items, "Audio"] as const;
+		} else {
+			return items;
+		}
+	};
+	const isConnected = () =>
+		context.devices.get(params.deviceSettings)?.isConnected;
 	const show = () => Boolean(params.deviceSettings);
 
 	const clearParams = () => {
 		setParams({ deviceSettings: undefined, tab: undefined });
 	};
 
-	const setCurrNav = (nav: (typeof navItems)[number]) => {
+	const setCurrNav = (nav: ReturnType<typeof navItems>[number]) => {
 		console.log(nav);
 		setParams({ tab: nav });
 	};
@@ -1437,10 +1483,15 @@ function DeviceSettingsModal() {
 
 	return (
 		<Show when={show()}>
-			<div class="fixed left-1/2 top-1/2 z-50 h-auto w-11/12 -translate-x-1/2 -translate-y-1/2 transform rounded-xl border bg-white shadow-lg">
+			<div class="fixed left-1/2 top-24 z-50 h-auto w-11/12 -translate-x-1/2 transform rounded-xl border bg-white shadow-lg">
 				<header class="flex justify-between px-4">
 					<div class="flex items-center py-4">
-						<BsCameraVideoFill size={32} />
+						<Show
+							when={!isConnected()}
+							fallback={<BsCameraVideoFill size={32} />}
+						>
+							<TbPlugConnectedX size={32} />
+						</Show>
 						<h1 class="pl-2 text-lg font-medium text-slate-600">
 							{deviceName()}
 						</h1>
@@ -1450,7 +1501,7 @@ function DeviceSettingsModal() {
 					</button>
 				</header>
 				<nav class="flex w-full justify-between">
-					<For each={navItems}>
+					<For each={navItems()}>
 						{(nav) => (
 							<button
 								classList={{
@@ -1478,7 +1529,7 @@ function DeviceSettingsModal() {
 					<Match when={currTab() === "Camera"}>
 						<CameraSettingsTab />
 					</Match>
-					<Match when={currTab() === "Audio"}>
+					<Match when={currTab() === "Audio" && user.dev()}>
 						<AudioSettingsTab />
 					</Match>
 				</Switch>

@@ -11,6 +11,7 @@ import { DeviceProvider } from "./contexts/Device";
 import { StorageProvider } from "./contexts/Storage";
 import NotificationPopup from "./components/NotificationPopup";
 import { BiSolidCopyAlt } from "solid-icons/bi";
+import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
 
 const routes = [
   {
@@ -76,6 +77,15 @@ export default function Root() {
       <Router>
         <ErrorBoundary
           fallback={(err) => {
+            if (err instanceof Error) {
+              StackTrace.fromError(err).then((stacktrace) => {
+                const message = err.message;
+                FirebaseCrashlytics.recordException({
+                  message,
+                  stacktrace,
+                });
+              });
+            }
             return (
               <div class="z-20 flex h-full w-screen flex-col items-center justify-center bg-white">
                 <h1 class="text-2xl font-bold">Something went wrong</h1>

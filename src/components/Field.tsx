@@ -20,7 +20,9 @@ type DropdownOption = string | { value: string; element: JSX.Element };
 type DropdownInputProps = {
 	value: string;
 	options: DropdownOption[];
-	onChange: (value: string) => Promise<void>;
+	onChange: (value: string) => void;
+	disabled: boolean;
+	message?: string;
 };
 
 const DropdownInput: Component<DropdownInputProps> = (props) => {
@@ -38,11 +40,8 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
 	const [saving, setSaving] = createSignal(false);
 	const saveText = () => (saving() ? "Saving..." : "Save");
 
-	createEffect(() => {
-		console.log("search", search());
-		console.log("shownOptions", shownOptions());
-		console.log("items", items());
-	});
+	const disabled = () =>
+		props.disabled || search() === props.value || saving() || !search();
 
 	return (
 		<>
@@ -72,6 +71,11 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
 								<ImCross size={12} />
 							</button>
 						</div>
+						<div class="w-full">
+							{props.message && (
+								<div class="text-sm text-gray-500 mb-2">{props.message}</div>
+							)}
+						</div>
 						<div class="relative">
 							<div class="flex items-center space-x-2">
 								<div class="relative flex w-full items-center">
@@ -85,7 +89,7 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
 									<div class="absolute right-0 mr-1">
 										<Switch>
 											<Match when={search() === props.value}>
-												<p class="flex items-center space-x-2 rounded-md bg-green-400 px-2 py-1 text-white">
+												<p class="flex items-center space-x-2 rounded-md border-2 border-green-400 px-2 py-1 text-green-400">
 													Current
 												</p>
 											</Match>
@@ -95,7 +99,7 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
 													!items().includes(search())
 												}
 											>
-												<p class="flex items-center space-x-2 rounded-md bg-blue-500 px-2 py-1 text-white">
+												<p class="flex items-center space-x-2 rounded-md border-2 border-blue-500 px-2 py-1 text-blue-500">
 													New
 												</p>
 											</Match>
@@ -104,7 +108,7 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
 													search() !== props.value && items().includes(search())
 												}
 											>
-												<p class="flex items-center space-x-2 rounded-md bg-gray-500 px-2 py-1 text-white">
+												<p class="flex items-center space-x-2 rounded-md border-2 border-gray-500 px-2 py-1 text-gray-500">
 													Existing
 												</p>
 											</Match>
@@ -113,13 +117,11 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
 								</div>
 								<button
 									classList={{
-										"bg-gray-200": search() === props.value,
-										"bg-blue-500": search() !== props.value,
-										"text-white": search() !== props.value,
-										"text-gray-500": search() === props.value,
+										"bg-gray-400": disabled(),
+										"bg-blue-500": !disabled(),
 									}}
-									class="rounded-lg px-3 py-2"
-									disabled={search() === props.value}
+									class="rounded-lg px-3 py-2  text-white"
+									disabled={disabled()}
 									onClick={async () => {
 										try {
 											setSaving(true);
@@ -171,6 +173,8 @@ type FieldWrapperDropdownProps = FieldWrapper & {
 	type: "dropdown";
 	options: DropdownOption[];
 	onChange: (value: string) => void;
+	disabled: boolean;
+	message?: string;
 };
 type FieldWrapperCustomProps = Omit<FieldWrapper, "value"> & {
 	type: "custom";
@@ -219,6 +223,8 @@ const FieldWrapper: Component<
 							options={val().options}
 							value={val().value}
 							onChange={val().onChange}
+							disabled={val().disabled}
+							message={val().message}
 						/>
 					)}
 				</Match>

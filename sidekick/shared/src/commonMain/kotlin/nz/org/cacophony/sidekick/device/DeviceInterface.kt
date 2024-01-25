@@ -46,12 +46,7 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                     { error -> call.failure(error.toString()) },
                     { info ->
                         call.success(
-                            mapOf(
-                                "serverURL" to info.serverURL,
-                                "groupName" to info.groupname,
-                                "deviceName" to info.devicename,
-                                "deviceID" to info.deviceID
-                            )
+                            info
                         )
                     }
                 )

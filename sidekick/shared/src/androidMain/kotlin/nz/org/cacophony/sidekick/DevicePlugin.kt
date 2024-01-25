@@ -158,6 +158,7 @@ class DevicePlugin: Plugin() {
                         result.put("message", "Failed to connect to device AP")
                         call.resolve(result)
                         call.setKeepAlive(false)
+                        cm!!.unregisterNetworkCallback(this)
                         bridge.releaseCall(call.callbackId)
                     }
                     override fun onLost(network: Network) {

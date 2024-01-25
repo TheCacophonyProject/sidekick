@@ -47,6 +47,7 @@ export type RecordingName = string;
 
 export type DeviceDetails = {
 	id: DeviceId;
+	saltId?: string;
 	host: DeviceHost;
 	name: DeviceName;
 	group: string;
@@ -84,7 +85,7 @@ export interface DevicePlugin {
 	): Promise<CallbackId>;
 	stopDiscoverDevices(options: { id: CallbackId }): Promise<void>;
 	checkDeviceConnection(options: DeviceUrl): Result;
-	getDeviceInfo(options: DeviceUrl): Result<DeviceInfo>;
+	getDeviceInfo(options: DeviceUrl): Result<string>;
 	getDeviceConfig(options: DeviceUrl): Result<string>;
 	updateRecordingWindow(
 		options: DeviceUrl & { on: string; off: string },
@@ -131,13 +132,13 @@ export function unbindAndRebind<T>(callback: () => Promise<T>): Promise<T> {
 		});
 }
 
-// Device Action Outputs
-export type DeviceInfo = {
-	serverURL: string;
-	groupName: string;
-	deviceName: string;
-	deviceID: number;
-};
+const DeviceInfoSchema = z.object({
+	serverURL: z.string(),
+	groupname: z.string(),
+	devicename: z.string(),
+	deviceID: z.number(),
+	saltID: z.string().optional(),
+});
 
 const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const storage = useStorage();
@@ -177,49 +178,25 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		endpoint: string,
 		host: string,
 	): Promise<ConnectedDevice | undefined> => {
-		const [deviceName] = endpoint.split(".");
-		const url = `http://${deviceName}.local`;
-		const info = await DevicePlugin.getDeviceInfo({ url });
-		const connection = await DevicePlugin.checkDeviceConnection({ url });
-		if (connection.success && info.success) {
-			const id: DeviceId = info.data.deviceID.toString();
-			const deviceDetails: Omit<DeviceDetails, "url"> = {
-				id,
-				host: deviceName,
-				name: info.data.deviceName,
-				group: info.data.groupName,
-				type: "thermal",
-				endpoint,
-				isProd: !info.data.serverURL.includes("test"),
-				locationSet: false,
-				timeFound: new Date(),
-			};
-			const device: ConnectedDevice = {
-				...deviceDetails,
-				url,
-				isConnected: true,
-				locationSet: false,
-			};
-			return device;
-		} else {
-			// Use host ipv4 address if device is not found
-			const url = `http://${host}`;
+		try {
+			const [deviceName] = endpoint.split(".");
+			const url = `http://${deviceName}.local`;
+			const infoRes = await DevicePlugin.getDeviceInfo({ url });
 			const connection = await DevicePlugin.checkDeviceConnection({ url });
-			if (connection.success) {
-				const info = await DevicePlugin.getDeviceInfo({ url });
-				if (!info.success) {
-					return;
-				}
-				const id: DeviceId = info.data.deviceID.toString();
+			if (connection.success && infoRes.success) {
+				const infoJson = JSON.parse(infoRes.data);
+				const info = DeviceInfoSchema.parse(infoJson);
+				const id: DeviceId = info.deviceID.toString();
 				const deviceDetails: Omit<DeviceDetails, "url"> = {
 					id,
+					saltId: info.saltID,
 					host: deviceName,
-					name: info.data.deviceName,
-					group: info.data.groupName,
+					name: info.devicename,
+					group: info.groupname,
 					type: "thermal",
 					endpoint,
+					isProd: !info.serverURL.includes("test"),
 					locationSet: false,
-					isProd: !info.data.serverURL.includes("test"),
 					timeFound: new Date(),
 				};
 				const device: ConnectedDevice = {
@@ -229,7 +206,41 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					locationSet: false,
 				};
 				return device;
+			} else {
+				// Use host ipv4 address if device is not found
+				const url = `http://${host}`;
+				const connection = await DevicePlugin.checkDeviceConnection({ url });
+				if (connection.success) {
+					const infoRes = await DevicePlugin.getDeviceInfo({ url });
+					if (!infoRes.success) {
+						return;
+					}
+					const infoJson = JSON.parse(infoRes.data);
+					const info = DeviceInfoSchema.parse(infoJson);
+					const id: DeviceId = info.deviceID.toString();
+					const deviceDetails: Omit<DeviceDetails, "url"> = {
+						id,
+						saltId: info.saltID,
+						host: deviceName,
+						name: info.devicename,
+						group: info.groupname,
+						type: "thermal",
+						endpoint,
+						locationSet: false,
+						isProd: !info.serverURL.includes("test"),
+						timeFound: new Date(),
+					};
+					const device: ConnectedDevice = {
+						...deviceDetails,
+						url,
+						isConnected: true,
+						locationSet: false,
+					};
+					return device;
+				}
 			}
+		} catch (error) {
+			console.log("error", error);
 		}
 	};
 
@@ -239,12 +250,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		const connectedDevices: ConnectedDevice[] = [];
 		// Clear devices that have been connected for more than 10 minutes
 		for (const device of devices.values()) {
-			if (device.isConnected) {
-				const timeDiff = new Date().getTime() - device.timeFound.getTime();
-				const tenMinutes = 600000;
-				if (timeDiff > tenMinutes) {
-					devices.delete(device.id);
-				}
+			const timeDiff = new Date().getTime() - device.timeFound.getTime();
+			const tenMinutes = 600000;
+			if (timeDiff > tenMinutes) {
+				devices.delete(device.id);
 			}
 		}
 
@@ -314,7 +323,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	};
 
 	const searchDevice = () => {
-		if (isDiscovering()) return;
 		startDiscovery();
 		setTimeout(async () => {
 			stopDiscovery();
@@ -600,7 +608,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					locationSet: true,
 				});
 				logSuccess({
-					message: `Successfully set location for ${device.name}. Please reset the device.`,
+					message: `Successfully set location for ${device.name}.`,
 					timeout: 6000,
 				});
 			}
@@ -643,6 +651,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			// Make the request to the device.
 			const res = await DevicePlugin.getDeviceLocation({ url });
+
 			// If the request was successful, return the data.
 			if (res.success) {
 				const location = locationSchema.safeParse(JSON.parse(res.data));
@@ -724,6 +733,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			async (data): Promise<Location | null> => {
 				try {
 					const [locations, device] = data;
+					debugger;
 					if (!device || !locations?.length || !device.isConnected) return null;
 					const deviceLocation = await getLocationCoords(device.id);
 					if (!deviceLocation.success) return null;
@@ -817,8 +827,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					if (!withinRange) {
 						devicesToUpdate.push(device.id);
 					}
-					return devicesToUpdate;
 				}
+				return devicesToUpdate;
 			} catch (error) {
 				if (error instanceof Error) {
 					logWarning({
@@ -872,7 +882,19 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			if (res.status !== 200) return [];
 			const networks = WifiNetwork.array().safeParse(JSON.parse(res.data));
 			return networks.success
-				? networks.data.filter((network) => network.SSID)
+				? networks.data
+						.filter((network) => network.SSID)
+						// remove duplicate networks
+						.reduce(
+							(acc, curr) => {
+								const found = acc.find((a) => a.SSID === curr.SSID);
+								if (!found) {
+									acc.push(curr);
+								}
+								return acc;
+							},
+							[] as WifiNetwork[],
+						)
 				: [];
 		} catch (error) {
 			console.log({
@@ -1042,7 +1064,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				},
 			});
 			return res.status === 200
-				? InterfaceSchema.array().parse(JSON.parse(res.data))
+				? InterfaceSchema.array().nullable().parse(JSON.parse(res.data))
 				: [];
 		} catch (error) {
 			console.error(error);
@@ -1089,7 +1111,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				} else {
 					logWarning({
 						message:
-							"Please try again, or connect to 'bushnet' with password 'feathers' in your wifi settings. Alternatively, set up a hotspot named 'Bushnet' password: 'feathers'.",
+							"Please try again, or connect to 'bushnet' with password 'feathers' in your wifi settings. Alternatively, set up a hotspot named 'bushnet' password: 'feathers'.",
 					});
 					setApState("default");
 				}
@@ -1313,21 +1335,22 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		isDiscovering,
 		devicesDownloading,
 		stopSaveItems,
-		locationBeingSet,
 		deviceRecordings,
 		deviceEventKeys,
 		startDiscovery,
 		stopDiscovery,
 		isDeviceConnected,
-		setDeviceToCurrLocation,
 		setRecordingWindow,
 		deleteUploadedRecordings,
 		getDeviceConfig,
-		getLocationByDevice,
 		getEvents,
 		saveItems,
-		getLocationCoords,
 		changeGroup,
+		// Location
+		setDeviceToCurrLocation,
+		locationBeingSet,
+		getLocationCoords,
+		getLocationByDevice,
 		devicesLocToUpdate,
 		shouldDeviceUpdateLocation,
 		// Wifi

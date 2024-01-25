@@ -1,4 +1,10 @@
-import { createEffect, createResource, createSignal, on } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	on,
+	onMount,
+} from "solid-js";
 import { createContextProvider } from "@solid-primitives/context";
 import { Preferences } from "@capacitor/preferences";
 import { logSuccess, logWarning } from "./Notification";
@@ -23,6 +29,7 @@ export type User = z.infer<typeof UserSchema>;
 
 const [UserProvider, useUserContext] = createContextProvider(() => {
 	const nav = useNavigate();
+
 	const [data, { mutate: mutateUser, refetch }] = createResource(async () => {
 		try {
 			const storedUser = await Preferences.get({ key: "user" });
@@ -68,19 +75,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		try {
 			const user = data();
 			if (!user) return;
-			const currUser = UserSchema.parse(user);
-			setServer(currUser.prod ? "prod" : "test");
-			const { token, id, email, refreshToken, prod } = currUser;
-			Preferences.set({
-				key: "user",
-				value: JSON.stringify({
-					token,
-					id,
-					email,
-					refreshToken,
-					prod,
-				}),
-			});
 		} catch (error) {
 			console.error("Error saving user data:", error);
 			logWarning({
@@ -90,6 +84,8 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 	});
 
 	async function logout() {
+		// print stack trace
+		console.trace();
 		await Preferences.set({ key: "user", value: "" });
 		await Preferences.set({ key: "skippedLogin", value: "false" });
 		mutateSkip(false);
@@ -183,30 +179,35 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		}
 	};
 
-	async function getValidUser(user: User): Promise<User | undefined> {
+	async function getValidUser(user: User): Promise<User | null> {
 		try {
 			const { token, refreshToken, email, id } = user;
 			const decodedToken = decodeJWT(token);
-			if (!decodedToken) return;
+			if (!decodedToken) return null;
 			const now = new Date();
 			if (decodedToken.expiresAt.getTime() < now.getTime() + 5000) {
 				return await unbindAndRebind(async () => {
 					const result = await CacophonyPlugin.validateToken({ refreshToken });
 
 					if (result.success) {
-						return {
+						const user: User = {
 							token: result.data.token,
-							refreshToken,
+							refreshToken: result.data.refreshToken,
 							id,
 							email,
 							expiry: result.data.expiry,
 							prod: isProd(),
-						} satisfies User;
+						};
+						Preferences.set({
+							key: "user",
+							value: JSON.stringify(user),
+						});
+						return user;
 					} else {
 						if (result.message.includes("Failed")) {
 							await logout();
 						}
-						return undefined;
+						return null;
 					}
 				});
 			} else {
@@ -214,6 +215,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 			}
 		} catch (error) {
 			console.error("Error in validateCurrToken:", error);
+			return null;
 		}
 	}
 
@@ -233,23 +235,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		} catch (error) {
 			console.error("Error in validateCurrToken:", error);
 		}
-	}
-
-	/**
-	 * Updates the user data.
-	 * @param data The new data to update.
-	 * @param user The current user data.
-	 */
-	function updateUser(data: AuthToken, user: { id: string; email: string }) {
-		const { token, refreshToken, expiry } = data;
-		const updatedUser = {
-			...user,
-			token,
-			refreshToken,
-			expiry,
-			prod: isProd(),
-		};
-		mutateUser(updatedUser);
 	}
 
 	function skip() {
@@ -305,7 +290,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 	const [groups] = createResource(
 		() => [data(), getServerUrl()] as const,
 		async ([_, url]) => {
-			debugger;
 			const user = await getUser();
 			if (!url || !user) return [];
 			const res = await unbindAndRebind(async () => {
@@ -332,6 +316,21 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		},
 	);
 
+	const [dev, setDev] = createSignal(false);
+	onMount(async () => {
+		const dev = await Preferences.get({ key: "dev" });
+		console.log("dev", dev);
+		if (dev.value === "true") {
+			setDev(true);
+		}
+	});
+
+	const toggleDev = () => {
+		setDev(!dev());
+		console.log("dev", dev());
+		Preferences.set({ key: "dev", value: dev() ? "true" : "false" });
+	};
+
 	return {
 		data,
 		groups,
@@ -344,6 +343,8 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		requestDeletion,
 		toggleServer,
 		getServerUrl,
+		dev,
+		toggleDev,
 	};
 });
 

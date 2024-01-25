@@ -39,10 +39,9 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             }
         }.flatMap { validateResponse(it) }
 
-    suspend fun getDeviceInfo(): Either<ApiError, DeviceInfo> =
+    suspend fun getDeviceInfo(): Either<ApiError, String> =
         getRequest("device-info").flatMap { res ->
-            validateResponse<String>(res)
-                .flatMap {decodeToJSON(it)}
+            validateResponse(res)
         }
 
     suspend fun getConfig(): Either<ApiError, String> =
@@ -121,8 +120,8 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
     suspend fun updateRecordingWindow(on: String, off: String): Either<ApiError, String> =
         submitForm("config", Parameters.build {
             append("section", "windows")
-            // Json string of "power-on" and "power-off" times
-            append("config", "{\"power-on\":\"$on\",\"power-off\":\"$off\"}")
+            // Json string of "power-on" and "power-off" times, "start-recording" "stop-recording"
+            append("config", "{\"power-on\":\"$on\",\"power-off\":\"$off\",\"start-recording\":\"$on\",\"stop-recording\":\"$off\"}")
         }).flatMap { validateResponse(it) }
 
     suspend fun updateWifiNetwork(ssid: String, password: String): Either<ApiError, String> =
