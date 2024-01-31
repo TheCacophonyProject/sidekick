@@ -2,7 +2,7 @@ import { Camera, CameraResultType } from "@capacitor/camera";
 import { Dialog as Prompt } from "@capacitor/dialog";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { A, useNavigate, useSearchParams } from "@solidjs/router";
-import { AiFillEdit } from "solid-icons/ai";
+import { AiFillEdit, AiOutlineInfoCircle } from "solid-icons/ai";
 import { BiRegularCurrentLocation, BiSolidError } from "solid-icons/bi";
 import { BsCameraVideoFill } from "solid-icons/bs";
 import {
@@ -61,7 +61,6 @@ import { useUserContext } from "~/contexts/User";
 import { Effect, Stream, pipe } from "effect";
 import { CameraInfo, Frame, Region, Track } from "~/contexts/Device/Camera";
 import { VsArrowSwap } from "solid-icons/vs";
-
 type CameraCanvas = HTMLCanvasElement | undefined;
 const colours = ["#ff0000", "#00ff00", "#ffff00", "#80ffff"];
 
@@ -339,8 +338,11 @@ function CameraSettingsTab() {
 			windows.StopRecording === windowsDefault.StopRecording &&
 			windows.PowerOn === windowsDefault.PowerOn &&
 			windows.PowerOff === windowsDefault.PowerOff
-		)
+		) {
+			console.log("is default");
 			return true;
+		}
+		console.log("is not default");
 		return false;
 	};
 
@@ -354,6 +356,7 @@ function CameraSettingsTab() {
 	};
 
 	const isCustom = () => {
+		console.log(isDefault(), is24Hours());
 		return config.loading ? false : !isDefault() && !is24Hours();
 	};
 
@@ -363,9 +366,7 @@ function CameraSettingsTab() {
 			const on = "12:00";
 			const off = "12:00";
 			const res = await context.setRecordingWindow(id(), on, off);
-			if (res) {
-				console.log("Success");
-			}
+			refetch();
 		} catch (error) {
 			console.log(error);
 		}
@@ -379,9 +380,7 @@ function CameraSettingsTab() {
 			const on = defaults.windows?.PowerOn ?? "-30min";
 			const off = defaults.windows?.PowerOff ?? "+30min";
 			const res = await context.setRecordingWindow(id(), on, off);
-			if (res) {
-				console.log("Success");
-			}
+			refetch();
 		} catch (error) {
 			console.log(error);
 		}
@@ -461,7 +460,7 @@ function CameraSettingsTab() {
 						style={{
 							height: "269px",
 						}}
-						class="h-full bg-slate-50 flex items-center justify-center gap-x-2"
+						class="flex h-full items-center justify-center gap-x-2 bg-slate-50"
 					>
 						<FaSolidSpinner class="animate-spin" size={32} />
 						<p>Starting Camera...</p>
@@ -552,6 +551,17 @@ function CameraSettingsTab() {
 						<label for="custom">Custom</label>
 					</div>
 				</div>
+				<Show when={isDefault() && !showCustom()}>
+					<p class="flex pt-2 text-gray-600">
+						<span class="inline-block">
+							<AiOutlineInfoCircle size={22} />
+						</span>
+						<span class="text-ellipsis px-2">
+							30 minutes before sunrise and 30 minutes after sunset based on the
+							device's location and seasonal timing.
+						</span>
+					</p>
+				</Show>
 				<Show when={showCustom()}>
 					<div>
 						<div class="flex space-x-2 py-2">
@@ -1127,9 +1137,11 @@ function WifiSettingsTab() {
 		}
 	};
 	createEffect(() => {
-		if (wifiNetworks.error) {
-			refetchWifiNetowrks();
-		}
+		on(wifiNetworks, () => {
+			if (wifiNetworks() === null || wifiNetworks.error) {
+				refetchWifiNetowrks();
+			}
+		});
 	});
 
 	// Interval check for current wifi
@@ -1165,91 +1177,130 @@ function WifiSettingsTab() {
 		},
 	);
 
+	const [hasNetworkEndpoints] = createResource(async () => {
+		const hasEndpoint = await context.hasNetworkEndpoints(
+			params.deviceSettings,
+		);
+		console.log("HAS ENDPOINT", hasEndpoint);
+		return hasEndpoint;
+	});
+
+	const LinkToNetwork = () => (
+		<div class="flex w-full items-center justify-center py-2 text-lg text-blue-500">
+			<A href={`/devices/${params.deviceSettings}/wifi-networks`}>
+				Open Network Settings
+			</A>
+		</div>
+	);
+
 	return (
 		<div class="flex w-full  flex-col space-y-2 px-2 py-2">
-			<section class="w-full space-y-2">
-				<FieldWrapper
-					type="custom"
-					title={
-						<div class="flex items-center justify-center gap-x-2">
-							<div
-								classList={{
-									"bg-yellow-300": modemConnectedToInternet.loading,
-									"bg-gray-400": modemConnectedToInternet() === "no-modem",
-									"bg-green-500": modemConnectedToInternet() === "connected",
-									"bg-red-500": modemConnectedToInternet() === "disconnected",
-								}}
-								class="h-2 w-2 rounded-full transition-colors"
-							/>
-							<p>Modem</p>
-						</div>
-					}
-				>
-					<div class="flex h-full w-full items-center justify-between p-2">
-						<p>{hasModem() ? "Connected" : "-"}</p>{" "}
-					</div>
-				</FieldWrapper>
-				<FieldWrapper
-					type="custom"
-					title={
-						<div class="flex items-center justify-center gap-x-2">
-							<div
-								classList={{
-									"bg-yellow-300": wifiConnectedToInternet.loading,
-									"bg-gray-400": wifiConnectedToInternet() === "no-wifi",
-									"bg-green-500": wifiConnectedToInternet() === "connected",
-									"bg-red-500": wifiConnectedToInternet() === "disconnected",
-								}}
-								class="h-2 w-2 rounded-full transition-colors"
-							/>
-							<p>WiFi</p>
-						</div>
-					}
-				>
-					<div class="flex h-full w-full items-center justify-between p-2">
-						<p>{currentWifi()?.SSID !== "" ? currentWifi()?.SSID : "-"}</p>
-					</div>
-				</FieldWrapper>
-			</section>
 			<Show
-				when={currentWifi() || !currentWifi.loading || !currentWifi.error}
+				when={hasNetworkEndpoints.loading}
 				fallback={
+					<Show when={hasNetworkEndpoints()} fallback={LinkToNetwork()}>
+						<section class="w-full space-y-2">
+							<FieldWrapper
+								type="custom"
+								title={
+									<div class="flex items-center justify-center gap-x-2">
+										<div
+											classList={{
+												"bg-yellow-300": modemConnectedToInternet.loading,
+												"bg-gray-400":
+													modemConnectedToInternet() === "no-modem",
+												"bg-green-500":
+													modemConnectedToInternet() === "connected",
+												"bg-red-500":
+													modemConnectedToInternet() === "disconnected",
+											}}
+											class="h-2 w-2 rounded-full transition-colors"
+										/>
+										<p>Modem</p>
+									</div>
+								}
+							>
+								<div class="flex h-full w-full items-center justify-between p-2">
+									<p>{hasModem() ? "Connected" : "-"}</p>{" "}
+								</div>
+							</FieldWrapper>
+							<FieldWrapper
+								type="custom"
+								title={
+									<div class="flex items-center justify-center gap-x-2">
+										<div
+											classList={{
+												"bg-yellow-300": wifiConnectedToInternet.loading,
+												"bg-gray-400": wifiConnectedToInternet() === "no-wifi",
+												"bg-green-500":
+													wifiConnectedToInternet() === "connected",
+												"bg-red-500":
+													wifiConnectedToInternet() === "disconnected",
+											}}
+											class="h-2 w-2 rounded-full transition-colors"
+										/>
+										<p>WiFi</p>
+									</div>
+								}
+							>
+								<div class="flex h-full w-full items-center justify-between p-2">
+									<p>
+										{currentWifi()?.SSID !== "" ? currentWifi()?.SSID : "-"}
+									</p>
+								</div>
+							</FieldWrapper>
+						</section>
+						<Show
+							when={currentWifi() || !currentWifi.loading || !currentWifi.error}
+							fallback={
+								<div class="flex w-full items-center justify-center">
+									<FaSolidSpinner size={28} class="animate-spin" />
+								</div>
+							}
+						>
+							<section class="flex h-64 flex-col space-y-2 overflow-y-auto rounded-md bg-neutral-100 p-2">
+								<For each={wifiNetworks()?.sort(sortWifi)}>
+									{(val) => (
+										<button
+											classList={{
+												"bg-white": currentWifi()?.SSID === val.SSID,
+												"bg-gray-50": currentWifi()?.SSID !== val.SSID,
+											}}
+											class="flex w-full items-center justify-between rounded-md px-4 py-4"
+											onClick={() => setOpenedNetwork(val)}
+										>
+											<div class="flex items-center space-x-2">
+												{getWifiIcon(val.quality)}
+												<span class="">
+													<h1 class="text-slate-900">{val.SSID}</h1>
+													<Show when={val.SSID === currentWifi()?.SSID}>
+														<p class="text-xs text-slate-600">Connected</p>
+													</Show>
+												</span>
+											</div>
+											<Show when={val.SSID !== currentWifi()?.SSID}>
+												<Show
+													when={val.isSecured}
+													fallback={<FaSolidLockOpen />}
+												>
+													<div class="text-gray-800">
+														<FaSolidLock />
+													</div>
+												</Show>
+											</Show>
+										</button>
+									)}
+								</For>
+							</section>
+						</Show>
+					</Show>
+				}
+			>
+				<div>
 					<div class="flex w-full items-center justify-center">
 						<FaSolidSpinner size={28} class="animate-spin" />
 					</div>
-				}
-			>
-				<section class="flex h-64 flex-col space-y-2 overflow-y-auto rounded-md bg-neutral-100 p-2">
-					<For each={wifiNetworks()?.sort(sortWifi)}>
-						{(val) => (
-							<button
-								classList={{
-									"bg-white": currentWifi()?.SSID === val.SSID,
-									"bg-gray-50": currentWifi()?.SSID !== val.SSID,
-								}}
-								class="flex w-full items-center justify-between rounded-md px-4 py-4"
-								onClick={() => setOpenedNetwork(val)}
-							>
-								<div class="flex items-center space-x-2">
-									{getWifiIcon(val.quality)}
-									<span class="">
-										<h1 class="text-slate-900">{val.SSID}</h1>
-										<Show when={val.SSID === currentWifi()?.SSID}>
-											<p class="text-xs text-slate-600">Connected</p>
-										</Show>
-									</span>
-								</div>
-								<Show when={val.SSID !== currentWifi()?.SSID}>
-									<Show when={val.isSecured} fallback={<FaSolidLockOpen />}>
-										<div class="text-gray-800">
-											<FaSolidLock />
-										</div>
-									</Show>
-								</Show>
-							</button>
-						)}
-					</For>
-				</section>
+				</div>
 			</Show>
 			<Portal>
 				<Show when={openedNetwork()}>
@@ -1387,15 +1438,9 @@ function GeneralSettingsTab() {
 	const setGroup = async (v: string) => {
 		const res = await context.changeGroup(id(), v);
 	};
-	const [canUpdate, { refetch }] = createResource(
-		async () => await context.canUpdateDevice(id()),
-	);
-	onMount(() => {
-		const interval = setInterval(() => {
-			refetch();
-		}, 10000);
-
-		onCleanup(() => clearInterval(interval));
+	const [canUpdate] = createResource(async () => {
+		const res = await context.canUpdateDevice(device()?.id ?? "");
+		return res;
 	});
 
 	const [canChangeGroup] = createResource(async () => {
@@ -1407,6 +1452,15 @@ function GeneralSettingsTab() {
 		canChangeGroup() === false
 			? "Device must be connected to WiFi to change group"
 			: "";
+
+	const softwareUpdateMessage = () =>
+		canUpdate.loading
+			? "Checking for update..."
+			: context.isDeviceUpdating(id())
+			  ? "Updating..."
+			  : canUpdate?.()
+				  ? "Software Update"
+				  : "No Update Available";
 
 	return (
 		<div class="flex w-full flex-col space-y-2 px-2 py-4">
@@ -1427,14 +1481,10 @@ function GeneralSettingsTab() {
 					"bg-gray-400 py-2 px-4 text-gray-500 rounded-md": !canUpdate(),
 				}}
 				disabled={!canUpdate?.()}
-				class="flex w-full items-center justify-center space-x-2 rounded-md py-3 text-white bg-blue-500 px-4 "
+				class="flex w-full items-center justify-center space-x-2 rounded-md bg-blue-500 px-4 py-3 text-white "
 				onClick={() => context.updateDevice(id())}
 			>
-				{canUpdate?.()
-					? context.isDeviceUpdating(id())
-						? "Updating..."
-						: "Software Update"
-					: "No Update Available"}
+				{softwareUpdateMessage()}
 			</button>
 			<A
 				class="flex w-full items-center justify-center py-2 text-center text-lg text-blue-600"

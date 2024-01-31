@@ -107,21 +107,24 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 			return;
 		}
 		const { token, refreshToken, expiry } = authUser.data;
-		Preferences.set({ key: "skippedLogin", value: "false" });
-		mutateUser({
+		const user: User = {
 			token,
 			id: authUser.data.id,
 			email,
 			refreshToken,
 			expiry,
 			prod: isProd(),
+		};
+		Preferences.set({ key: "skippedLogin", value: "false" });
+		Preferences.set({
+			key: "user",
+			value: JSON.stringify(user),
 		});
+		mutateUser(user);
 		mutateSkip(false);
 	}
 
-	const [server, setServer] = createSignal<"test" | "prod" | "loading">(
-		"loading",
-	);
+	const [server, setServer] = createSignal<"test" | "prod">("prod");
 	const isProd = () => server() === "prod";
 
 	const [changeServer] = createResource(server, async (server) => {
@@ -198,6 +201,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 							expiry: result.data.expiry,
 							prod: isProd(),
 						};
+						debugger;
 						Preferences.set({
 							key: "user",
 							value: JSON.stringify(user),

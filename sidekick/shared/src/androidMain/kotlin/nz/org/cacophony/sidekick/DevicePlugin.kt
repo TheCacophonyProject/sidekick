@@ -24,7 +24,7 @@ import nz.org.cacophony.sidekick.device.DeviceInterface
 class DevicePlugin: Plugin() {
     private val type = "_cacophonator-management._tcp"
 
-    private lateinit var nsdManager: NsdManager
+    private lateinit var nsdHelper: NsdHelper
     private lateinit var discoveryListener: NsdManager.DiscoveryListener
     private var callQueue: MutableMap<String, CallType> = mutableMapOf()
 
@@ -53,41 +53,22 @@ class DevicePlugin: Plugin() {
         try {
             call.setKeepAlive(true)
             callQueue[call.callbackId] = CallType.DISCOVER
-            multicastLock.acquire()
-            nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-            discoveryListener = object : NsdManager.DiscoveryListener {
-                override fun onDiscoveryStarted(regType: String) {
-                    println("Service discovery started")
+            nsdHelper = object : NsdHelper(context) {
+                override fun onNsdServiceResolved(service: NsdServiceInfo) {
+                    val endpoint = "${service.serviceName}.local"
+                    val result = JSObject()
+                    result.put("endpoint", endpoint)
+                    result.put("host", service.host.hostAddress)
+                    call.resolve(result)
                 }
 
-                override fun onServiceFound(serviceInfo: NsdServiceInfo) {
-                    nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
-                        override fun onServiceResolved(info: NsdServiceInfo) {
-                            val endpoint = "${info.serviceName}.local"
-                            val result = JSObject()
-                            result.put("endpoint", endpoint)
-                            result.put("host", info.host.hostAddress)
-                            call.resolve(result)
-                        }
-
-                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                            call.reject("Resolve failed with error code: $errorCode")
-                        }
-                    })
+                override fun onNsdServiceLost(service: NsdServiceInfo) {
+                    // Handle service loss here if needed
                 }
-
-                override fun onServiceLost(serviceInfo: NsdServiceInfo) {}
-
-                override fun onDiscoveryStopped(serviceType: String) {}
-
-                override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                    call.reject("Discovery failed with error code: $errorCode")
-                }
-
-                override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {}
             }
 
-            nsdManager.discoverServices(type, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
+            nsdHelper.initializeNsd()
+            nsdHelper.discoverServices()
         } catch (e: Exception) {
             call.reject(e.toString())
         }
@@ -99,7 +80,7 @@ class DevicePlugin: Plugin() {
         try {
             val id = call.getString("id") ?: return call.reject("No Id Found")
             bridge.releaseCall(id)
-            nsdManager.stopServiceDiscovery(discoveryListener)
+            nsdHelper.stopDiscovery()
             multicastLock.release()
 
             result.put("success", true)

@@ -879,10 +879,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				},
 			});
 			console.log(res);
-			if (res.status !== 200) return [];
-			const networks = WifiNetwork.array().safeParse(JSON.parse(res.data));
-			return networks.success
-				? networks.data
+			if (res.status !== 200) {
+				return null;
+			}
+			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
+			return networks
+				? networks
 						.filter((network) => network.SSID)
 						// remove duplicate networks
 						.reduce(
@@ -896,11 +898,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							[] as WifiNetwork[],
 						)
 				: [];
-		} catch (error) {
-			console.log({
-				message: "Could not get wifi networks",
-				error,
-			});
+		} catch (e) {
+			console.log(e);
 			return [];
 		}
 	};
@@ -990,7 +989,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							clearInterval(interval);
 						}
 					} catch (e) {
-						console.error(e);
+						console.log(e);
 					}
 				}, 5000);
 			});
@@ -1020,7 +1019,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const connection = ConnectionRes.parse(JSON.parse(res.data)).connected;
 			return connection;
 		} catch (error) {
-			console.error(error);
+			console.log(error);
 			return false;
 		}
 	};
@@ -1038,6 +1037,24 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				},
 			});
 			return ConnectionRes.parse(res.data).connected;
+		} catch (error) {
+			return false;
+		}
+	};
+
+	const hasNetworkEndpoints = async (deviceId: DeviceId) => {
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return false;
+			const { url } = device;
+			const res = await CapacitorHttp.get({
+				url: `${url}/api/network/wifi/current`,
+				headers,
+				webFetchExtra: {
+					credentials: "include",
+				},
+			});
+			return res.status === 200;
 		} catch (error) {
 			return false;
 		}
@@ -1067,7 +1084,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				? InterfaceSchema.array().nullable().parse(JSON.parse(res.data))
 				: [];
 		} catch (error) {
-			console.error(error);
+			console.log(error);
 			return [];
 		}
 	};
@@ -1228,7 +1245,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			if (!res.success) return null;
 			return configSchema.parse(JSON.parse(res.data));
 		} catch (error) {
-			console.error(error);
+			console.log(error);
 			return null;
 		}
 	};
@@ -1245,7 +1262,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const res = await DevicePlugin.updateRecordingWindow({ url, on, off });
 			return res.success;
 		} catch (error) {
-			console.error(error);
+			console.log(error);
 			return null;
 		}
 	};
@@ -1254,7 +1271,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	// Update
 	const updateDevice = async (deviceId: DeviceId) => {
 		try {
-			console.log("updateDevice");
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
 			const { url } = device;
@@ -1266,18 +1282,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				},
 			});
 			if (res.status === 200) {
-				debugger;
 				setIsUpdating((prev) => [...prev, deviceId]);
 				return true;
 			}
 		} catch (error) {
-			console.error(error);
+			console.log(error);
 		}
 		return false;
 	};
 
 	const canUpdateDevice = async (deviceId: DeviceId) => {
 		try {
+			debugger;
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
 			const { url } = device;
@@ -1288,9 +1304,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					credentials: "include",
 				},
 			});
+			debugger;
+			console.log(res);
+
 			return res.status === 200;
 		} catch (error) {
-			console.error(error);
+			console.log(error);
+			return null;
 		}
 	};
 
@@ -1361,6 +1381,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		disconnectFromWifi,
 		checkDeviceWifiInternetConnection,
 		checkDeviceModemInternetConnection,
+		hasNetworkEndpoints,
 		// Access point
 		connectToDeviceAP,
 		apState,

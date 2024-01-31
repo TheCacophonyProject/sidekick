@@ -14,115 +14,122 @@ import { BiSolidCopyAlt } from "solid-icons/bi";
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
 
 const routes = [
-  {
-    path: "/devices",
-    children: [
-      { path: "/", component: lazy(() => import("./routes/devices/index")) },
-      {
-        path: "/:id",
-        component: lazy(() => import("./routes/devices/[...id]")),
-      },
-    ],
-  },
-  {
-    path: "/storage",
-    children: [
-      { path: "/", component: lazy(() => import("./routes/storage")) },
-      {
-        path: "/recordings",
-        component: lazy(() => import("./routes/storage/recordings")),
-      },
-    ],
-  },
-  {
-    path: "/settings",
-    children: [
-      { path: "/", component: lazy(() => import("./routes/settings")) },
-      {
-        path: "/user",
-        component: lazy(() => import("./routes/settings/user")),
-      },
-    ],
-  },
+	{
+		path: "/devices",
+		children: [
+			{ path: "/", component: lazy(() => import("./routes/devices/index")) },
+			{
+				path: "/:id/*",
+				component: lazy(() => import("./routes/devices/[...id]")),
+			},
+		],
+	},
+	{
+		path: "/storage",
+		children: [
+			{ path: "/", component: lazy(() => import("./routes/storage")) },
+			{
+				path: "/recordings",
+				component: lazy(() => import("./routes/storage/recordings")),
+			},
+		],
+	},
+	{
+		path: "/settings",
+		children: [
+			{ path: "/", component: lazy(() => import("./routes/settings")) },
+			{
+				path: "/user",
+				component: lazy(() => import("./routes/settings/user")),
+			},
+		],
+	},
 ];
 
 const AppRoutes = () => {
-  const navigate = useNavigate();
-  createEffect(() => {
-    navigate("/devices", { replace: true });
-  });
-  const context = useUserContext();
-  const Routes = useRoutes(routes);
-  return (
-    <Show
-      when={context?.data() || context?.skippedLogin()}
-      fallback={<Login />}
-    >
-      <Header />
-      <Routes />
-      <NavBar />
-    </Show>
-  );
+	const navigate = useNavigate();
+	createEffect(() => {
+		navigate("/devices", { replace: true });
+	});
+	const context = useUserContext();
+	const Routes = useRoutes(routes);
+	return (
+		<Show
+			when={context?.data() || context?.skippedLogin()}
+			fallback={<Login />}
+		>
+			<Header />
+			<Routes />
+			<NavBar />
+		</Show>
+	);
 };
 
 const writeToClipboard = async (err: unknown) => {
-  await Clipboard.write({
-    string: JSON.stringify(err),
-  });
+	await Clipboard.write({
+		string: JSON.stringify(err),
+	});
 };
 
 export default function Root() {
-  return (
-    <main class="h-screen bg-gray-200">
-      <Router>
-        <ErrorBoundary
-          fallback={(err) => {
-            if (err instanceof Error) {
-              StackTrace.fromError(err).then((stacktrace) => {
-                const message = err.message;
-                FirebaseCrashlytics.recordException({
-                  message,
-                  stacktrace,
-                });
-              });
-            }
-            return (
-              <div class="z-20 flex h-full w-screen flex-col items-center justify-center bg-white">
-                <h1 class="text-2xl font-bold">Something went wrong</h1>
-                <p class="text-lg">Please refresh the page</p>
-                <p class="flex items-center text-center text-lg">
-                  Error:
-                  {err.message ?? "Couldn't get error message"}
-                </p>
-                <div class="flex items-center">
-                  <button
-                    class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
-                    onClick={() => writeToClipboard(err)}
-                  >
-                    <span>Copy</span>
-                    <BiSolidCopyAlt size={18} class="ml-1" />
-                  </button>
-                  <button
-                    class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
-                    onClick={() => window.location.reload()}
-                  >
-                    Reload
-                  </button>
-                </div>
-              </div>
-            );
-          }}
-        >
-          <UserProvider>
-            <StorageProvider>
-              <DeviceProvider>
-                <AppRoutes />
-                <NotificationPopup />
-              </DeviceProvider>
-            </StorageProvider>
-          </UserProvider>
-        </ErrorBoundary>
-      </Router>
-    </main>
-  );
+	return (
+		<main class="h-screen bg-gray-200">
+			<Router>
+				<ErrorBoundary
+					fallback={(err) => {
+						console.trace(err);
+						if (err instanceof Error) {
+							try {
+								StackTrace.fromError(err).then((stacktrace) => {
+									const message = err.message;
+									FirebaseCrashlytics.recordException({
+										message,
+										stacktrace,
+									});
+								});
+							} catch (e) {
+								FirebaseCrashlytics.recordException({
+									message: err.message,
+								});
+							}
+						}
+						return (
+							<div class="z-20 flex h-full w-screen flex-col items-center justify-center bg-white">
+								<h1 class="text-2xl font-bold">Something went wrong</h1>
+								<p class="text-lg">Please refresh the page</p>
+								<p class="flex items-center text-center text-lg">
+									Error:
+									{err.message ?? "Couldn't get error message"}
+								</p>
+								<div class="flex items-center">
+									<button
+										class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
+										onClick={() => writeToClipboard(err)}
+									>
+										<span>Copy</span>
+										<BiSolidCopyAlt size={18} class="ml-1" />
+									</button>
+									<button
+										class="flex items-center rounded-lg px-4 py-1 text-gray-700 shadow-md"
+										onClick={() => window.location.reload()}
+									>
+										Reload
+									</button>
+								</div>
+							</div>
+						);
+					}}
+				>
+					<UserProvider>
+						<StorageProvider>
+							<DeviceProvider>
+								<AppRoutes />
+								<NotificationPopup />
+							</DeviceProvider>
+						</StorageProvider>
+					</UserProvider>
+				</ErrorBoundary>
+			</Router>
+		</main>
+	);
 }
