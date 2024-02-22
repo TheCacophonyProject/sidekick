@@ -3,7 +3,6 @@ package nz.org.cacophony.sidekick.device
 import arrow.core.*
 import io.ktor.client.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.formData
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
@@ -129,5 +128,10 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
             // Json string of "ssid" and "password"
             append("ssid", ssid)
             append("psk", password)
+        }).flatMap { validateResponse(it) }
+
+    suspend fun turnOnModem(minutes: String): Either<ApiError, String> =
+        submitForm("modem-stay-on-for", Parameters.build {
+            append("minutes", minutes.toString())
         }).flatMap { validateResponse(it) }
 }

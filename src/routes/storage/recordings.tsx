@@ -37,21 +37,22 @@ function DeviceRecordingsDisplay(props: DeviceRecordingsProps) {
       <Show when={toggle()}>
         <For each={props.recordings}>
           {(recording) => (
-            <ActionContainer
-              icon={BsCameraVideoFill}
-              action={
-                <button
-                  class="text-blue-500"
-                  onClick={() =>
-                    openRecording(recording.uploadId, recording.isProd)
-                  }
-                >
-                  <RiArrowsArrowRightSLine size={32} />
-                </button>
+            <div
+              onClick={() =>
+                openRecording(recording.uploadId, recording.isProd)
               }
             >
-              {recording.uploadId}
-            </ActionContainer>
+              <ActionContainer
+                icon={BsCameraVideoFill}
+                action={
+                  <button class="text-blue-500">
+                    <RiArrowsArrowRightSLine size={32} />
+                  </button>
+                }
+              >
+                {recording.uploadId}
+              </ActionContainer>
+            </div>
           )}
         </For>
       </Show>

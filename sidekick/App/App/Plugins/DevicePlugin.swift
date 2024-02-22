@@ -74,20 +74,38 @@ public class DevicePlugin: CAPPlugin {
                 bridge.releaseCall(withID: call.callbackId)
                 return
             }
-            
-            if #available(iOS 14.0, *) {
-                NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
-                    if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
-                        // Successfully connected to the desired network
-                        call.resolve(["success": true, "data": "connected"])
-                    } else {
-                        // The device might have connected to a different network
-                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
-                    }
+        }
+        if #available(iOS 14.0, *) {
+            NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
+                if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
+                    // Successfully connected to the desired network
+                    call.resolve(["success": true, "data": "connected"])
+                } else {
+                    // The device might have connected to a different network
+                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
                 }
+            }
+        } else {
+            // Fallback on earlier versions
+            guard let interfaceNames = CNCopySupportedInterfaces() as? [String] else {
+                call.resolve(["success": false, "error": "No interfaces found"])
+                return
+            }
+            
+            let val = interfaceNames.compactMap { name in
+                guard let info = CNCopyCurrentNetworkInfo(name as CFString) as? [String: AnyObject] else {
+                    return nil
+                }
+                
+                guard let ssid = info[kCNNetworkInfoKeySSID as String] as? String else {
+                    return nil
+                }
+                return ssid
+            })
+            if val.contains("bushnet") {
+                call.resolve(["success": true, "data": "connected"])
             } else {
-                // Fallback on earlier versions
-                call.resolve(["success": true, "data": "default"])
+                call.resolve(["success": false, "error": "Did not connect to the desired network"])
             }
         }
     }

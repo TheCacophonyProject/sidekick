@@ -1,5 +1,12 @@
 // @refresh reload
-import { createEffect, ErrorBoundary, lazy, Show, Suspense } from "solid-js";
+import {
+	createEffect,
+	ErrorBoundary,
+	lazy,
+	Match,
+	Show,
+	Suspense,
+} from "solid-js";
 import { Router, useNavigate, useRoutes } from "@solidjs/router";
 import { Clipboard } from "@capacitor/clipboard";
 import NavBar from "./components/NavBar";
@@ -12,6 +19,7 @@ import { StorageProvider } from "./contexts/Storage";
 import NotificationPopup from "./components/NotificationPopup";
 import { BiSolidCopyAlt } from "solid-icons/bi";
 import { FirebaseCrashlytics } from "@capacitor-community/firebase-crashlytics";
+import BackgroundLogo from "./components/BackgroundLogo";
 
 const routes = [
 	{
@@ -46,6 +54,14 @@ const routes = [
 	},
 ];
 
+function LoadingScreen() {
+	return (
+		<div class="flex items-center justify-center h-full w-full">
+			<div class="flex flex-col items-center"></div>
+		</div>
+	);
+}
+
 const AppRoutes = () => {
 	const navigate = useNavigate();
 	createEffect(() => {
@@ -54,13 +70,15 @@ const AppRoutes = () => {
 	const context = useUserContext();
 	const Routes = useRoutes(routes);
 	return (
-		<Show
-			when={context?.data() || context?.skippedLogin()}
-			fallback={<Login />}
-		>
-			<Header />
-			<Routes />
-			<NavBar />
+		<Show when={!context?.data.loading} fallback={<LoadingScreen />}>
+			<Show
+				when={context?.data() || context?.skippedLogin()}
+				fallback={<Login />}
+			>
+				<Header />
+				<Routes />
+				<NavBar />
+			</Show>
 		</Show>
 	);
 };

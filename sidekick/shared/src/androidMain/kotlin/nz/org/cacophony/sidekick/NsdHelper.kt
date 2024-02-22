@@ -101,6 +101,7 @@ abstract class NsdHelper(val context: Context) {
         }
     }
 
+
     // Instantiate DNS-SD resolve listener to get extra information about the service
     private fun initializeResolveListener() {
         resolveListener =  object : NsdManager.ResolveListener {

@@ -13,7 +13,7 @@ import { FaSolidThumbsUp, FaSolidSpinner } from "solid-icons/fa";
 import { BiSolidCopyAlt } from "solid-icons/bi";
 import { VsChevronDown, VsClose } from "solid-icons/vs";
 import { Clipboard } from "@capacitor/clipboard";
-
+import { FiCloudOff } from "solid-icons/fi";
 interface NotificationBarProps {
   notification: Notification;
 }
@@ -25,6 +25,8 @@ function NotificationBar(props: NotificationBarProps) {
         return "border-red-400";
       case "warning":
         return "border-yellow-400";
+      case "sync":
+        return "border-blue-400";
       case "success":
         return "border-green-400";
       case "loading":
@@ -76,6 +78,11 @@ function NotificationBar(props: NotificationBarProps) {
             <Match when={props.notification.type === "loading"}>
               <div class="animate-spin text-blue-400">
                 <FaSolidSpinner size={24} />
+              </div>
+            </Match>
+            <Match when={props.notification.type === "sync"}>
+              <div class="text-blue-400">
+                <FiCloudOff size={24} />
               </div>
             </Match>
           </Switch>

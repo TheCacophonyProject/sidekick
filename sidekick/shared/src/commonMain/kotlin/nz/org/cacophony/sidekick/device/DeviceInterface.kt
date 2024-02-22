@@ -1,8 +1,6 @@
 package nz.org.cacophony.sidekick.device
 
 import arrow.core.flatMap
-import arrow.core.maybe
-import arrow.core.right
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
@@ -13,6 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import nz.org.cacophony.sidekick.*
 import okio.Path.Companion.toPath
+
 
 @Suppress("UNUSED")
 class DeviceInterface(private val filePath: String): CapacitorInterface {
@@ -241,6 +240,24 @@ data class RecordingWindow(val on: String, val off: String)
                 call.validateCall<Wifi>("ssid", "password")
                     .map { wifi ->
                         deviceApi.updateWifiNetwork(wifi.ssid, wifi.password)
+                            .fold(
+                                { error -> call.failure(error.toString()) },
+                                {
+                                    call.success()
+                                }
+                            )
+                    }
+            }
+    }
+
+    @Serializable
+    data class TurnOnModem(val minutes: String)
+    fun turnOnModem(call: PluginCall) = runCatch(call) {
+        getDeviceFromCall(call)
+            .map { deviceApi ->
+                call.validateCall<TurnOnModem>("minutes")
+                    .map { modem ->
+                        deviceApi.turnOnModem(modem.minutes)
                             .fold(
                                 { error -> call.failure(error.toString()) },
                                 {

@@ -140,21 +140,23 @@ export default function Storage() {
           </span>
         </p>
       </ActionContainer>
-      <ActionContainer icon={ImLocation} header="Test Locations">
-        <p class="flex items-center text-gray-800">
-          <span class="w-32">
-            Needs to Sync:{" "}
-            {storage
-              .savedLocations()
-              ?.filter(
-                (loc) =>
-                  loc.deletePhotos?.length ||
-                  loc.updateName ||
-                  loc.uploadPhotos?.length
-              ).length ?? 0}{" "}
-          </span>
-        </p>
-      </ActionContainer>
+      <Show when={!user.isProd()}>
+        <ActionContainer icon={ImLocation} header="Test Locations">
+          <p class="flex items-center text-gray-800">
+            <span class="w-32">
+              Needs to Sync:{" "}
+              {storage
+                .savedLocations()
+                ?.filter(
+                  (loc) =>
+                    loc.deletePhotos?.length ||
+                    loc.updateName ||
+                    loc.uploadPhotos?.length
+                ).length ?? 0}{" "}
+            </span>
+          </p>
+        </ActionContainer>
+      </Show>
 
       <div class="pb-bar fixed inset-x-0 bottom-2 mx-auto flex justify-center">
         <CircleButton

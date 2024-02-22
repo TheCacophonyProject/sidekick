@@ -52,6 +52,7 @@
     "@capacitor/filesystem": "^5.1.4",
     "@capacitor/geolocation": "^5.0.6",
     "@capacitor/ios": "^5.5.1",
+    "@capacitor/network": "^5.0.7",
     "@capacitor/preferences": "^5.0.6",
     "@motionone/solid": "^10.16.4",
     "@solid-primitives/context": "^0.2.1",

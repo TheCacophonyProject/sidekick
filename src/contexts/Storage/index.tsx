@@ -1,11 +1,12 @@
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import { CapacitorSQLite, SQLiteConnection } from "@capacitor-community/sqlite";
 import { createContextProvider } from "@solid-primitives/context";
-import { createSignal } from "solid-js";
+import { createEffect, createResource, createSignal, on } from "solid-js";
 import { openConnection } from "../../database";
 import { useEventStorage } from "./event";
 import { useLocationStorage } from "./location";
 import { useRecordingStorage } from "./recording";
+import { Network } from "@capacitor/network";
 
 const DatabaseName = "Cacophony";
 
@@ -50,6 +51,17 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       location.hasItemsToUpload()
     );
   };
+
+  const [upload] = createResource(hasItemsToUpload, async (hasItems) => {
+    try {
+      const status = await Network.getStatus();
+      if (status.connectionType === "wifi" && hasItems) {
+        uploadItems();
+      }
+    } catch (error) {
+      console.error("Error getting network status:", error);
+    }
+  });
 
   return {
     ...recording,

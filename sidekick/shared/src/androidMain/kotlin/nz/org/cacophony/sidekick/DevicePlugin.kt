@@ -177,6 +177,30 @@ class DevicePlugin: Plugin() {
         }
     }
 
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    fun disconnectFromDeviceAP(call: PluginCall) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                cm?.bindProcessToNetwork(null)
+                currNetworkCallback?.let { cm?.unregisterNetworkCallback(it) }
+                val result = JSObject()
+                result.put("success", true)
+                result.put("data", "Disconnected from device AP")
+                call.resolve(result)
+            } else {
+                val result = JSObject()
+                result.put("success", false)
+                result.put("message", "Failed to disconnect from device AP")
+                call.resolve(result)
+            }
+        } catch (e: Exception) {
+            val result = JSObject()
+            result.put("success", false)
+            result.put("message", e.message)
+            call.resolve(result)
+        }
+    }
+
     @ActivityCallback
     fun connectToWifi(call: PluginCall, result: ActivityResult) {
         if (result.resultCode == RESULT_OK) {
@@ -303,4 +327,8 @@ class DevicePlugin: Plugin() {
         device.updateWifi(pluginCall(call))
     }
 
+    @PluginMethod
+    fun turnOnModem(call: PluginCall) {
+        device.turnOnModem(pluginCall(call))
+    }
 }
