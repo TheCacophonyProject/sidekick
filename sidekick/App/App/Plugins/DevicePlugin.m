@@ -23,6 +23,7 @@ CAP_PLUGIN(DevicePlugin, "Device",
            CAP_PLUGIN_METHOD(deleteRecording, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(deleteRecordings, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(downloadRecording, CAPPluginReturnPromise);
+           CAP_PLUGIN_METHOD(updateRecordingWindow, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(unbindConnection, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(rebindConnection, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(hasConnection, CAPPluginReturnPromise);

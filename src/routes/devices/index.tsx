@@ -468,172 +468,172 @@ function CameraSettingsTab() {
     return true;
   };
 
-  return (
-    <section>
-      <Show
-        when={isRecieving()}
-        fallback={
-          <div
-            style={{
-              height: "269px",
-            }}
-            class="flex h-full items-center justify-center gap-x-2 bg-slate-50"
-          >
-            <FaSolidSpinner class="animate-spin" size={32} />
-            <p>Starting Camera...</p>
-          </div>
-        }
-      >
-        <div class="relative">
-          <canvas
-            ref={frameCanvas}
-            id="frameCanvas"
-            width="160"
-            height="120"
-            class="w-full"
-          />
-          <canvas
-            ref={trackCanvas}
-            id="trackCanvas"
-            width="160"
-            height="120"
-            class="absolute left-0 top-0 z-10 w-full"
-          />
-        </div>
-      </Show>
-      <button
-        ref={triggerTrap}
-        style="position: relative;display: none"
-        type="button"
-      >
-        Trigger trap
-      </button>
-      <button
-        class="flex w-full items-center justify-center space-x-2 rounded-b-lg bg-blue-500 py-3 text-white"
-        onClick={() => createTestRecording()}
-        disabled={recording()}
-      >
-        <Switch>
-          <Match when={recording()}>
-            <p>Recording...</p>
-            <FaSolidSpinner class="animate-spin" size={24} />
-          </Match>
-          <Match when={result() === "success"}>
-            <p>Success!</p>
-            <FaSolidCheck size={24} />
-          </Match>
-          <Match when={result() === "failed"}>
-            <ImCross size={12} />
-          </Match>
-          <Match when={!recording() && !result()}>
-            <p>Test Recording</p>
-            <FaSolidVideo size={24} />
-          </Match>
-        </Switch>
-      </button>
-      <div class="px-6 py-2">
-        <h1 class="font-semibold text-gray-800">Recording Window</h1>
-        <div class="flex w-full justify-between">
-          <div class="flex items-center gap-x-2">
-            <input
-              id="default"
-              type="radio"
-              name="recording-window"
-              value="default"
-              checked={isDefault()}
-              onChange={() => setToDefault()}
-            />
-            <label for="default">Default</label>
-          </div>
-          <div class="flex items-center gap-x-2">
-            <input
-              id="24-hours"
-              type="radio"
-              name="recording-window"
-              value="24-hours"
-              checked={is24Hours()}
-              onChange={() => setTo24Hours()}
-            />
-            <label for="24-hours">24 Hours</label>
-          </div>
-          <div class="flex items-center gap-x-2">
-            <input
-              id="custom"
-              type="radio"
-              name="recording-window"
-              value="custom"
-              checked={isCustom()}
-              onChange={() => setShowCustom(true)}
-            />
-            <label for="custom">Custom</label>
-          </div>
-        </div>
-        <Show when={isDefault() && !showCustom()}>
-          <p class="flex pt-2 text-gray-600">
-            <span class="inline-block">
-              <AiOutlineInfoCircle size={22} />
-            </span>
-            <span class="text-ellipsis px-2">
-              30 minutes before sunrise and 30 minutes after sunset based on the
-              device's location and seasonal timing.
-            </span>
-          </p>
-        </Show>
-        <Show when={showCustom()}>
-          <div>
-            <div class="flex space-x-2 py-2">
-              <input
-                id="lower"
-                name="upper"
-                type="time"
-                class="rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
-                value={lowerTimeStr()}
-                onChange={(e) => {
-                  const value = timeToPercent(e.target.value);
-                  setLowerTime(value);
-                }}
-              />
-              <div
-                onClick={() => {
-                  const lower = lowerTime();
-                  const upper = upperTime();
-                  setLowerTime(upper);
-                  setUpperTime(lower);
-                }}
-                class="flex h-8 w-8 items-center justify-center rounded-full border border-2 border-slate-50 shadow-md"
-              >
-                <div class="p-2">
-                  <VsArrowSwap size={18} />
-                </div>
-              </div>
-              <input
-                id="upper"
-                name="upper"
-                type="time"
-                class="rounded-r bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none"
-                value={upperTimeStr()}
-                onChange={(e) => {
-                  const value = timeToPercent(e.target.value);
-                  setUpperTime(value);
-                }}
-              />
-            </div>
-            <button
-              classList={{
-                "bg-blue-500 py-2 px-4 text-white": !saveIsDisabled(),
-                "bg-gray-400 py-2 px-4 text-gray-500": saveIsDisabled(),
-              }}
-              class="flex w-full items-center justify-center space-x-2 rounded-lg  py-3 text-white"
-              onClick={() => saveCustomWindow()}
-              disabled={saveIsDisabled()}
-            >
-              {saving() ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </Show>
-      </div>
-    </section>
-  );
+	return (
+		<section>
+			<Show
+				when={isRecieving()}
+				fallback={
+					<div
+						style={{
+							height: "269px",
+						}}
+						class="flex h-full items-center justify-center gap-x-2 bg-slate-50"
+					>
+						<FaSolidSpinner class="animate-spin" size={32} />
+						<p>Starting Camera...</p>
+					</div>
+				}
+			>
+				<div class="relative">
+					<canvas
+						ref={frameCanvas}
+						id="frameCanvas"
+						width="160"
+						height="120"
+						class="w-full"
+					/>
+					<canvas
+						ref={trackCanvas}
+						id="trackCanvas"
+						width="160"
+						height="120"
+						class="absolute left-0 top-0 z-10 w-full"
+					/>
+				</div>
+			</Show>
+			<button
+				ref={triggerTrap}
+				style="position: relative;display: none"
+				type="button"
+			>
+				Trigger trap
+			</button>
+			<button
+				class="flex w-full items-center justify-center space-x-2 rounded-b-lg bg-blue-500 py-3 text-white"
+				onClick={() => createTestRecording()}
+				disabled={recording()}
+			>
+				<Switch>
+					<Match when={recording()}>
+						<p>Recording...</p>
+						<FaSolidSpinner class="animate-spin" size={24} />
+					</Match>
+					<Match when={result() === "success"}>
+						<p>Success!</p>
+						<FaSolidCheck size={24} />
+					</Match>
+					<Match when={result() === "failed"}>
+						<ImCross size={12} />
+					</Match>
+					<Match when={!recording() && !result()}>
+						<p>Test Recording</p>
+						<FaSolidVideo size={24} />
+					</Match>
+				</Switch>
+			</button>
+			<div class="px-6 py-2">
+				<h1 class="font-semibold text-gray-800">Recording Window</h1>
+				<div class="flex w-full justify-between">
+					<div class="flex items-center gap-x-2">
+						<input
+							id="default"
+							type="radio"
+							name="recording-window"
+							value="default"
+							checked={isDefault()}
+							onChange={() => setToDefault()}
+						/>
+						<label for="default">Default</label>
+					</div>
+					<div class="flex items-center gap-x-2">
+						<input
+							id="24-hours"
+							type="radio"
+							name="recording-window"
+							value="24-hours"
+							checked={is24Hours()}
+							onChange={() => setTo24Hours()}
+						/>
+						<label for="24-hours">24 Hours</label>
+					</div>
+					<div class="flex items-center gap-x-2">
+						<input
+							id="custom"
+							type="radio"
+							name="recording-window"
+							value="custom"
+							checked={isCustom()}
+							onChange={() => setShowCustom(true)}
+						/>
+						<label for="custom">Custom</label>
+					</div>
+				</div>
+				<Show when={isDefault() && !showCustom()}>
+					<p class="flex pt-2 text-gray-600">
+						<span class="inline-block">
+							<AiOutlineInfoCircle size={22} />
+						</span>
+						<span class="text-ellipsis px-2">
+							30 minutes before sunrise and 30 minutes after sunset based on the
+							device's location and seasonal timing.
+						</span>
+					</p>
+				</Show>
+				<Show when={showCustom()}>
+					<div >
+						<div class="flex space-x-2 py-2 items-center justify-center py-4">
+							<input
+								id="lower"
+								name="upper"
+								type="time"
+								class="rounded-l bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none w-24"
+								value={lowerTimeStr()}
+								onChange={(e) => {
+									const value = timeToPercent(e.target.value);
+									setLowerTime(value);
+								}}
+							/>
+							<div
+								onClick={() => {
+									const lower = lowerTime();
+									const upper = upperTime();
+									setLowerTime(upper);
+									setUpperTime(lower);
+								}}
+								class="flex h-8 w-8 items-center justify-center rounded-full border border-2 border-slate-50 shadow-md"
+							>
+								<div class="p-2">
+									<VsArrowSwap size={18} />
+								</div>
+							</div>
+							<input
+								id="upper"
+								name="upper"
+								type="time"
+								class="rounded-r bg-slate-50 py-2 pl-2 text-sm text-gray-800 outline-none w-24"
+								value={upperTimeStr()}
+								onChange={(e) => {
+									const value = timeToPercent(e.target.value);
+									setUpperTime(value);
+								}}
+							/>
+						</div>
+						<button
+							classList={{
+								"bg-blue-500 py-2 px-4 text-white": !saveIsDisabled(),
+								"bg-gray-400 py-2 px-4 text-gray-500": saveIsDisabled(),
+							}}
+							class="flex w-full items-center justify-center space-x-2 rounded-lg  py-3 text-white"
+							onClick={() => saveCustomWindow()}
+							disabled={saveIsDisabled()}
+						>
+							{saving() ? "Saving..." : "Save"}
+						</button>
+					</div>
+				</Show>
+			</div>
+		</section>
+	);
 }
 
 function LocationSettingsTab() {
@@ -1828,61 +1828,61 @@ function DeviceSettingsModal() {
     return deviceName;
   };
 
-  return (
-    <Show when={show()}>
-      <div class="fixed left-1/2 top-24 z-40 h-auto w-11/12 -translate-x-1/2 transform rounded-xl border bg-white shadow-lg">
-        <header class="flex justify-between px-4">
-          <div class="flex items-center py-4">
-            <Show
-              when={!isConnected()}
-              fallback={<BsCameraVideoFill size={32} />}
-            >
-              <TbPlugConnectedX size={32} />
-            </Show>
-            <h1 class="pl-2 text-lg font-medium text-slate-600">
-              {deviceName()}
-            </h1>
-          </div>
-          <button onClick={() => clearParams()} class="text-gray-500">
-            <ImCross size={12} />
-          </button>
-        </header>
-        <nav class="flex w-full justify-between">
-          <For each={navItems()}>
-            {(nav) => (
-              <button
-                classList={{
-                  "text-green-400": currTab() === nav,
-                  "bg-gray-100 text-slate-400": currTab() !== nav,
-                }}
-                class="w-full px-2 py-4"
-                onClick={() => setCurrNav(nav)}
-              >
-                {nav}
-              </button>
-            )}
-          </For>
-        </nav>
-        <Switch>
-          <Match when={currTab() === "General"}>
-            <GeneralSettingsTab />
-          </Match>
-          <Match when={currTab() === "Network"}>
-            <WifiSettingsTab />
-          </Match>
-          <Match when={currTab() === "Location"}>
-            <LocationSettingsTab />
-          </Match>
-          <Match when={currTab() === "Camera"}>
-            <CameraSettingsTab />
-          </Match>
-          <Match when={currTab() === "Audio" && user.dev()}>
-            <AudioSettingsTab />
-          </Match>
-        </Switch>
-      </div>
-    </Show>
-  );
+	return (
+		<Show when={show()}>
+			<div class="fixed left-1/2 top-24 z-40 h-auto w-11/12 -translate-x-1/2 transform rounded-xl border bg-white shadow-lg">
+				<header class="flex justify-between px-4">
+					<div class="flex items-center py-4">
+						<Show
+							when={!isConnected()}
+							fallback={<BsCameraVideoFill size={32} />}
+						>
+							<TbPlugConnectedX size={32} />
+						</Show>
+						<h1 class="pl-2 text-lg font-medium text-slate-600">
+							{deviceName()}
+						</h1>
+					</div>
+					<button onClick={() => clearParams()} class="text-gray-500">
+						<ImCross size={12} />
+					</button>
+				</header>
+				<nav class="flex w-full justify-between">
+					<For each={navItems()}>
+						{(nav) => (
+							<button
+								classList={{
+									"text-green-400": currTab() === nav,
+									"bg-gray-100 text-slate-400": currTab() !== nav,
+								}}
+								class="w-full px-2 py-4"
+								onClick={() => setCurrNav(nav)}
+							>
+								{nav}
+							</button>
+						)}
+					</For>
+				</nav>
+				<Switch>
+					<Match when={currTab() === "General"}>
+						<GeneralSettingsTab />
+					</Match>
+					<Match when={currTab() === "Network"}>
+						<WifiSettingsTab />
+					</Match>
+					<Match when={currTab() === "Location"}>
+						<LocationSettingsTab />
+					</Match>
+					<Match when={currTab() === "Camera"}>
+						<CameraSettingsTab />
+					</Match>
+					<Match when={currTab() === "Audio" && user.dev()}>
+						<AudioSettingsTab />
+					</Match>
+				</Switch>
+			</div>
+		</Show>
+	);
 }
 
 interface DeviceDetailsProps {

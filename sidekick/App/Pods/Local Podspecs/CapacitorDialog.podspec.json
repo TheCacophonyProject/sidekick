@@ -1,13 +1,13 @@
 {
   "name": "CapacitorDialog",
-  "version": "5.0.2",
+  "version": "5.0.6",
   "summary": "The Dialog API provides methods for triggering native dialog windows for alerts, confirmations, and input prompts",
   "license": "MIT",
   "homepage": "https://capacitorjs.com",
   "authors": "Ionic <hi@ionicframework.com>",
   "source": {
     "git": "https://github.com/ionic-team/capacitor-plugins.git",
-    "tag": "@capacitor/dialog@5.0.2"
+    "tag": "@capacitor/dialog@5.0.6"
   },
   "source_files": [
     "ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}",

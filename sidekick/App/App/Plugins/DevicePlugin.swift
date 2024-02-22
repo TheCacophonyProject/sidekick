@@ -64,9 +64,10 @@ public class DevicePlugin: CAPPlugin {
     
     @objc func connectToDeviceAP(_ call: CAPPluginCall) {
         guard let bridge = self.bridge else { return call.reject("Could not access bridge") }
-        configuration.joinOnce = true
         call.keepAlive = true
         callQueue[call.callbackId] = .discover
+        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
+        configuration.joinOnce = true
         
         NEHotspotConfigurationManager.shared.apply(configuration) { error in
             if let error = error {
@@ -152,6 +153,11 @@ public class DevicePlugin: CAPPlugin {
     @objc func deleteRecordings(_ call: CAPPluginCall) {
         device.deleteRecordings(call: pluginCall(call: call))
     }
+
+    @objc func updateRecordingWindow(_ call: CAPPluginCall) {
+        device.updateRecordingWindow(call: pluginCall(call: call))
+    }
+    
     @objc func unbindConnection(_ call: CAPPluginCall) {
         call.resolve()
     }
