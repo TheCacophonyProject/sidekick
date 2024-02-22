@@ -607,10 +607,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           message: `Successfully set location for ${device.name}.`,
           timeout: 6000,
         });
-        const [params, setParams] = useSearchParams();
-        if (locationBeingSet.size === 1) {
-          setParams({ deviceSettings: device.id, tab: "location" });
-        }
       }
       locationBeingSet.delete(device.id);
     } catch (error) {

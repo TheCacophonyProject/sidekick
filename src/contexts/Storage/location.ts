@@ -73,7 +73,6 @@ export const isWithinRange = (
 
 export function useLocationStorage() {
   const userContext = useUserContext();
-  const device = useDevice();
   type ServerLocation = ApiLocation & { isProd: boolean };
   const message =
     "Could not to get locations. Please check your internet connection and you are logged in.";

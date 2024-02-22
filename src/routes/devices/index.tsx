@@ -2127,6 +2127,7 @@ function Devices() {
     });
   });
 
+  const [, setParams] = useSearchParams();
   const [isDialogOpen, setIsDialogOpen] = createSignal(false);
   createEffect(
     on(
@@ -2170,9 +2171,7 @@ function Devices() {
           for (const device of devicesToUpdate) {
             await context.setDeviceToCurrLocation(device);
           }
-          if (devicesToUpdate.length === 1) {
-            return devicesToUpdate[0];
-          }
+          setParams({ deviceSettings: devicesToUpdate[0], tab: "Location" });
         } else {
           setPromptCancel(true);
         }
