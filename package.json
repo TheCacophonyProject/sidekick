@@ -70,7 +70,7 @@
     "solid-js": "^1.8.6",
     "sql.js": "^1.9.0",
     "stacktrace-js": "^2.0.2",
-    "undici": "^5.28.1",
+    "undici": "^5.28.3",
     "zod": "^3.22.4"
   },
   "engines": {
