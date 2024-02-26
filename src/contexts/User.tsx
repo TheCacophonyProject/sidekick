@@ -227,6 +227,33 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     }
   }
 
+  const CreateGroupResSchema = z.object({
+    success: z.boolean(),
+    messages: z.array(z.string()),
+  });
+
+  async function createGroup(groupName: string) {
+    const user = await getUser();
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const res = await unbindAndRebind(async () => {
+      return await CapacitorHttp.request({
+        method: "POST",
+        url: `${getServerUrl()}/api/v1/groups`,
+        headers: {
+          Authorization: user.token,
+          "Content-Type": "application/json",
+        },
+        data: {
+          groupName,
+        },
+      });
+    });
+    const result = CreateGroupResSchema.parse(res.data);
+    return result;
+  }
+
   async function getUser(warn = false): Promise<User | undefined | null> {
     try {
       if (data.loading) return;
@@ -293,7 +320,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
       messages: z.array(z.string()),
     }),
   ]);
-  const [groups] = createResource(
+  const [groups, { refetch: refetchGroups }] = createResource(
     () => [data(), getServerUrl()] as const,
     async ([_, url]) => {
       const user = await getUser();
@@ -325,7 +352,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
   const [dev, setDev] = createSignal(false);
   onMount(async () => {
     const dev = await Preferences.get({ key: "dev" });
-    console.log("dev", dev);
     if (dev.value === "true") {
       setDev(true);
     }
@@ -333,19 +359,20 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 
   const toggleDev = () => {
     setDev(!dev());
-    console.log("dev", dev());
     Preferences.set({ key: "dev", value: dev() ? "true" : "false" });
   };
 
   return {
     data,
     groups,
+    refetchGroups,
     skippedLogin,
     getUser,
     isProd,
     login,
     logout,
     skip,
+    createGroup,
     requestDeletion,
     toggleServer,
     getServerUrl,

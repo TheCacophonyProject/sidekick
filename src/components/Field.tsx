@@ -1,26 +1,25 @@
+import { AiFillEdit } from "solid-icons/ai";
 // FieldWrapper.tsx
 import { BiSolidGroup } from "solid-icons/bi";
 import { ImCross } from "solid-icons/im";
 import {
   Component,
-  Match,
-  Show,
   For,
   JSX,
+  Match,
+  Show,
   Switch,
-  createSignal,
   createEffect,
-  onMount,
-  onCleanup,
+  createSignal,
+  on,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { TiPlus, TiTick } from "solid-icons/ti";
-import { AiFillEdit } from "solid-icons/ai";
 type DropdownOption = string | { value: string; element: JSX.Element };
 type DropdownInputProps = {
   value: string;
   options: DropdownOption[];
   onChange: (value: string) => Promise<void>;
+  shouldOpen?: () => Promise<boolean>;
   disabled: boolean;
   message?: string;
 };
@@ -29,7 +28,6 @@ type DropdownInputProps = {
 const DropdownInput: Component<DropdownInputProps> = (props) => {
   const [open, setOpen] = createSignal(false);
   const [search, setSearch] = createSignal("");
-  let input: HTMLInputElement | undefined;
   let options: HTMLDivElement | undefined;
   const items = () =>
     props.options.map((option) =>
@@ -40,24 +38,48 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
       option.toLowerCase().includes(search().toLowerCase())
     );
   const [showOptions, setShowOptions] = createSignal(false);
-  const [saving, setSaving] = createSignal(false);
-  const saveText = () => (saving() ? "Saving..." : "Save");
+  const [saving, setSaving] = createSignal<"saving" | "saved" | "error" | null>(
+    null
+  );
+  const [error, setError] = createSignal("");
+  createEffect(() => {
+    on(
+      () => search(),
+      () => {
+        setError("");
+      }
+    );
+  });
+  const saveText = () =>
+    saving() === "saving"
+      ? "Saving..."
+      : saving() === "saved"
+      ? "Saved"
+      : "Save";
 
   const disabled = () =>
     props.disabled ||
     search() === props.value ||
-    saving() ||
-    !search() ||
-    (Boolean(search()) && notAvailable());
+    saving() === "saving" ||
+    !search();
 
-  const notAvailable = () =>
+  const newGroup = () =>
     search() !== props.value && !items().includes(search());
-  const existing = () => search() !== props.value && items().includes(search());
+  createEffect(() => {
+    if (open()) {
+      props.shouldOpen?.();
+    }
+  });
+
   return (
     <>
       <div
         class="flex w-full items-center justify-between pl-2"
-        onClick={() => setOpen(!open())}
+        onClick={async () => {
+          if (!open() && (await props.shouldOpen?.())) {
+            setOpen(!open());
+          }
+        }}
       >
         <span>{props.value}</span>
         <span class="mr-4 text-gray-500">
@@ -96,23 +118,21 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
                         Current
                       </p>
                     </Match>
-                    <Match when={notAvailable()}>
-                      <p class="flex items-center space-x-2 rounded-md px-2 text-red-500 outline outline-2 outline-red-500">
-                        Not available
-                      </p>
-                    </Match>
-                    <Match when={existing()}>
-                      <p class="flex items-center space-x-2 rounded-md px-2 text-gray-500 outline outline-2 outline-gray-500">
-                        Existing
+                    <Match when={newGroup()}>
+                      <p class="flex items-center space-x-2 rounded-md px-2 text-blue-500 outline outline-2 outline-blue-500">
+                        New
                       </p>
                     </Match>
                   </Switch>
                 </Show>
               </div>
-              <Show when={search() && notAvailable()}>
-                <p class="pb-1 text-sm text-red-500">
-                  Please create group on cacophony browse first.
+              <Show when={saving() === "saved"}>
+                <p class="pb-1 text-sm text-green-500">
+                  Please reset the device to take effect.
                 </p>
+              </Show>
+              <Show when={error()}>
+                <p class="pb-1 text-sm text-red-500">{error()}</p>
               </Show>
               <div class="flex items-center space-x-2">
                 <div class="relative flex w-full items-center">
@@ -133,11 +153,16 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
                   disabled={disabled()}
                   onClick={async () => {
                     try {
-                      setSaving(true);
+                      setError("");
+                      setSaving("saving");
                       await props.onChange(search());
-                      setSaving(false);
+                      setSaving("saved");
                     } catch (error) {
-                      setSaving(false);
+                      console.error(error);
+                      setSaving("error");
+                      if (error instanceof Error) {
+                        setError(error.message);
+                      }
                     }
                   }}
                 >
@@ -182,6 +207,8 @@ type FieldWrapperDropdownProps = FieldWrapper & {
   type: "dropdown";
   options: DropdownOption[];
   onChange: (value: string) => Promise<void>;
+  shouldOpen?: () => Promise<boolean>;
+  error?: string;
   disabled: boolean;
   message?: string;
 };
@@ -232,6 +259,7 @@ const FieldWrapper: Component<
               options={val().options}
               value={val().value}
               onChange={val().onChange}
+              shouldOpen={val().shouldOpen}
               disabled={val().disabled}
               message={val().message}
             />

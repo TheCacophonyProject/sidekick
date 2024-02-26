@@ -119,13 +119,11 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
     suspend fun updateRecordingWindow(on: String, off: String): Either<ApiError, String> =
         submitForm("config", Parameters.build {
             append("section", "windows")
-            // Json string of "power-on" and "power-off" times, "start-recording" "stop-recording"
             append("config", "{\"power-on\":\"$on\",\"power-off\":\"$off\",\"start-recording\":\"$on\",\"stop-recording\":\"$off\"}")
         }).flatMap { validateResponse(it) }
 
     suspend fun updateWifiNetwork(ssid: String, password: String): Either<ApiError, String> =
         submitForm("wifi-networks", Parameters.build {
-            // Json string of "ssid" and "password"
             append("ssid", ssid)
             append("psk", password)
         }).flatMap { validateResponse(it) }

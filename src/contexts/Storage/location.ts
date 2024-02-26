@@ -626,9 +626,15 @@ export function useLocationStorage() {
           settings.name ??
           `New Location ${settings.groupName} ${new Date().toISOString()}`;
         if (tries > 0) name = `${name}(${Math.floor(Math.random() * 1000)})`;
-        while (savedLocations()?.some((loc: Location) => loc.name === name)) {
+        while (
+          savedLocations()?.some(
+            (loc: Location) =>
+              loc.name === name && loc.groupName === settings.groupName
+          )
+        ) {
           name = `${name}(${Math.floor(Math.random() * 100)})`;
         }
+        debugger;
         const res = await CacophonyPlugin.createStation({
           token: user.token,
           name,

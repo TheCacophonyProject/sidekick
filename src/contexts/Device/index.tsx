@@ -8,8 +8,8 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { createStore } from "solid-js/store";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
-import { createEffect, createResource, createSignal, on } from "solid-js";
-import { set, z } from "zod";
+import { createEffect, createResource, createSignal } from "solid-js";
+import { z } from "zod";
 import { GoToPermissions } from "~/components/GoToPermissions";
 import { Coords, Location } from "~/database/Entities/Location";
 import { CallbackId, Res, Result, URL } from "..";
@@ -17,8 +17,6 @@ import { logError, logSuccess, logWarning } from "../Notification";
 import { useStorage } from "../Storage";
 import { isWithinRange } from "../Storage/location";
 import DeviceCamera from "./Camera";
-import { connected } from "process";
-import { useSearchParams } from "@solidjs/router";
 
 const WifiNetwork = z
   .object({
@@ -262,7 +260,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
             devices.set(device.id, currDevice);
             clearUploaded(currDevice);
             connectedDevices.push(currDevice);
-            return;
+            continue;
           }
         }
       }
@@ -293,6 +291,16 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           );
 
           if (connectedDevice) {
+            // Remove any devices with the same saltId
+            for (const device of devices.values()) {
+              if (
+                !device.isConnected &&
+                device.saltId === connectedDevice.saltId
+              ) {
+                devices.delete(device.id);
+                break;
+              }
+            }
             devices.set(connectedDevice.id, connectedDevice);
             clearUploaded(connectedDevice);
             return;
@@ -768,26 +776,24 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     return res.success;
   };
 
-  const [permission, { refetch: refetchLocationPermission }] = createResource(
-    async () => {
-      try {
-        let permission = await Geolocation.checkPermissions();
-        if (
-          permission.location === "denied" ||
-          permission.location === "prompt" ||
-          permission.location === "prompt-with-rationale"
-        ) {
-          permission = await Geolocation.requestPermissions();
-          if (permission.location === "prompt-with-rationale") {
-            permission = await Geolocation.checkPermissions();
-          }
+  const [permission] = createResource(async () => {
+    try {
+      let permission = await Geolocation.checkPermissions();
+      if (
+        permission.location === "denied" ||
+        permission.location === "prompt" ||
+        permission.location === "prompt-with-rationale"
+      ) {
+        permission = await Geolocation.requestPermissions();
+        if (permission.location === "prompt-with-rationale") {
+          permission = await Geolocation.checkPermissions();
         }
-        return permission.location;
-      } catch (e) {
-        return "denied";
       }
+      return permission.location;
+    } catch (e) {
+      return "denied";
     }
-  );
+  });
 
   const [devicesLocToUpdate] = createResource(
     () => {
@@ -1278,7 +1284,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   const disconnectFromDeviceAP = async () => {
     try {
       setApState("loading");
-      const res = await DevicePlugin.disconnectFromDeviceAP();
+      await DevicePlugin.disconnectFromDeviceAP();
       searchDevice();
       setApState("disconnected");
       return true;
@@ -1467,11 +1473,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
                     : d
                 )
               );
-              setTimeout(() => {
-                setUpdatingDevice((prev) =>
-                  prev.filter((d) => d.id !== deviceId)
-                );
-              }, 8000);
             }
           }
         }, 5000);
@@ -1496,7 +1497,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
               );
             }, 8000);
           }
-        }, 20000);
+        }, 5 * 60 * 1000);
+
         return true;
       }
     } catch (error) {
