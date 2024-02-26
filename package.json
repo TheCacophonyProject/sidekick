@@ -16,7 +16,7 @@
   "type": "module",
   "devDependencies": {
     "@biomejs/biome": "1.4.0",
-    "@capacitor/assets": "^2.0.4",
+    "@capacitor/assets": "^3.0.4",
     "@capacitor/cli": "^5.5.1",
     "@iconify-icon/solid": "^1.0.8",
     "@ionic/cli": "^7.1.5",
