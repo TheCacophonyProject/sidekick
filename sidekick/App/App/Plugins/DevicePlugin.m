@@ -27,5 +27,6 @@ CAP_PLUGIN(DevicePlugin, "Device",
            CAP_PLUGIN_METHOD(unbindConnection, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(rebindConnection, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(hasConnection, CAPPluginReturnPromise);
-           
+           CAP_PLUGIN_METHOD(disconnectFromDeviceAP, CAPPluginReturnPromise);
+           CAP_PLUGIN_METHOD(turnOnModem, CAPPluginReturnPromise);
 )

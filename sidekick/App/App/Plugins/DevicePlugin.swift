@@ -9,6 +9,7 @@ import Network
 import Capacitor
 import shared
 import NetworkExtension
+import SystemConfiguration.CaptiveNetwork
 
 let type = "_cacophonator-management._tcp"
 let domain = "local."
@@ -75,42 +76,109 @@ public class DevicePlugin: CAPPlugin {
                 bridge.releaseCall(withID: call.callbackId)
                 return
             }
+            if #available(iOS 14.0, *) {
+                NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
+                    if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
+                        // Successfully connected to the desired network
+                        call.resolve(["success": true, "data": "connected"])
+                    } else {
+                        // The device might have connected to a different network
+                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                    }
+                }
+            } else {
+                // Fallback on earlier versions
+                guard let interfaceNames = CNCopySupportedInterfaces() else {
+                    call.resolve(["success": false, "error": "No interfaces found"])
+                    return
+                }
+                guard let interfaceNames = CNCopySupportedInterfaces() else {
+                    call.resolve(["success": false, "error": "No interfaces found"])
+                    return
+                }
+                guard let swiftInterfaces = (interfaceNames as NSArray) as? [String] else {
+                    call.resolve(["success": false, "error": "No interfaces found"])
+                    return
+                }
+                for name in swiftInterfaces {
+                    guard let info = CNCopyCurrentNetworkInfo(name as CFString) as? [String: AnyObject] else {
+                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                        return
+                    }
+                    
+                    guard let ssid = info[kCNNetworkInfoKeySSID as String] as? String else {
+                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                        return
+                    }
+                        call.resolve(["success": true, "data": "connected"])
+                }
+            }
         }
+        
+    }
+    
+    @objc func disconnectFromDeviceAP(_ call: CAPPluginCall) {
+        guard let bridge = self.bridge else { return call.reject("Could not access bridge") }
+        call.keepAlive = true
+
+        // Attempt to remove the Wi-Fi configuration for the SSID "bushnet"
+        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
+
         if #available(iOS 14.0, *) {
             NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
                 if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
-                    // Successfully connected to the desired network
-                    call.resolve(["success": true, "data": "connected"])
+                    // The device is still connected to the "bushnet" network, disconnection failed
+                    call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
                 } else {
-                    // The device might have connected to a different network
-                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                    // Successfully disconnected or was not connected to "bushnet"
+                    call.resolve(["success": true, "data": "disconnected"])
                 }
             }
         } else {
-            // Fallback on earlier versions
-            guard let interfaceNames = CNCopySupportedInterfaces() as? [String] else {
+            // Fallback for earlier versions of iOS
+            guard let interfaceNames = CNCopySupportedInterfaces() else {
                 call.resolve(["success": false, "error": "No interfaces found"])
                 return
             }
-            
-            let val = interfaceNames.compactMap { name in
+            guard let interfaceNames = CNCopySupportedInterfaces() else {
+                call.resolve(["success": false, "error": "No interfaces found"])
+                return
+            }
+            guard let swiftInterfaces = (interfaceNames as NSArray) as? [String] else {
+                call.resolve(["success": false, "error": "No interfaces found"])
+                return
+            }
+            for name in swiftInterfaces {
                 guard let info = CNCopyCurrentNetworkInfo(name as CFString) as? [String: AnyObject] else {
-                    return nil
+                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                    return
                 }
                 
                 guard let ssid = info[kCNNetworkInfoKeySSID as String] as? String else {
-                    return nil
+                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                    return
                 }
-                return ssid
-            })
-            if val.contains("bushnet") {
-                call.resolve(["success": true, "data": "connected"])
-            } else {
-                call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                if ssid.contains("bushnet") {
+                    // The device is still connected to "bushnet", meaning disconnection failed
+                    call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
+                } else {
+                    // Successfully disconnected or was not connected to "bushnet"
+                    call.resolve(["success": true, "data": "disconnected"])
+                }
             }
+
+            
         }
+
+        // Clean up any reference to the call if necessary
+        bridge.releaseCall(withID: call.callbackId)
     }
 
+
+    @objc func turnOnModem(_ call: CAPPluginCall) {
+        device.turnOnModem(call: pluginCall(call: call))
+    }
+    
     
     @objc func getDeviceInfo(_ call: CAPPluginCall) {
         device.getDeviceInfo(call: pluginCall(call: call))
