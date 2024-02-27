@@ -95,8 +95,6 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 
   async function login(email: string, password: string) {
     try {
-      await DevicePlugin.disconnectFromDeviceAP();
-
       const authUser = await CacophonyPlugin.authenticateUser({
         email,
         password,
@@ -362,6 +360,10 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     Preferences.set({ key: "dev", value: dev() ? "true" : "false" });
   };
 
+  const isLoggedIn = () => {
+    return !!data();
+  };
+
   return {
     data,
     groups,
@@ -378,6 +380,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     getServerUrl,
     dev,
     toggleDev,
+    isLoggedIn,
   };
 });
 

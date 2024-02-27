@@ -68,7 +68,7 @@ public class DevicePlugin: CAPPlugin {
         call.keepAlive = true
         callQueue[call.callbackId] = .discover
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
-        configuration.joinOnce = true
+        configuration.joinOnce = false
         
         NEHotspotConfigurationManager.shared.apply(configuration) { error in
             if let error = error {
@@ -124,59 +124,67 @@ public class DevicePlugin: CAPPlugin {
         // Attempt to remove the Wi-Fi configuration for the SSID "bushnet"
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
 
-        if #available(iOS 14.0, *) {
-            NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
-                if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
-                    // The device is still connected to the "bushnet" network, disconnection failed
-                    call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
-                } else {
-                    // Successfully disconnected or was not connected to "bushnet"
-                    call.resolve(["success": true, "data": "disconnected"])
+        // Add a 5 second delay before checking the connection status
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            if #available(iOS 14.0, *) {
+                NEHotspotNetwork.fetchCurrent { (currentConfiguration) in
+                    if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
+                        // The device is still connected to the "bushnet" network, disconnection failed
+                        call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
+                    } else {
+                        // Successfully disconnected or was not connected to "bushnet"
+                        call.resolve(["success": true, "data": "disconnected"])
+                    }
+                    // Clean up any reference to the call if necessary
+                    bridge.releaseCall(withID: call.callbackId)
                 }
-            }
-        } else {
-            // Fallback for earlier versions of iOS
-            guard let interfaceNames = CNCopySupportedInterfaces() else {
-                call.resolve(["success": false, "error": "No interfaces found"])
-                return
-            }
-            guard let interfaceNames = CNCopySupportedInterfaces() else {
-                call.resolve(["success": false, "error": "No interfaces found"])
-                return
-            }
-            guard let swiftInterfaces = (interfaceNames as NSArray) as? [String] else {
-                call.resolve(["success": false, "error": "No interfaces found"])
-                return
-            }
-            for name in swiftInterfaces {
-                guard let info = CNCopyCurrentNetworkInfo(name as CFString) as? [String: AnyObject] else {
-                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
+            } else {
+                // Fallback for earlier versions of iOS
+                guard let interfaceNames = CNCopySupportedInterfaces() else {
+                    call.resolve(["success": false, "error": "No interfaces found"])
+                    bridge.releaseCall(withID: call.callbackId)
                     return
                 }
-                
-                guard let ssid = info[kCNNetworkInfoKeySSID as String] as? String else {
-                    call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                guard let swiftInterfaces = (interfaceNames as NSArray) as? [String] else {
+                    call.resolve(["success": false, "error": "No interfaces found"])
+                    bridge.releaseCall(withID: call.callbackId)
+
                     return
                 }
-                if ssid.contains("bushnet") {
-                    // The device is still connected to "bushnet", meaning disconnection failed
-                    call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
-                } else {
-                    // Successfully disconnected or was not connected to "bushnet"
-                    call.resolve(["success": true, "data": "disconnected"])
+                for name in swiftInterfaces {
+                    guard let info = CNCopyCurrentNetworkInfo(name as CFString) as? [String: AnyObject] else {
+                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                        bridge.releaseCall(withID: call.callbackId)
+                        return
+                    }
+                    
+                    guard let ssid = info[kCNNetworkInfoKeySSID as String] as? String else {
+                        call.resolve(["success": false, "error": "Did not connect to the desired network"])
+                        bridge.releaseCall(withID: call.callbackId)
+                        return
+                    }
+                    if ssid.contains("bushnet") {
+                        // The device is still connected to "bushnet", meaning disconnection failed
+                        call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
+                    } else {
+                        // Successfully disconnected or was not connected to "bushnet"
+                        call.resolve(["success": true, "data": "disconnected"])
+                    }
                 }
+                bridge.releaseCall(withID: call.callbackId)
             }
 
-            
         }
-
-        // Clean up any reference to the call if necessary
-        bridge.releaseCall(withID: call.callbackId)
     }
+
 
 
     @objc func turnOnModem(_ call: CAPPluginCall) {
         device.turnOnModem(call: pluginCall(call: call))
+    }
+    
+    @objc func reregisterDevice(_ call: CAPPluginCall) {
+        device.reregister(call: pluginCall(call: call))
     }
     
     

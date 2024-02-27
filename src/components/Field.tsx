@@ -43,19 +43,20 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
   );
   const [error, setError] = createSignal("");
   createEffect(() => {
-    on(
-      () => search(),
-      () => {
-        setError("");
-      }
-    );
+    if (search()) {
+      setError("");
+      setSaving(null);
+    }
   });
-  const saveText = () =>
-    saving() === "saving"
+  const saveText = () => {
+    const state = saving();
+    debugger;
+    return state === "saving"
       ? "Saving..."
-      : saving() === "saved"
+      : state === "saved"
       ? "Saved"
       : "Save";
+  };
 
   const disabled = () =>
     props.disabled ||

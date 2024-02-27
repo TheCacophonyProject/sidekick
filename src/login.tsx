@@ -5,6 +5,7 @@ import CacaophonyLogo from "./components/CacaophonyLogo";
 import { useUserContext } from "./contexts/User";
 import { ImCog } from "solid-icons/im";
 import { FaRegularEye, FaRegularEyeSlash } from "solid-icons/fa";
+import { useDevice } from "./contexts/Device";
 type LoginInput = {
   type: string;
   placeholder?: string;
@@ -75,6 +76,7 @@ const passwordSchema = z
 
 function Login() {
   const user = useUserContext();
+  const device = useDevice();
   let form: HTMLFormElement | undefined;
   const [emailError, setEmailError] = createSignal("");
   const [passwordError, setPasswordError] = createSignal("");
@@ -100,6 +102,9 @@ function Login() {
       setError("Invalid Email or Password");
     }
     if (email.success && password.success) {
+      if (device.apState() === "connected") {
+        await device.disconnectFromDeviceAP();
+      }
       await user?.login(email.data, password.data).catch(() => {
         setError("Invalid Email or Password");
       });

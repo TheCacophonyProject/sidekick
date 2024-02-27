@@ -1355,24 +1355,22 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   };
 
   const changeGroup = async (deviceId: DeviceId, group: string) => {
-    try {
-      const device = devices.get(deviceId);
-      if (!device || !device.isConnected) return false;
-      const { url } = device;
-      const res = await DevicePlugin.reregisterDevice({
-        url,
-        group,
-        device: device.name,
-      });
-      if (!res.success) return false;
-      devices.set(deviceId, {
-        ...device,
-        group,
-      });
-      return true;
-    } catch (error) {
-      return false;
+    const device = devices.get(deviceId);
+    if (!device || !device.isConnected) return false;
+    const { url } = device;
+    const res = await DevicePlugin.reregisterDevice({
+      url,
+      group,
+      device: device.name,
+    });
+    if (!res.success) {
+      throw new Error("Could not change group");
     }
+    devices.set(deviceId, {
+      ...device,
+      group,
+    });
+    return true;
   };
 
   const configDefaultsSchema = z.object({
