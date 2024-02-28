@@ -347,6 +347,18 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     }
   );
 
+  async function hasAccessToGroup(name: string) {
+    const user = await getUser();
+    if (!user) {
+      return false;
+    }
+    const currGroups = groups();
+    if (!groups) {
+      return false;
+    }
+    return currGroups?.some((group) => group.groupName === name) ?? false;
+  }
+
   const [dev, setDev] = createSignal(false);
   onMount(async () => {
     const dev = await Preferences.get({ key: "dev" });
@@ -375,6 +387,7 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
     logout,
     skip,
     createGroup,
+    hasAccessToGroup,
     requestDeletion,
     toggleServer,
     getServerUrl,

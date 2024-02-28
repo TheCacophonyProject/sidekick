@@ -87,7 +87,7 @@ class DeviceApi(private val api: Api) {
     data class UploadEventBody(val dateTimes: List<String>, val description: UploadEventDescription)
     suspend fun uploadEvent(device: String, token: String, dateTimes: List<String>, type: String, details: String) : Either<ApiError, UploadEventResponse> {
         // remove backslashes from \" in details and remove surrounding quotes
-        val cleanDetails = details.replace("\\\"", "\"").removeSurrounding("\"")
+        val cleanDetails = details
         val json = Json.parseToJsonElement(cleanDetails)
         val eventReq = UploadEventBody(dateTimes, UploadEventDescription(type, json))
         val body = Json.encodeToString(eventReq)

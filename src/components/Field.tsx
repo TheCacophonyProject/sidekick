@@ -50,7 +50,6 @@ const DropdownInput: Component<DropdownInputProps> = (props) => {
   });
   const saveText = () => {
     const state = saving();
-    debugger;
     return state === "saving"
       ? "Saving..."
       : state === "saved"

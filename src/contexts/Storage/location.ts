@@ -388,24 +388,15 @@ export function useLocationStorage() {
           });
         } else {
           location.updateName = newName;
-          logSync({
-            message: SyncLocationMessage,
-          });
         }
       } else {
         location.updateName = newName;
-        logSync({
-          message: SyncLocationMessage,
-        });
       }
       await updateLocation(db)(location);
       mutate((locations) =>
         locations?.map((loc) => (loc.id === location.id ? location : loc))
       );
     } catch (e) {
-      logSync({
-        message: SyncLocationMessage,
-      });
       location.updateName = newName;
       await updateLocation(db)(location);
       mutate((locations) =>
@@ -438,9 +429,6 @@ export function useLocationStorage() {
             message: "Successfully updated location picture",
           });
         } else {
-          logSync({
-            message: SyncLocationMessage,
-          });
           if (!location.uploadPhotos?.includes(newPhoto)) {
             location.uploadPhotos = [
               ...(location.uploadPhotos ?? []),
@@ -449,9 +437,6 @@ export function useLocationStorage() {
           }
         }
       } else {
-        logSync({
-          message: SyncLocationMessage,
-        });
         if (!location.uploadPhotos?.includes(newPhoto)) {
           location.uploadPhotos = [...(location.uploadPhotos ?? []), newPhoto];
         }
@@ -634,7 +619,6 @@ export function useLocationStorage() {
         ) {
           name = `${name}(${Math.floor(Math.random() * 100)})`;
         }
-        debugger;
         const res = await CacophonyPlugin.createStation({
           token: user.token,
           name,
@@ -675,7 +659,7 @@ export function useLocationStorage() {
     if (location.needsCreation) {
       logWarning({
         message:
-          "Unable to establish this location. Please try uploading from storage when you're online again.",
+          "Unable to establish this location. Ensure you have access to the group and are online.",
       });
       location.updateName = settings.name;
       location.name = null;

@@ -858,7 +858,7 @@ function LocationSettingsTab() {
     }
   };
 
-  const [locCoords] = createResource(
+  const [locCoords, { refetch }] = createResource(
     () => id(),
     async (id) => {
       const res = await context.getLocationCoords(id);
@@ -875,7 +875,10 @@ function LocationSettingsTab() {
         <div class="flex w-full flex-col items-center">
           <button
             class="my-2 flex space-x-2 self-center rounded-md bg-blue-500 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => context.setDeviceToCurrLocation(id())}
+            onClick={async () => {
+              await context.setDeviceToCurrLocation(id());
+              await refetch();
+            }}
           >
             <span class="text-sm">Update Location to Current</span>
             <FiMapPin size={18} />
@@ -889,7 +892,7 @@ function LocationSettingsTab() {
         }
       >
         {(loc) => (
-          <div class="mb-2 flex items-center justify-between space-x-2 rounded-lg border-2 border-blue-500 p-2">
+          <div class="mb-2 flex items-center space-x-2 rounded-lg border-2 border-blue-500 p-2">
             <div class="text-blue-600">
               <FiCloudOff size={18} />
             </div>
@@ -1249,17 +1252,41 @@ function WifiSettingsTab() {
   const [modem] = createResource(async () => {
     try {
       const res = await context.getModem(params.deviceSettings);
-      console.log("MODEM", res);
-      if (res === null) return null;
-      if (typeof res === "number") return res / 5;
-      return parseInt(res?.signal?.strength ?? "0") / 30;
+      return res;
     } catch (error) {
       console.log(error);
     }
   });
 
+  const [modemSignal] = createResource(async () => {
+    try {
+      const res = await context.getModemSignalStrength(params.deviceSettings);
+      console.log("MODEM SIGNAL", res);
+      if (res === null) return null;
+      if (typeof res === "number") return res / 5;
+      return parseInt(res.signal?.strength ?? "0") / 30;
+    } catch (error) {
+      console.log(error);
+    }
+  });
+
+  const modemSignalStrength = () => {
+    const currModem = modem();
+    const currSignal = modemSignal();
+    if (currModem === null && currSignal === null) return 0;
+    return Math.max(
+      currSignal ?? 0,
+      parseInt(currModem?.signal?.strength ?? "0") / 30
+    );
+  };
+
+  const noSim = () => {
+    const currModem = modem();
+    return currModem?.simCard?.simCardStatus.includes("not inserted") ?? false;
+  };
+
   const [modemConnectedToInternet] = createResource(
-    () => [modem()],
+    () => [modemSignalStrength()],
     async ([currModem]) => {
       if (!currModem) return "no-modem";
       const res = await context.checkDeviceModemInternetConnection(
@@ -1345,11 +1372,22 @@ function WifiSettingsTab() {
               >
                 <div class="space-between flex h-full w-full items-center justify-between p-2">
                   <Switch>
-                    <Match when={modemConnectedToInternet.loading}>
+                    <Match when={modem.loading}>
                       <FaSolidSpinner class="animate-spin" />
                     </Match>
+                    <Match when={noSim()}>
+                      <p>No Sim Card</p>
+                    </Match>
+                    <Match
+                      when={modem.loading || modemConnectedToInternet.loading}
+                    >
+                      <p>Checking Connection</p>
+                    </Match>
                     <Match when={modemConnectedToInternet() === "no-modem"}>
-                      <p>-</p>
+                      <p>No Modem</p>
+                    </Match>
+                    <Match when={modemConnectedToInternet() === "connected"}>
+                      <p>Internet Connection</p>
                     </Match>
                     <Match when={modemConnectedToInternet() === "connected"}>
                       <p>Internet Connection</p>
@@ -1358,7 +1396,7 @@ function WifiSettingsTab() {
                       <p>No Mobile Data</p>
                     </Match>
                   </Switch>
-                  <Show when={modem()}>
+                  <Show when={modemSignalStrength()}>
                     {(modem) => (
                       <Switch>
                         <Match when={modem() <= 0.2}>
@@ -1785,9 +1823,7 @@ function GeneralSettingsTab() {
         throw new Error(res.messages.join("\n"));
       }
     }
-    debugger;
     const res = await context.changeGroup(id(), v);
-    console.log(res);
   };
   const [canUpdate, { refetch }] = createResource(async () => {
     const res = await context.canUpdateDevice(id());
@@ -1809,10 +1845,13 @@ function GeneralSettingsTab() {
   });
 
   const [canChangeGroup] = createResource(async () => {
-    const res = await context.checkDeviceWifiInternetConnection(
+    const wifiRes = await context.checkDeviceWifiInternetConnection(
       params.deviceSettings
     );
-    return res;
+    const modemRes = await context.checkDeviceModemInternetConnection(
+      params.deviceSettings
+    );
+    return wifiRes || modemRes;
   });
 
   const message = () =>
@@ -1837,8 +1876,10 @@ function GeneralSettingsTab() {
         message:
           "To modify the group, you must be logged in. Would you like to login?",
       });
-      if (res) {
+      if (res.value) {
         user.logout();
+        return false;
+      } else {
         return false;
       }
     }
@@ -2237,30 +2278,69 @@ function Devices() {
         )
           return;
         if (isDialogOpen()) return;
-        const message =
-          devicesToUpdate.length === 1
-            ? `${
-                context.devices.get(devicesToUpdate[0])?.name
-              } has a different location stored. Would you like to update it to your current location?`
-            : `${devicesToUpdate
-                .map((val) => context.devices.get(val)?.name)
-                .join(
-                  ", "
-                )} have different location stored. Would you like to update them to the current location?`;
+        if (devicesToUpdate.length === 1) {
+          const device = context.devices.get(devicesToUpdate[0]);
+          if (device) {
+            if (device.group === "new") {
+              const message = `Looks like ${device.name} needs to be assigned to a group. Would you like to assign it to a group?`;
+              setIsDialogOpen(true);
+              const { value } = await Prompt.confirm({
+                title: "Setup Device",
+                message,
+              });
+              if (value) {
+                setParams({
+                  deviceSettings: devicesToUpdate[0],
+                  tab: "General",
+                });
+              }
+              setPromptCancel(true);
 
-        setIsDialogOpen(true);
-        const { value } = await Prompt.confirm({
-          title: "Update Location",
-          message,
-        });
-        setIsDialogOpen(false);
-        if (value) {
-          for (const device of devicesToUpdate) {
-            await context.setDeviceToCurrLocation(device);
+              setIsDialogOpen(false);
+            } else {
+              const message = `${
+                context.devices.get(devicesToUpdate[0])?.name
+              } has a different location stored. Would you like to update it to your current location?`;
+
+              setIsDialogOpen(true);
+              const { value } = await Prompt.confirm({
+                title: "Update Location",
+                message,
+              });
+
+              if (value) {
+                await context.setDeviceToCurrLocation(devicesToUpdate[0]);
+                setParams({
+                  deviceSettings: devicesToUpdate[0],
+                  tab: "Location",
+                });
+              } else {
+                setPromptCancel(true);
+              }
+              setIsDialogOpen(false);
+            }
           }
-          setParams({ deviceSettings: devicesToUpdate[0], tab: "Location" });
         } else {
-          setPromptCancel(true);
+          const message = `${devicesToUpdate
+            .map((val) => context.devices.get(val)?.name)
+            .join(
+              ", "
+            )} have different location stored. Would you like to update them to the current location?`;
+
+          setIsDialogOpen(true);
+          const { value } = await Prompt.confirm({
+            title: "Update Location",
+            message,
+          });
+          setIsDialogOpen(false);
+          if (value) {
+            for (const device of devicesToUpdate) {
+              await context.setDeviceToCurrLocation(device);
+            }
+            setParams({ deviceSettings: devicesToUpdate[0], tab: "Location" });
+          } else {
+            setPromptCancel(true);
+          }
         }
       }
     )

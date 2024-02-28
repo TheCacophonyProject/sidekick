@@ -4,7 +4,7 @@ import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
 import { Geolocation } from "@capacitor/geolocation";
 import { createContextProvider } from "@solid-primitives/context";
-import { ReactiveMap } from "@solid-primitives/map";
+import { ReactiveMap, ReactiveWeakMap } from "@solid-primitives/map";
 import { createStore } from "solid-js/store";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
@@ -17,6 +17,7 @@ import { logError, logSuccess, logWarning } from "../Notification";
 import { useStorage } from "../Storage";
 import { isWithinRange } from "../Storage/location";
 import DeviceCamera from "./Camera";
+import { IntervalsTypeId } from "effect/ScheduleIntervals";
 
 const WifiNetwork = z
   .object({
@@ -181,6 +182,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   ): Promise<ConnectedDevice | undefined> => {
     const connection = await DevicePlugin.checkDeviceConnection({ url });
     if (!connection.success) {
+      return;
     }
     const infoRes = await DevicePlugin.getDeviceInfo({ url });
     if (!infoRes.success) {
@@ -232,6 +234,27 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       console.log("error", error);
     }
   };
+
+  // Create an effect to always turning on modem for 5 minutes
+  const modemOnIntervals = new ReactiveMap<DeviceId, NodeJS.Timeout>();
+  createEffect(() => {
+    for (const [, device] of devices) {
+      const interval = modemOnIntervals.get(device.id);
+      if (!interval) {
+        const id = setInterval(() => {
+          unbindAndRebind(() =>
+            DevicePlugin.turnOnModem({ url: device.url, minutes: "5" })
+          );
+        }, 300000);
+        modemOnIntervals.set(device.id, id);
+      } else {
+        if (!device.isConnected) {
+          clearInterval(interval);
+          modemOnIntervals.delete(device.id);
+        }
+      }
+    }
+  });
 
   const startDiscovery = async () => {
     if (isDiscovering()) return;
@@ -1088,40 +1111,81 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     }
   };
 
-  const ModemSchema = z.object({
-    powered: z.boolean().or(z.literal("on").or(z.literal("off"))),
-    signal: z
-      .object({
+  // {
+  //    "modem": {
+  //        "connectedTime": "Wed, 28 Feb 2024 15:59:51 +1300",
+  //        "manufacturer": "SIMCOM INCORPORATED",
+  //        "model": "LE20B04SIM7600G22",
+  //        "name": "Qualcomm",
+  //        "netdev": "usb0",
+  //        "serial": "862636052211156",
+  //        "temp": 42,
+  //        "vendor": "1e0e:9011",
+  //        "voltage": 3.964
+  //    },
+  //    "onOffReason": "Modem should be on because it was requested to stay on until 2024-02-28 16:25:03.",
+  //    "powered": true,
+  //    "signal": {
+  //        "accessTechnology": "4G",
+  //        "band": "EUTRAN-BAND3",
+  //        "provider": "Spark NZ Spark NZ",
+  //        "strength": "23"
+  //    },
+  //    "simCard": {
+  //        "ICCID": "8964050087216926142",
+  //        "provider": "Spark NZ",
+  //        "simCardStatus": "READY"
+  //    },
+  //    "timestamp": "Wed, 28 Feb 2024 16:20:41 +1300"
+  //}
+  const asInt = z
+    .union([z.string(), z.number()])
+    .transform((val) => (typeof val === "string" ? parseInt(val) : val));
+  const tc2ModemSchema = z
+    .object({
+      modem: z.object({
+        connectedTime: z.string(),
+        manufacturer: z.string(),
+        model: z.string(),
+        name: z.string(),
+        netdev: z.string(),
+        serial: z.string(),
+        // parse as number even if it's a string
+        temp: asInt,
+        vendor: z.string(),
+        voltage: asInt,
+      }),
+      onOffReason: z.string(),
+      powered: z.boolean(),
+      signal: z.object({
+        accessTechnology: z.string(),
+        band: z.string(),
+        provider: z.string(),
         strength: z.string(),
-      })
-      .optional(),
-  });
+      }),
+      simCard: z.object({
+        ICCID: z.string(),
+        provider: z.string(),
+        simCardStatus: z.string(),
+      }),
+      timestamp: z.string(),
+    })
+    .partial();
 
   const getModem = async (deviceId: DeviceId) => {
     try {
       const device = devices.get(deviceId);
       if (!device || !device.isConnected) return null;
       const { url } = device;
-      if (device.type === "tc2") {
-        const res = await CapacitorHttp.get({
-          url: `${url}/api/modem`,
-          headers,
-          webFetchExtra: {
-            credentials: "include",
-          },
-        });
-        return res.status === 200 ? ModemSchema.parse(res.data) : null;
-      } else {
-        // Get Signal Strength
-        const res = await CapacitorHttp.get({
-          url: `${url}/api/signal-strength`,
-          headers,
-          webFetchExtra: {
-            credentials: "include",
-          },
-        });
-        return res.status === 200 ? parseInt(res.data) : null;
-      }
+      const res = await CapacitorHttp.get({
+        url: `${url}/api/modem`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      console.log("MODEM", res);
+      return res.status === 200 ? tc2ModemSchema.parse(res.data) : null;
     } catch (error) {
       console.error(error);
       return null;

@@ -26,4 +26,4 @@ elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
 	IP=$(ip route get 1 | awk '{print $7}')
 fi
 
-ionic cap run $PLATFORM -l --external --port=5173 --public-host=$IP
+ionic cap run $PLATFORM -l --external --port=5173 --public-host=localhost
