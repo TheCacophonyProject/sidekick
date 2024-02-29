@@ -645,6 +645,7 @@ function LocationSettingsTab() {
   const groupName = () => context.devices.get(id())?.group ?? "";
   const isProd = () => context.devices.get(id())?.isProd ?? false;
   const shouldUpdateLocState = () => context.shouldDeviceUpdateLocation(id());
+  const device = () => context.devices.get(id());
 
   createEffect((prev) => {
     const currUpdateLocState = shouldUpdateLocState();
@@ -897,8 +898,8 @@ function LocationSettingsTab() {
               <FiCloudOff size={18} />
             </div>
             <p class="flex space-x-2 text-sm text-blue-600">
-              Location will be updated when you're logged in and connected to
-              the internet.
+              Location will update when online and logged in as a member of the{" "}
+              {device()?.group ?? "device's"} group.
             </p>
           </div>
         )}
@@ -1856,7 +1857,7 @@ function GeneralSettingsTab() {
 
   const message = () =>
     canChangeGroup() === false
-      ? "Device must be connected to WiFi to change group"
+      ? "Device must have an internet connection to change group"
       : "";
 
   const softwareUpdateMessage = () => {
