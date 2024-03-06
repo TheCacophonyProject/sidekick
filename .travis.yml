@@ -28,7 +28,7 @@ env:
     - ANDROID_HOME=~/android-sdk
 
 rvm:
-  - 2.6
+  - 3.2
 
 before_install:
   # Android dependencies
@@ -43,8 +43,7 @@ before_install:
   - yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" --sdk_root=$ANDROID_HOME
   # Fastlane dependencies
   - chmod +x ./sidekick/gradlew
-  - rvm install 3.2.3
-  - rvm use 3.2.3
+  - rvm use 3.2
   - gem install bundler
   - bundle install
   # Capacitor.js dependencies
