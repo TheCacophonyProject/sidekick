@@ -44,7 +44,6 @@ import {
 } from "solid-icons/tb";
 import {
   For,
-  JSX,
   Match,
   Show,
   Switch,
@@ -68,10 +67,8 @@ import { logError, logWarning } from "~/contexts/Notification";
 import { useStorage } from "~/contexts/Storage";
 import { BsWifi1, BsWifi2, BsWifi } from "solid-icons/bs";
 import { useUserContext } from "~/contexts/User";
-import { Effect, Stream, pipe } from "effect";
-import { CameraInfo, Frame, Region, Track } from "~/contexts/Device/Camera";
+import { Frame, Region, Track } from "~/contexts/Device/Camera";
 import { VsArrowSwap } from "solid-icons/vs";
-import { CapacitorHttp } from "@capacitor/core";
 type CameraCanvas = HTMLCanvasElement | undefined;
 const colours = ["#ff0000", "#00ff00", "#ffff00", "#80ffff"];
 
@@ -130,14 +127,6 @@ function AudioSettingsTab() {
     </section>
   );
 }
-
-type DualRangeProps = {
-  lowerValue: number;
-  upperValue: number;
-  onLowerChange: (value: number) => void;
-  onUpperChange: (value: number) => void;
-  inverse: boolean;
-};
 
 function CameraSettingsTab() {
   const context = useDevice();
@@ -1090,8 +1079,14 @@ function WifiSettingsTab() {
   const [params] = useSearchParams();
   const device = () => context.devices.get(params.deviceSettings);
   const [wifiNetworks, { refetch: refetchWifiNetowrks }] = createResource(
-    () => [device(), context.apState()],
-    async () => context.getWifiNetworks(device()?.id ?? "")
+    () => [device(), context.apState()] as const,
+    async ([currDevice]) => {
+      console.log("Fetching Wifi Networks for ", currDevice);
+      if (!currDevice?.isConnected) return null;
+      const wifiNetworks = await context.getWifiNetworks(currDevice.id);
+      console.log("Fetched Wifi Networks", wifiNetworks);
+      return wifiNetworks;
+    }
   );
   const [currentWifi, { refetch }] = createResource(
     () => [device()],
@@ -1110,6 +1105,9 @@ function WifiSettingsTab() {
       return saved;
     }
   );
+  createEffect(() => {
+    console.log("Wifi Networks", wifiNetworks());
+  });
   const [password, setPassword] = createSignal("");
 
   const getWifiIcon = (signal: number) => (
@@ -1262,7 +1260,6 @@ function WifiSettingsTab() {
   const [modemSignal] = createResource(async () => {
     try {
       const res = await context.getModemSignalStrength(params.deviceSettings);
-      console.log("MODEM SIGNAL", res);
       if (res === null) return null;
       if (typeof res === "number") return res / 5;
       return parseInt(res.signal?.strength ?? "0") / 30;
@@ -1301,7 +1298,6 @@ function WifiSettingsTab() {
     const hasEndpoint = await context.hasNetworkEndpoints(
       params.deviceSettings
     );
-    console.log("HAS ENDPOINT", hasEndpoint);
     return hasEndpoint;
   });
 
@@ -1446,115 +1442,101 @@ function WifiSettingsTab() {
                 </div>
               </FieldWrapper>
             </section>
-            <Show
-              when={currentWifi() || !currentWifi.loading || !currentWifi.error}
-              fallback={
-                <div class="flex w-full items-center justify-center">
-                  <FaSolidSpinner size={28} class="animate-spin" />
-                </div>
-              }
-            >
-              <section class="flex h-64 flex-col space-y-2 overflow-y-auto rounded-md bg-neutral-100 p-2">
-                <For each={wifiNetworks()?.sort(sortWifi)}>
-                  {(val) => (
-                    <button
-                      classList={{
-                        "bg-white": currentWifi()?.SSID === val.SSID,
-                        "bg-gray-50": currentWifi()?.SSID !== val.SSID,
-                      }}
-                      class="flex w-full items-center justify-between rounded-md px-4 py-4"
-                      onClick={() => setOpenedNetwork(val)}
-                    >
-                      <div class="flex space-x-2">
-                        {getWifiIcon(val.quality)}
-                        <div class="flex flex-col items-start justify-center">
-                          <p class="text-start text-slate-900">{val.SSID}</p>
-                          <div class=" flex gap-x-1 text-xs text-slate-600">
-                            <Show when={val.SSID === currentWifi()?.SSID}>
-                              <Switch>
-                                <Match
-                                  when={
-                                    wifiConnectedToInternet() === "connected"
-                                  }
-                                >
-                                  <p>Internet Connection</p>
-                                </Match>
-                                <Match
-                                  when={
-                                    wifiConnectedToInternet() === "disconnected"
-                                  }
-                                >
-                                  <p>No Internet Connection</p>
-                                </Match>
-                              </Switch>
-                            </Show>
-                            <Show
-                              when={
-                                val.SSID === currentWifi()?.SSID &&
-                                isSaved(val.SSID)
-                              }
-                            >
-                              <p>|</p>
-                            </Show>
-                            <Show when={isSaved(val.SSID)}>
-                              <p>Saved</p>
-                            </Show>
-                          </div>
+            <section class="flex h-64 flex-col space-y-2 overflow-y-auto rounded-md bg-neutral-100 p-2">
+              <For each={wifiNetworks()?.sort(sortWifi)}>
+                {(val) => (
+                  <button
+                    classList={{
+                      "bg-white": currentWifi()?.SSID === val.SSID,
+                      "bg-gray-50": currentWifi()?.SSID !== val.SSID,
+                    }}
+                    class="flex w-full items-center justify-between rounded-md px-4 py-4"
+                    onClick={() => setOpenedNetwork(val)}
+                  >
+                    <div class="flex space-x-2">
+                      {getWifiIcon(val.quality)}
+                      <div class="flex flex-col items-start justify-center">
+                        <p class="text-start text-slate-900">{val.SSID}</p>
+                        <div class=" flex gap-x-1 text-xs text-slate-600">
+                          <Show when={val.SSID === currentWifi()?.SSID}>
+                            <Switch>
+                              <Match
+                                when={wifiConnectedToInternet() === "connected"}
+                              >
+                                <p>Internet Connection</p>
+                              </Match>
+                              <Match
+                                when={
+                                  wifiConnectedToInternet() === "disconnected"
+                                }
+                              >
+                                <p>No Internet Connection</p>
+                              </Match>
+                            </Switch>
+                          </Show>
+                          <Show
+                            when={
+                              val.SSID === currentWifi()?.SSID &&
+                              isSaved(val.SSID)
+                            }
+                          >
+                            <p>|</p>
+                          </Show>
+                          <Show when={isSaved(val.SSID)}>
+                            <p>Saved</p>
+                          </Show>
                         </div>
                       </div>
-                      <Show when={val.SSID !== currentWifi()?.SSID}>
-                        <Show
-                          when={val.isSecured}
-                          fallback={<FaSolidLockOpen />}
-                        >
-                          <div class="text-gray-800">
-                            <FaSolidLock />
-                          </div>
-                        </Show>
+                    </div>
+                    <Show when={val.SSID !== currentWifi()?.SSID}>
+                      <Show when={val.isSecured} fallback={<FaSolidLockOpen />}>
+                        <div class="text-gray-800">
+                          <FaSolidLock />
+                        </div>
                       </Show>
-                    </button>
-                  )}
-                </For>
-                <For
-                  each={savedWifi()?.filter(
-                    (val) =>
-                      val !== "" &&
-                      val !== currentWifi()?.SSID &&
-                      !wifiNetworks()?.some((wifi) => wifi.SSID === val) &&
-                      val.toLowerCase() !== "bushnet"
-                  )}
-                >
-                  {(val) => (
-                    <button
-                      class="flex w-full items-center justify-between rounded-md bg-gray-50 px-4 py-4"
-                      onClick={() =>
-                        setOpenedNetwork({
-                          SSID: val,
-                          quality: 0,
-                          isSecured: false,
-                        })
-                      }
-                    >
-                      <div class="flex space-x-2 text-gray-600">
-                        <BiRegularSave size={28} />
-                        <div class="flex flex-col items-start justify-center">
-                          <p class="text-start text-slate-900">{val}</p>
-                        </div>
+                    </Show>
+                  </button>
+                )}
+              </For>
+              <For
+                each={savedWifi()?.filter(
+                  (val) =>
+                    val !== "" &&
+                    val !== currentWifi()?.SSID &&
+                    !wifiNetworks()?.some((wifi) => wifi.SSID === val) &&
+                    val.toLowerCase() !== "bushnet"
+                )}
+              >
+                {(val) => (
+                  <button
+                    class="flex w-full items-center justify-between rounded-md bg-gray-50 px-4 py-4"
+                    onClick={() =>
+                      setOpenedNetwork({
+                        SSID: val,
+                        quality: 0,
+                        isSecured: false,
+                      })
+                    }
+                  >
+                    <div class="flex space-x-2 text-gray-600">
+                      <BiRegularSave size={28} />
+                      <div class="flex flex-col items-start justify-center">
+                        <p class="text-start text-slate-900">{val}</p>
                       </div>
-                    </button>
-                  )}
-                </For>
-              </section>
-              <section>
-                <button
-                  onClick={() => setShowSaveNetwork(true)}
-                  class="flex w-full items-center justify-center space-x-2 pb-3 pt-5 text-lg text-blue-700"
-                >
-                  <p>Add Network</p>
-                  <FaSolidPlus size={20} />
-                </button>
-              </section>
-            </Show>
+                    </div>
+                  </button>
+                )}
+              </For>
+            </section>
+            <section>
+              <button
+                onClick={() => setShowSaveNetwork(true)}
+                class="flex w-full items-center justify-center space-x-2 pb-3 pt-5 text-lg text-blue-700"
+              >
+                <p>Add Network</p>
+                <FaSolidPlus size={20} />
+              </button>
+            </section>
           </Show>
         }
       >
@@ -1818,6 +1800,7 @@ function GeneralSettingsTab() {
     console.log("DEVICE", device());
   });
   const setGroup = async (v: string) => {
+    await user.refetchGroups();
     if (!user.groups()?.some((g) => g.groupName === v)) {
       const res = await user.createGroup(v);
       if (!res.success) {
@@ -1887,6 +1870,11 @@ function GeneralSettingsTab() {
     user.refetchGroups();
     return true;
   };
+  const displayId = () => {
+    const currId = saltId();
+    if (!currId) return id();
+    return currId;
+  };
   return (
     <div class="flex w-full flex-col space-y-2 px-2 py-4">
       <FieldWrapper type="text" value={name()} title="Name" />
@@ -1900,7 +1888,7 @@ function GeneralSettingsTab() {
         disabled={canChangeGroup.loading || !canChangeGroup()}
         message={message()}
       />
-      <FieldWrapper type="text" value={saltId() ?? id()} title="ID" />
+      <FieldWrapper type="text" value={displayId()} title="ID" />
       <button
         classList={{
           "bg-blue-500 py-2 px-4 text-white rounded-md": Boolean(canUpdate?.()),
@@ -2249,7 +2237,7 @@ function Devices() {
     context.searchDevice();
     const search = setInterval(() => {
       context.searchDevice();
-    }, 60 * 1000 * 1);
+    }, 6 * 1000);
 
     onCleanup(() => {
       clearInterval(search);

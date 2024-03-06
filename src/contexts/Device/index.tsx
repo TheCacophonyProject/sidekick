@@ -17,7 +17,6 @@ import { logError, logSuccess, logWarning } from "../Notification";
 import { useStorage } from "../Storage";
 import { isWithinRange } from "../Storage/location";
 import DeviceCamera from "./Camera";
-import { IntervalsTypeId } from "effect/ScheduleIntervals";
 
 const WifiNetwork = z
   .object({
@@ -156,11 +155,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
   // Callback ID is used to determine if the device is currently discovering
   const [callbackID, setCallbackID] = createSignal<string>();
   createEffect(() => {
-    if (callbackID()) {
-      setIsDiscovering(true);
-    } else {
-      setIsDiscovering(false);
-    }
+    setIsDiscovering(!!callbackID());
   });
 
   const setCurrRecs = async (device: ConnectedDevice) =>
@@ -180,33 +175,39 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     endpoint: string,
     url: string
   ): Promise<ConnectedDevice | undefined> => {
-    const connection = await DevicePlugin.checkDeviceConnection({ url });
-    if (!connection.success) {
-      return;
-    }
-    const infoRes = await DevicePlugin.getDeviceInfo({ url });
-    if (!infoRes.success) {
-      return;
-    }
-    const infoJson = JSON.parse(infoRes.data);
-    const info = DeviceInfoSchema.parse(infoJson);
-    const id: DeviceId = info.deviceID.toString();
-    const type = info.type ?? "pi";
+    try {
+      const infoRes = await CapacitorHttp.get({
+        url: `${url}/api/device-info`,
+        headers,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      });
+      if (infoRes.status !== 200) {
+        return;
+      }
+      const info = DeviceInfoSchema.parse(JSON.parse(infoRes.data));
+      const id: DeviceId = info.deviceID.toString();
+      const type = info.type ?? "pi";
 
-    return {
-      id,
-      saltId: info.saltID,
-      host: deviceName,
-      name: info.devicename,
-      group: info.groupname,
-      type,
-      endpoint,
-      isProd: !info.serverURL.includes("test"),
-      locationSet: false,
-      timeFound: new Date(),
-      url,
-      isConnected: true,
-    };
+      return {
+        id,
+        saltId: info.saltID,
+        host: deviceName,
+        name: info.devicename,
+        group: info.groupname,
+        type,
+        endpoint,
+        isProd: !info.serverURL.includes("test"),
+        locationSet: false,
+        timeFound: new Date(),
+        url,
+        isConnected: true,
+      };
+    } catch (error) {
+      console.log("error", error);
+      return;
+    }
   };
 
   const endpointToDevice = async (
@@ -216,8 +217,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     try {
       const [deviceName] = endpoint.split(".");
       const url = `http://${deviceName}.local`;
-      const infoRes = await DevicePlugin.getDeviceInfo({ url });
-      const connection = await DevicePlugin.checkDeviceConnection({ url });
       const device = await createDevice(deviceName, endpoint, url);
       if (device) {
         return device;
@@ -255,6 +254,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       }
     }
   });
+
+  const [connectingToDevice, setConnectingToDevice] = createSignal<string[]>(
+    []
+  );
 
   const startDiscovery = async () => {
     if (isDiscovering()) return;
@@ -306,8 +309,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       )
         return;
 
+      if (connectingToDevice().includes(newDevice.endpoint)) return;
+
       for (let i = 0; i < 3; i++) {
         try {
+          setConnectingToDevice([...connectingToDevice(), newDevice.endpoint]);
           const connectedDevice = await endpointToDevice(
             newDevice.endpoint,
             newDevice.host
@@ -324,6 +330,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
                 break;
               }
             }
+            setConnectingToDevice(
+              connectingToDevice().filter((d) => d !== newDevice.endpoint)
+            );
             devices.set(connectedDevice.id, connectedDevice);
             clearUploaded(connectedDevice);
             return;
@@ -334,9 +343,15 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
             details: JSON.stringify(newDevice),
           });
         }
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
+      setConnectingToDevice(
+        connectingToDevice().filter((d) => d !== newDevice.endpoint)
+      );
     });
+    const currId = callbackID();
+    if (currId) {
+      await DevicePlugin.stopDiscoverDevices({ id: currId });
+    }
     setCallbackID(id);
   };
 
@@ -902,6 +917,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
           credentials: "include",
         },
       });
+      console.log("NETWORKS Result", res.data);
       if (res.status !== 200) {
         return null;
       }

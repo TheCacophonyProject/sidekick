@@ -143,11 +143,7 @@ abstract class NsdHelper(val context: Context) {
     // Stop DNS-SD service discovery
     fun stopDiscovery() {
         if (discoveryListener != null) {
-            try {
-                // check if discovery is already in progress
-                nsdManager?.stopServiceDiscovery(discoveryListener)
-            } finally {
-            }
+            nsdManager?.stopServiceDiscovery(discoveryListener)
             discoveryListener = null
         }
     }
