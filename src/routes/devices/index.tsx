@@ -1939,9 +1939,6 @@ function DeviceSettingsModal() {
 
   const deviceName = () => {
     const deviceName = context.devices.get(params.deviceSettings)?.name;
-    if (!deviceName) {
-      clearParams();
-    }
     return deviceName;
   };
 
@@ -2033,7 +2030,6 @@ function DeviceDetails(props: DeviceDetailsProps) {
   };
   const [params, setParams] = useSearchParams();
 
-  const navigate = useNavigate();
   const openDeviceInterface = leading(
     debounce,
     () => {
