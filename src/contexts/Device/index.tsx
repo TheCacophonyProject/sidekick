@@ -298,6 +298,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
       });
     }
 
+    const currId = callbackID();
+    if (currId) {
+      await DevicePlugin.stopDiscoverDevices({ id: currId });
+    }
     const id = await DevicePlugin.discoverDevices(async (newDevice) => {
       if (
         !newDevice ||
@@ -348,17 +352,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
         connectingToDevice().filter((d) => d !== newDevice.endpoint)
       );
     });
-    const currId = callbackID();
-    if (currId) {
-      await DevicePlugin.stopDiscoverDevices({ id: currId });
-    }
     setCallbackID(id);
   };
 
   const stopDiscovery = async () => {
     const id = callbackID();
     if (id) {
-      await DevicePlugin.stopDiscoverDevices({ id });
+      try {
+        await DevicePlugin.stopDiscoverDevices({ id });
+      } catch (e) {
+        console.log(e);
+      }
       setCallbackID();
     }
     setIsDiscovering(false);
@@ -368,7 +372,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     startDiscovery();
     setTimeout(async () => {
       stopDiscovery();
-    }, 6000);
+    }, 10000);
   };
 
   const Authorization = "Basic YWRtaW46ZmVhdGhlcnM=";

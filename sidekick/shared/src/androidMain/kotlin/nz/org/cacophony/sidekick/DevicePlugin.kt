@@ -36,7 +36,7 @@ class DevicePlugin: Plugin() {
 
 
     override fun load() {
-       device = DeviceInterface(context.applicationContext.filesDir.absolutePath)
+        device = DeviceInterface(context.applicationContext.filesDir.absolutePath)
         val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         multicastLock = wifi.createMulticastLock("multicastLock")
     }
@@ -47,6 +47,7 @@ class DevicePlugin: Plugin() {
         DISCOVER,
         CONNECT,
     }
+
 
     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
     fun discoverDevices(call: PluginCall) {
@@ -74,11 +75,16 @@ class DevicePlugin: Plugin() {
         }
     }
 
+
     @PluginMethod
     fun stopDiscoverDevices(call: PluginCall) {
         val result = JSObject()
         try {
             val id = call.getString("id") ?: return call.reject("No Id Found")
+            if (callQueue[id] != CallType.DISCOVER) {
+                return call.reject("Invalid Id")
+            }
+            callQueue.remove(id)
             bridge.releaseCall(id)
             nsdHelper.stopDiscovery()
             multicastLock.release()
@@ -108,7 +114,7 @@ class DevicePlugin: Plugin() {
             val password = "feathers"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 call.setKeepAlive(true)
-               // ask for permission
+                // ask for permission
                 val wifiSpecifier = WifiNetworkSpecifier.Builder()
                     .setSsid(ssid)
                     .setWpa2Passphrase(password)

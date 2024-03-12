@@ -22,15 +22,16 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
                 credentials { BasicAuthCredentials("admin", "feathers") }
             }
         }
-        install(HttpTimeout) {
-            connectTimeoutMillis = 3000
-        }
+
         install(ContentNegotiation) {
             json(Json {
                 prettyPrint = true
                 isLenient = true
                 ignoreUnknownKeys = true
             })
+        }
+        install(HttpTimeout) {
+            socketTimeoutMillis = 3000
         }
     }
     private fun getDeviceFromCall(call: PluginCall) = call.validateCall<Device>("url").map { device ->
