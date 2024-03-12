@@ -300,7 +300,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
     const currId = callbackID();
     if (currId) {
-      await DevicePlugin.stopDiscoverDevices({ id: currId });
+      try {
+        await DevicePlugin.stopDiscoverDevices({ id: currId });
+      } catch (e) {
+        console.log("Error stopping discovery");
+      }
     }
     const id = await DevicePlugin.discoverDevices(async (newDevice) => {
       if (
