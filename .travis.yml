@@ -43,6 +43,8 @@ before_install:
   - yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" --sdk_root=$ANDROID_HOME
   # Fastlane dependencies
   - chmod +x ./sidekick/gradlew
+  - rvm install 2.6.0
+  - rvm use 2.6.0
   - gem install bundler -v 2.4.22
   - bundle install
   # Capacitor.js dependencies
