@@ -6,7 +6,7 @@ import { Geolocation } from "@capacitor/geolocation";
 import { createContextProvider } from "@solid-primitives/context";
 import { ReactiveMap, ReactiveWeakMap } from "@solid-primitives/map";
 import { createStore } from "solid-js/store";
-import { debounce, leading } from "@solid-primitives/scheduled";
+import { debounce, leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import { createEffect, createResource, createSignal } from "solid-js";
 import { z } from "zod";
@@ -372,12 +372,16 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
     setIsDiscovering(false);
   };
 
-  const searchDevice = () => {
-    startDiscovery();
-    setTimeout(async () => {
-      stopDiscovery();
-    }, 10000);
-  };
+  const searchDevice = leading(
+    throttle,
+    () => {
+      startDiscovery();
+      setTimeout(() => {
+        stopDiscovery();
+      }, 10000);
+    },
+    10000
+  );
 
   const Authorization = "Basic YWRtaW46ZmVhdGhlcnM=";
   const headers = { Authorization: Authorization };
