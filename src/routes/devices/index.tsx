@@ -136,6 +136,7 @@ function CameraSettingsTab() {
   const [config, { refetch }] = createResource(id, async (id) => {
     if (!id) return null;
     const res = await context.getDeviceConfig(id);
+    console.log("Config", res);
     return res;
   });
   createEffect(() => {
