@@ -11,10 +11,12 @@ import { FaRegularTrashCan, FaSolidStop } from "solid-icons/fa";
 import { Dialog } from "@capacitor/dialog";
 import { useUserContext } from "~/contexts/User";
 import { FiPause, FiUploadCloud } from "solid-icons/fi";
+import { useDevice } from "~/contexts/Device";
 
 export default function Storage() {
   const storage = useStorage();
   const user = useUserContext();
+  const device = useDevice();
 
   const deleteSaved = async () => {
     const { value } = await Dialog.confirm({
@@ -38,8 +40,15 @@ export default function Storage() {
     headerContext?.headerMap.set("/storage", [
       header[0],
       () => (
-        <button type="button" onClick={deleteSaved} class="text-red-400">
-          <FaRegularTrashCan size={28} />
+        <button
+          type="button"
+          onClick={deleteSaved}
+          class="flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-white shadow-md transition-all hover:bg-red-600 hover:shadow-lg active:scale-95"
+          aria-label="Delete all saved items"
+        >
+          <FaRegularTrashCan size={20} />
+          <span class="hidden font-medium sm:inline">Clear Saved</span>
+          <span class="font-medium sm:hidden">Clear</span>
         </button>
       ),
     ]);
@@ -87,18 +96,16 @@ export default function Storage() {
           </span>
         </A>
       </ActionContainer>
-      <Show when={user.dev()}>
-        <ActionContainer icon={ImNotification} header="Events">
-          <p class="flex items-center text-gray-800">
-            <span class="w-28">
-              Saved: {storage.unuploadedEvents().filter(isProd).length}{" "}
-            </span>
-            <span class="ml-2">
-              Uploaded: {storage.uploadedEvents().filter(isProd).length}
-            </span>
-          </p>
-        </ActionContainer>
-      </Show>
+      <ActionContainer icon={ImNotification} header="Events">
+        <p class="flex items-center text-gray-800">
+          <span class="w-28">
+            Saved: {storage.unuploadedEvents().filter(isProd).length}{" "}
+          </span>
+          <span class="ml-2">
+            Uploaded: {storage.uploadedEvents().filter(isProd).length}
+          </span>
+        </p>
+      </ActionContainer>
       <Show when={!user.isProd()}>
         <ActionContainer
           icon={BsCameraVideoFill}
@@ -162,17 +169,14 @@ export default function Storage() {
 
       <div class="pb-bar fixed inset-x-0 bottom-2 mx-auto flex justify-center">
         <button
-          class="flex items-center justify-center space-x-2 rounded-md bg-white px-4 py-4"
+          class="flex items-center justify-center space-x-2 rounded-md bg-white px-4 py-4 disabled:text-gray-400"
           onClick={toggleUpload}
-          disabled={!storage.hasItemsToUpload()}
+          disabled={!storage.hasItemsToUpload() || device.apState() === "connected"}
         >
           <Switch>
             <Match when={!storage.isUploading()}>
               <div
-                classList={{
-                  "text-blue-500": storage.hasItemsToUpload(),
-                  "text-gray-400": !storage.hasItemsToUpload(),
-                }}
+                class="text-blue-500"
               >
                 <FiUploadCloud size={28} />
               </div>

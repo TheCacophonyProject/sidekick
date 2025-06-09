@@ -263,10 +263,12 @@ export function createTokenService(config: TokenServiceConfig): TokenService {
           return user;
         }
 
-        config.logger.logWarning({
-          message: "Token expired and offline - login required when online",
+        config.logger.logError({
+          message: "Token expired and offline - user will be logged out when online",
+          error: new Error("Token expired and offline"), // Added error object
+          details: "Keeping user data for now to allow offline operation",
         });
-        return null;
+        return user; // Keep the user logged in even if token is expired and offline
       }
 
       // Online and token expiring soon - refresh it

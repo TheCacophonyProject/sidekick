@@ -3,70 +3,70 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    -webkit-tap-highlight-color: transparent;
-  }
+	html {
+		-webkit-tap-highlight-color: transparent;
+	}
 }
 
 @layer utilities {
-  .pb-safe {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 1em);
-  }
-  .pt-safe {
-    padding-top: calc(env(safe-area-inset-top) + 1em);
-  }
-  .pl-safe {
-    padding-left: calc(env(safe-area-inset-left));
-  }
-  .pr-safe {
-    padding-right: calc(env(safe-area-inset-right));
-  }
-  .py-safe {
-    padding-top: calc(env(safe-area-inset-top));
-    padding-bottom: calc(env(safe-area-inset-bottom));
-  }
-  .px-safe {
-    padding-left: calc(env(safe-area-inset-left));
-    padding-right: calc(env(safe-area-inset-right));
-  }
-  .pt-bar {
-    padding-top: calc(4.5rem + env(safe-area-inset-top));
-  }
-  .pb-bar {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
-  }
-  .mt-bar {
-    margin-top: calc(4.5rem + env(safe-area-inset-top));
-  }
-  .mb-bar {
-    margin-bottom: calc(4rem + env(safe-area-inset-bottom));
-  }
-  .mt-safe {
-    margin-top: calc(env(safe-area-inset-top, 2em));
-  }
-  .mb-safe {
-    margin-bottom: calc(env(safe-area-inset-bottom, 2em));
-  }
-  .ml-safe {
-    margin-left: calc(env(safe-area-inset-left, 2em));
-  }
-  .mr-safe {
-    margin-right: calc(env(safe-area-inset-right, 2em));
-  }
-  .my-safe {
-    margin-top: calc(env(safe-area-inset-top, 2em));
-    margin-bottom: calc(env(safe-area-inset-bottom, 2em));
-  }
-  .mx-safe {
-    margin-left: calc(env(safe-area-inset-left, 2em));
-    margin-right: calc(env(safe-area-inset-right, 2em));
-  }
+	.pb-safe {
+		padding-bottom: calc(env(safe-area-inset-bottom) + 1.5em);
+	}
+	.pt-safe {
+		padding-top: calc(env(safe-area-inset-top) + 1.5em);
+	}
+	.pl-safe {
+		padding-left: calc(env(safe-area-inset-left));
+	}
+	.pr-safe {
+		padding-right: calc(env(safe-area-inset-right));
+	}
+	.py-safe {
+		padding-top: calc(env(safe-area-inset-top));
+		padding-bottom: calc(env(safe-area-inset-bottom));
+	}
+	.px-safe {
+		padding-left: calc(env(safe-area-inset-left));
+		padding-right: calc(env(safe-area-inset-right));
+	}
+	.pt-bar {
+		padding-top: calc(5rem + env(safe-area-inset-top));
+	}
+	.pb-bar {
+		padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+	}
+	.mt-bar {
+		margin-top: calc(4.5rem + env(safe-area-inset-top));
+	}
+	.mb-bar {
+		margin-bottom: calc(4rem + env(safe-area-inset-bottom));
+	}
+	.mt-safe {
+		margin-top: calc(env(safe-area-inset-top, 2em));
+	}
+	.mb-safe {
+		margin-bottom: calc(env(safe-area-inset-bottom, 2em));
+	}
+	.ml-safe {
+		margin-left: calc(env(safe-area-inset-left, 2em));
+	}
+	.mr-safe {
+		margin-right: calc(env(safe-area-inset-right, 2em));
+	}
+	.my-safe {
+		margin-top: calc(env(safe-area-inset-top, 2em));
+		margin-bottom: calc(env(safe-area-inset-bottom, 2em));
+	}
+	.mx-safe {
+		margin-left: calc(env(safe-area-inset-left, 2em));
+		margin-right: calc(env(safe-area-inset-right, 2em));
+	}
 }
 :root {
-  --ion-background-color: transparent !important;
+	--ion-background-color: transparent !important;
 }
 
 #root {
-  height: 100%;
-  min-height: 100vh;
+	height: 100%;
+	min-height: 100vh;
 }

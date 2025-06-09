@@ -40,10 +40,8 @@ class StationApi(val api: CacophonyApi, val filePath: String) {
 
     @Serializable
     data class UpdateStation(val name : String)
-    @Serializable
-    data class UpdateStationJSON(@SerialName("station-updates") val stationUpdates: String)
     suspend fun updateStation(id: String, name: String, token: Token): Either<ApiError, String> =
-        api.patchJSON("stations/$id",UpdateStationJSON(Json.encodeToString(mapOf("name" to name))), token)
+        api.patchJSON("stations/$id/name",UpdateStation(name), token)
             .flatMap { validateResponse(it) }
     private fun validateIsoString(isoString: String): Either<ApiError, ValidIsoString> = try {
         isoString.right()

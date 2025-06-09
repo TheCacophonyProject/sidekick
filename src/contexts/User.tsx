@@ -16,6 +16,7 @@ import { CapacitorHttp } from "@capacitor/core";
 import { useLogsContext } from "./LogsContext";
 import { Effect, Either } from "effect";
 import { createTokenService, type User, UserSchema } from "./TokenService";
+import { createStore } from "solid-js/store";
 
 // Response schema definitions
 export type UserAuthResponse = z.infer<typeof UserAuthResponseSchema>;
@@ -134,7 +135,20 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 					if (!json || Object.keys(json).length === 0) return null;
 
 					const user = UserSchema.parse(json);
-					return await tokenService.validateToken(user);
+					const validatedUser = await tokenService.validateToken(user);
+
+					if (validatedUser === null && !navigator.onLine) {
+						log.logWarning({
+							message:
+								"Token validation failed offline, retaining user session.",
+							details:
+								"User token might be expired, but keeping session active due to offline status.",
+							warn: true,
+						});
+						return user;
+					}
+
+					return validatedUser;
 				} catch (error) {
 					log.logError({
 						message: "User data validation failed",
@@ -241,7 +255,8 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 			if (
 				!authResult.success ||
 				!authResult.data.success ||
-				!authResult.data.userData
+				!authResult.data.userData ||
+				!authResult.data.token
 			) {
 				log.logWarning({
 					message: "Authentication failed",
@@ -264,16 +279,16 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 				});
 				return {
 					_tag: "NeedsAgreement",
-					authToken: authResult.data.token!,
+					authToken: authResult.data.token, // Removed non-null assertion
 				};
 			}
 
 			// Create user object
 			const user: User = {
-				token: authResult.data.token!,
+				token: authResult.data.token, // Removed non-null assertion
 				id: authResult.data.userData.id.toString(),
 				email,
-				refreshToken: authResult.data.refreshToken!,
+				refreshToken: authResult.data.refreshToken || "", // Provide empty string as fallback
 				expiry: authResult.data.expiry,
 				prod: isProd(),
 			};
@@ -688,12 +703,107 @@ const [UserProvider, useUserContext] = createContextProvider(() => {
 		}
 	});
 
+	const [userNeedsGroupAccess, setUserNeedsGroupAccess] = createStore({
+		deviceId: "",
+		deviceName: "",
+		groupName: "",
+	});
+
+	// Request device access function - supports both deviceId and deviceName+groupName
+	async function requestDeviceAccess(
+		params: { deviceId: string } | { deviceName: string; groupName: string },
+		adminEmail?: string
+	): Promise<boolean> {
+		try {
+			const user = await getUser();
+			if (!user) {
+				log.logError({
+					message: "User not logged in",
+					error: new Error("User not authenticated"),
+				});
+				return false;
+			}
+
+			// Build payload based on provided parameters
+			const payload: { 
+				deviceId?: string; 
+				deviceName?: string; 
+				groupName?: string; 
+				groupAdminEmail?: string;
+			} = {};
+
+			if ("deviceId" in params) {
+				if (!params.deviceId) {
+					log.logError({
+						message: "Device ID is required for access request",
+						error: new Error("Missing device ID"),
+					});
+					return false;
+				}
+				payload.deviceId = params.deviceId;
+			} else {
+				if (!params.deviceName || !params.groupName) {
+					log.logError({
+						message: "Device name and group name are required for access request",
+						error: new Error("Missing device name or group name"),
+					});
+					return false;
+				}
+				payload.deviceName = params.deviceName;
+				payload.groupName = params.groupName;
+			}
+
+			if (adminEmail) {
+				payload.groupAdminEmail = adminEmail;
+			}
+
+			const response = await CapacitorHttp.post({
+				url: `${getServerUrl()}/api/v1/users/request-device-access`,
+				headers: {
+					Authorization: user.token,
+					"Content-Type": "application/json",
+				},
+				data: payload,
+			});
+
+			if (response.status >= 200 && response.status < 300) {
+				const deviceInfo = "deviceId" in params ? 
+					`device ID ${params.deviceId}` : 
+					`device ${params.deviceName} in group ${params.groupName}`;
+				log.logSuccess({
+					message: "Device access request sent successfully",
+					details: `Request for ${deviceInfo} has been sent`,
+				});
+				return true;
+			} else {
+				const errorMessage =
+					(response.data as { message?: string })?.message ||
+					`HTTP Error: ${response.status}`;
+				log.logError({
+					message: "Failed to send device access request",
+					error: new Error(errorMessage),
+					details: errorMessage,
+				});
+				return false;
+			}
+		} catch (err) {
+			log.logError({
+				message: "Exception during device access request",
+				error: err instanceof Error ? err : new Error(String(err)),
+			});
+			return false;
+		}
+	}
+
 	// Return context value
 	return {
 		data,
 		groups,
 		refetchGroups,
 		skippedLogin,
+		userNeedsGroupAccess,
+		setUserNeedsGroupAccess,
+		requestDeviceAccess,
 		getUser,
 		isProd,
 		login,

@@ -3,6 +3,7 @@ import {
 	type HttpResponse,
 	type PluginListenerHandle,
 	registerPlugin,
+	Capacitor, // Added Capacitor import
 } from "@capacitor/core";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
@@ -316,6 +317,38 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const [listeners, setListeners] = createSignal<PluginListenerHandle[]>([]);
 	const [isDiscovering, setIsDiscovering] = createSignal(false);
 
+	const internetConnectionCache = new ReactiveMap<
+		DeviceId,
+		{ status: boolean; timestamp: number }
+	>();
+	const INTERNET_CACHE_DURATION_MS = 60 * 1000; // 1 minute
+
+	const availableWifiNetworksCache = new ReactiveMap<
+		DeviceId,
+		{ networks: WifiNetwork[] | null; timestamp: number }
+	>();
+	const currentWifiNetworkCache = new ReactiveMap<
+		DeviceId,
+		{ network: { SSID: string } | null; timestamp: number }
+	>();
+	const modemDetailsCache = new ReactiveMap<
+		DeviceId,
+		{ modem: Modem | null; timestamp: number }
+	>();
+	const savedWifiNetworksCache = new ReactiveMap<
+		DeviceId,
+		{ networks: string[] | null; timestamp: number }
+	>();
+	const wifiInternetConnectionCache = new ReactiveMap<
+		DeviceId,
+		{ connected: boolean; timestamp: number }
+	>();
+	const modemInternetConnectionCache = new ReactiveMap<
+		DeviceId,
+		{ connected: boolean; timestamp: number }
+	>();
+	const NETWORK_DATA_CACHE_DURATION_MS = 20 * 1000; // 20 seconds
+
 	const setCurrRecs = async (device: ConnectedDevice) =>
 		deviceRecordings.set(device.id, await getRecordings(device));
 
@@ -403,7 +436,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			return res.status === 200 || res.status === 405;
 		} catch (error: unknown) {
 			// A 404 error means the endpoint doesn't exist
-			if (error instanceof Error && 'status' in error && error.status === 404) {
+			if (error instanceof Error && "status" in error && error.status === 404) {
 				return false;
 			}
 			// Other errors might indicate network issues, but assume no support for safety
@@ -744,25 +777,42 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		await Promise.all([
 			clearUploaded(connectedDevice),
 			turnOnModem(connectedDevice.id),
+			deviceHasInternet(connectedDevice.id), // Proactively populate internet connection cache
+			preloadNetworkData(connectedDevice.id), // Proactively populate WiFi and modem data cache
 		]);
 	};
 
-	const handleServiceLost = (lostDevice: { endpoint: string }) => {
+	const handleServiceLost = async (lostDevice: { endpoint: string }) => {
 		const device = [...devices.values()].find(
 			(d) => d.endpoint === lostDevice.endpoint && d.isConnected,
 		);
 
 		if (device) {
-			devices.set(device.id, {
-				...device,
-				isConnected: false,
-			});
+			// Check both URL and host connections before disconnecting
+			const [urlReachable, hostReachable] = await Promise.all([
+				verifyDeviceConnection(device.url),
+				verifyDeviceConnection(`http://${device.host}`),
+			]);
 
-			log.logEvent("device_lost", {
-				name: device.name,
-				saltId: device.saltId,
-				group: device.group,
-			});
+			// Only disconnect if both connection methods fail
+			if (!urlReachable && !hostReachable) {
+				devices.set(device.id, {
+					...device,
+					isConnected: false,
+				});
+				internetConnectionCache.delete(device.id); // Clear cache entry
+				wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
+				modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
+
+				log.logEvent("device_lost", {
+					name: device.name,
+					saltId: device.saltId,
+					group: device.group,
+				});
+			} else {
+				// Device is still reachable via one of the methods
+				console.log(`Device ${device.name} reported as lost but still reachable via ${urlReachable ? 'URL' : 'host'}`);
+			}
 		}
 	};
 
@@ -858,7 +908,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			message:
 				res.error ||
 				"Please try again, or connect to 'bushnet' with password 'feathers' in your wifi settings. Alternatively, set up a hotspot named 'bushnet' password: 'feathers'.",
-			warn: res.canRetry,
+			warn: false,
 		});
 		setApState("default");
 	};
@@ -1056,16 +1106,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		return false;
 	};
 
-	async function checkExistingDevices() {
-		const devicesToCheck = [...devices.values()];
-		const batchSize = 3;
-
-		for (let i = 0; i < devicesToCheck.length; i += batchSize) {
-			const batch = devicesToCheck.slice(i, i + batchSize);
-			await Promise.all(batch.map((device) => checkDeviceConnection(device)));
-		}
-	}
-
 	const startDiscovery = async () => {
 		if (isDiscovering()) {
 			console.log("Discovery already in progress");
@@ -1073,6 +1113,20 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 
 		try {
+			// Check for local network permissions before starting discovery
+			if (Capacitor.getPlatform() === "ios") {
+				const perm = await DevicePlugin.checkPermissions();
+				if (!perm.granted) {
+					console.warn(
+						"Local Network permission not granted. Device discovery will not start.",
+					);
+					// Optionally, notify the user or update a state here
+					// For now, just prevent discovery.
+					setIsDiscovering(false); // Ensure state reflects discovery is not active
+					return;
+				}
+			}
+
 			await DevicePlugin.discoverDevices();
 			setIsDiscovering(true);
 
@@ -1116,14 +1170,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			await new Promise((resolve) => setTimeout(resolve, 200));
 
 			await startDiscovery();
-
-			// After discovery, also check existing devices' connections
-			const connectedDevices = [...devices.values()].filter(
-				(d) => d.isConnected,
-			);
-			for (const device of connectedDevices) {
-				// Keep checking existing device connections
-			}
 		} catch (e) {
 			console.error(e);
 		} finally {
@@ -1409,83 +1455,100 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		devicesDownloading.delete(deviceId);
 	};
 
-// Accept both string and number for lat/lng/alt/accuracy, and transform to number
-const numish = z.union([z.string(), z.number()]).transform(v => typeof v === "string" ? Number.parseFloat(v) : v);
-const locationSchema = z.object({
-	   latitude: numish,
-	   longitude: numish,
-	   altitude: numish.optional().default(0),
-	   // treat missing / 0 / NaN accuracy as “unknown” = 100 m
-	   accuracy: numish.optional().transform(v => (v && v > 0 ? v : 100)).default(100),
-	   timestamp: z.string().or(z.number()).transform(v => typeof v === "number" ? Math.round(v).toString() : v),
-});
+	// Accept both string and number for lat/lng/alt/accuracy, and transform to number
+	const numish = z
+		.union([z.string(), z.number()])
+		.transform((v) => (typeof v === "string" ? Number.parseFloat(v) : v));
+	const locationSchema = z.object({
+		latitude: numish,
+		longitude: numish,
+		altitude: numish.optional().default(0),
+		// treat missing / 0 / NaN accuracy as “unknown” = 100 m
+		accuracy: numish
+			.optional()
+			.transform((v) => (v && v > 0 ? v : 100))
+			.default(100),
+		timestamp: z
+			.string()
+			.or(z.number())
+			.transform((v) => (typeof v === "number" ? Math.round(v).toString() : v)),
+	});
 
 	const LOCATION_ERROR =
 		"Please ensure location is enabled, and permissions are granted";
-const setDeviceToCurrLocation = async (deviceId: DeviceId) => {
-	   try {
-			   const device = devices.get(deviceId);
-			   if (!device || !device.isConnected) return;
-			   let permission = await Geolocation.requestPermissions();
-			   if (permission.location === "prompt-with-rationale") {
-					   permission = await Geolocation.checkPermissions();
-			   }
-			   if (permission.location !== "granted") return;
-			   locationBeingSet.add(device.id);
-			   const { timestamp, coords } = await Geolocation.getCurrentPosition({
-					   enableHighAccuracy: true,
-			   });
-			   // Clamp accuracy to a minimum of 5m so we never pass 0 down
-			   const safeCoords = { ...coords, accuracy: coords.accuracy && coords.accuracy > 5 ? coords.accuracy : 5 };
-			   const location = locationSchema.safeParse({ ...safeCoords, timestamp });
-			   if (!location.success) {
-					   locationBeingSet.delete(device.id);
-					   log.logWarning({
-							   message: LOCATION_ERROR,
-							   details: location.error.message,
-			   });
-			   return;
-		   }
-		   // Ensure all fields are strings for DevicePlugin.setDeviceLocation
-		   const options = {
-			   url: device.url,
-					   latitude: location.data.latitude.toString(),
-					   longitude: location.data.longitude.toString(),
-					   altitude: location.data.altitude?.toString() ?? "0",
-					   accuracy: location.data.accuracy?.toString() ?? "100",
-					   timestamp: location.data.timestamp,
-			   };
-			   const res = await DevicePlugin.setDeviceLocation(options);
-			   if (res.success) {
-					   tryUpdateServerLocation(deviceId, {
-							   lat: Number(location.data.latitude),
-							   lng: Number(location.data.longitude),
-					   });
-					   devices.set(device.id, {
-							   ...device,
-							   locationSet: true,
-					   });
-					   log.logSuccess({
-							   message: `Successfully set location for ${device.name}.`,
-							   timeout: 6000,
-					   });
-			   }
-			   locationBeingSet.delete(device.id);
-	   } catch (error) {
-			   if (error instanceof Error) {
-					   log.logWarning({
-							   message: LOCATION_ERROR,
-							   details: error.message,
-					   });
-			   }
-			   locationBeingSet.delete(deviceId);
-	   }
-};
+	const setDeviceToCurrLocation = async (deviceId: DeviceId) => {
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return;
+			let permission = await Geolocation.requestPermissions();
+			if (permission.location === "prompt-with-rationale") {
+				permission = await Geolocation.checkPermissions();
+			}
+			if (permission.location !== "granted") return;
+			locationBeingSet.add(device.id);
+			const { timestamp, coords } = await Geolocation.getCurrentPosition({
+				enableHighAccuracy: true,
+			});
+			// Clamp accuracy to a minimum of 5m so we never pass 0 down
+			const safeCoords = {
+				...coords,
+				accuracy: coords.accuracy && coords.accuracy > 5 ? coords.accuracy : 5,
+			};
+			const location = locationSchema.safeParse({ ...safeCoords, timestamp });
+			if (!location.success) {
+				locationBeingSet.delete(device.id);
+				log.logWarning({
+					message: LOCATION_ERROR,
+					details: location.error.message,
+				});
+				return;
+			}
+			// Ensure all fields are strings for DevicePlugin.setDeviceLocation
+			const options = {
+				url: device.url,
+				latitude: location.data.latitude.toString(),
+				longitude: location.data.longitude.toString(),
+				altitude: location.data.altitude?.toString() ?? "0",
+				accuracy: location.data.accuracy?.toString() ?? "100",
+				timestamp: location.data.timestamp,
+			};
+			const res = await DevicePlugin.setDeviceLocation(options);
+			if (res.success) {
+				tryUpdateServerLocation(deviceId, {
+					lat: Number(location.data.latitude),
+					lng: Number(location.data.longitude),
+				});
+				devices.set(device.id, {
+					...device,
+					locationSet: true,
+				});
+				log.logSuccess({
+					message: `Successfully set location for ${device.name}.`,
+					timeout: 6000,
+				});
+			}
+			locationBeingSet.delete(device.id);
+		} catch (error) {
+			if (error instanceof Error) {
+				log.logWarning({
+					message: LOCATION_ERROR,
+					details: error.message,
+				});
+			}
+			locationBeingSet.delete(deviceId);
+		}
+	};
 
 	const tryUpdateServerLocation = async (
 		deviceId: string,
 		location: { lat: number; lng: number },
 	) => {
+		// Skip server update if connected to device AP (no internet)
+		if (apState() === "connected") {
+			console.log("Skipping server location update - connected to device AP");
+			return;
+		}
+
 		try {
 			const updateData = { location };
 			const userData = user.data();
@@ -1506,61 +1569,66 @@ const setDeviceToCurrLocation = async (deviceId: DeviceId) => {
 		}
 	};
 
-const getLocationCoords = async (
-	   device: DeviceId,
-): Result<DeviceCoords<number>> => {
-	   try {
-			   const deviceObj = devices.get(device);
+	const getLocationCoords = async (
+		device: DeviceId,
+	): Result<DeviceCoords<number>> => {
+		try {
+			const deviceObj = devices.get(device);
 
-			   if (!deviceObj || !deviceObj.isConnected) {
-					   return {
-							   success: false,
-							   message: "Device is not connected",
-					   };
-			   }
+			if (!deviceObj || !deviceObj.isConnected) {
+				return {
+					success: false,
+					message: "Device is not connected",
+				};
+			}
 
-			   const { url } = deviceObj;
+			const { url } = deviceObj;
 
-			   // Use the same relaxed schema as above
-			   const numish = z.union([z.string(), z.number()]).transform(v => typeof v === "string" ? Number.parseFloat(v) : v);
-			   const locationSchema = z.object({
-					   latitude: numish,
-					   longitude: numish,
-					   altitude: numish.optional().default(0),
-					   accuracy: numish.optional().transform(v => (v && v > 0 ? v : 100)).default(100),
-					   timestamp: z.string(),
-			   });
+			// Use the same relaxed schema as above
+			const numish = z
+				.union([z.string(), z.number()])
+				.transform((v) => (typeof v === "string" ? Number.parseFloat(v) : v));
+			const locationSchema = z.object({
+				latitude: numish,
+				longitude: numish,
+				altitude: numish.optional().default(0),
+				accuracy: numish
+					.optional()
+					.transform((v) => (v && v > 0 ? v : 100))
+					.default(100),
+				timestamp: z.string(),
+			});
 
-			   const res = await DevicePlugin.getDeviceLocation({ url });
+			const res = await DevicePlugin.getDeviceLocation({ url });
 
-			   if (res.success) {
-					   const location = locationSchema.safeParse(JSON.parse(res.data));
-					   if (!location.success) {
-							   return {
-									   success: false,
-									   message: location.error.message,
-							   };
-					   }
-					   tryUpdateServerLocation(device, {
-							   lat: location.data.latitude,
-							   lng: location.data.longitude,
-					   });
-					   return {
-							   success: true,
-							   data: location.data,
-					   };
-			   }
-			   return {
-					   success: false,
-					   message: "Could not get location",
-			   };
-	   } catch (error) {
-			   return {
-					   success: false,
-					   message: "Could not get location",
-			   };
-	   }
-};
+			if (res.success) {
+				const location = locationSchema.safeParse(JSON.parse(res.data));
+				if (!location.success) {
+					return {
+						success: false,
+						message: location.error.message,
+					};
+				}
+				tryUpdateServerLocation(device, {
+					lat: location.data.latitude,
+					lng: location.data.longitude,
+				});
+				return {
+					success: true,
+					data: location.data,
+				};
+			}
+			return {
+				success: false,
+				message: "Could not get location",
+			};
+		} catch (error) {
+			return {
+				success: false,
+				message: "Could not get location",
+			};
+		}
+	};
 
 	const getLocationByDevice = (deviceId: DeviceId) =>
 		createResource(
@@ -1628,72 +1696,79 @@ const getLocationCoords = async (
 	);
 
 	const [locationDisabled, setLocationDisabled] = createSignal(false);
-const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
-	   createResource(
-			   () => {
-					   // Add locationBeingSet to dependencies by spreading into a new Set
-					   return [[...devices.values()], permission(), new Set(locationBeingSet)] as const;
-			   },
-			   async ([deviceList, perm, currentlySettingLocations]) => {
-					   try {
-							   const devicesToFilter = deviceList.filter(({ isConnected }) => isConnected);
-							   if (!devicesToFilter || devicesToFilter.length === 0 || !perm) return [];
-							   if (perm === "denied") return [];
-							   const pos = await Geolocation.getCurrentPosition({
-									   enableHighAccuracy: true,
-							   }).catch((e) => {
-									   console.log("Error", e);
-									   if (e instanceof Error && e.message === "location disabled") {
-											   setLocationDisabled(true);
-									   }
-									   return null;
-							   });
-							   if (!pos) return [];
-							   setLocationDisabled(false);
+	const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
+		createResource(
+			() => {
+				// Add locationBeingSet to dependencies by spreading into a new Set
+				return [
+					[...devices.values()],
+					permission(),
+					new Set(locationBeingSet),
+				] as const;
+			},
+			async ([deviceList, perm, currentlySettingLocations]) => {
+				try {
+					const devicesToFilter = deviceList.filter(
+						({ isConnected }) => isConnected,
+					);
+					if (!devicesToFilter || devicesToFilter.length === 0 || !perm)
+						return [];
+					if (perm === "denied") return [];
+					const pos = await Geolocation.getCurrentPosition({
+						enableHighAccuracy: true,
+					}).catch((e) => {
+						console.log("Error", e);
+						if (e instanceof Error && e.message === "location disabled") {
+							setLocationDisabled(true);
+						}
+						return null;
+					});
+					if (!pos) return [];
+					setLocationDisabled(false);
 
-							   const devicesToUpdate: string[] = [];
-							   for (const device of devicesToFilter) {
-									   if (!device.isConnected) continue;
-									   // Skip if location is currently being set for this device
-									   if (currentlySettingLocations.has(device.id)) {
-											   continue;
-									   }
-									   const locationRes = await getLocationCoords(device.id);
-									   if (!locationRes.success) continue;
-									   const loc = locationRes.data;
-									   const newLoc: [number, number] = [
-											   pos.coords.latitude,
-											   pos.coords.longitude,
-									   ];
+					const devicesToUpdate: string[] = [];
+					for (const device of devicesToFilter) {
+						if (!device.isConnected) continue;
+						// Skip if location is currently being set for this device
+						if (currentlySettingLocations.has(device.id)) {
+							continue;
+						}
+						const locationRes = await getLocationCoords(device.id);
+						if (!locationRes.success) continue;
+						const loc = locationRes.data;
+						const newLoc: [number, number] = [
+							pos.coords.latitude,
+							pos.coords.longitude,
+						];
 
-									   const withinRange = isWithinRange(
-											   [loc.latitude, loc.longitude],
-											   newLoc,
-											   UPDATE_DISTANCE_THRESHOLD_METERS,
-									   );
-									   if (!withinRange) {
-											   devicesToUpdate.push(device.id);
-									   }
-							   }
-							   return devicesToUpdate;
-					   } catch (error) {
-							   if (error instanceof Error) {
-									   log.logWarning({
-											   message:
-													   "Could not update device locations. Check location permissions and try again.",
-											   action: <GoToPermissions />,
-									   });
-							   } else if (typeof error === "string") {
-									   log.logWarning({
-											   message: "Could not update device locations",
-											   details: error,
-									   });
-							   }
+						const withinRange = isWithinRange(
+							[loc.latitude, loc.longitude],
+							newLoc,
+							UPDATE_DISTANCE_THRESHOLD_METERS,
+						);
+						if (!withinRange) {
+							devicesToUpdate.push(device.id);
+						}
+					}
+					return devicesToUpdate;
+				} catch (error) {
+					if (error instanceof Error) {
+						log.logWarning({
+							message:
+								"Could not update device locations. Check location permissions and try again.",
+							action: <GoToPermissions />,
+						});
+					} else if (typeof error === "string") {
+						log.logWarning({
+							message: "Could not update device locations",
+							details: error,
+						});
+					}
 
-							   return [];
-					   }
-			   },
-	   );
+					return [];
+				}
+			},
+		);
 
 	type DeviceLocationStatus =
 		| "loading"
@@ -1712,10 +1787,101 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 		return updateDevice;
 	};
 
-	const getWifiNetworks = async (deviceId: DeviceId) => {
+	const preloadNetworkData = async (deviceId: DeviceId) => {
+		// Proactively fetch and cache WiFi networks, current WiFi, saved networks, modem data, and internet connectivity
+		// This prevents the UI from showing loading states when the user opens network settings
+		try {
+			await Promise.allSettled([
+				getWifiNetworks(deviceId),
+				getCurrentWifiNetwork(deviceId),
+				getSavedWifiNetworks(deviceId),
+				getModem(deviceId),
+				checkDeviceWifiInternetConnection(deviceId),
+				checkDeviceModemInternetConnection(deviceId),
+			]);
+		} catch (error) {
+			console.error("Error preloading network data:", error);
+		}
+	};
+
+	const backgroundRefreshNetworkData = async (deviceId: DeviceId) => {
+		// Background refresh without invalidating cache - "stale-while-revalidate" pattern
+		// UI continues showing cached data while fresh data loads in background
 		try {
 			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return [];
+			if (!device || !device.isConnected) return;
+
+			// Make fresh API calls that will update cache if data has changed
+			// These will bypass cache timeouts but won't clear existing cache first
+			const { url } = device;
+			
+			// Fetch fresh data in parallel
+			await Promise.allSettled([
+				// Force fresh network data by making direct API calls
+				CapacitorHttp.get({ url: `${url}/api/network/wifi`, headers, webFetchExtra: { credentials: "include" } })
+					.then(res => res.status === 200 ? WifiNetwork.array().parse(JSON.parse(res.data)) : [])
+					.then(networks => {
+						const processedNetworks = networks
+							.filter(network => network.SSID)
+							.reduce((acc, curr) => {
+								const found = acc.find(a => a.SSID === curr.SSID);
+								if (!found) acc.push(curr);
+								return acc;
+							}, [] as WifiNetwork[]);
+						availableWifiNetworksCache.set(deviceId, { networks: processedNetworks, timestamp: Date.now() });
+					})
+					.catch(() => {}),
+
+				// Fresh current WiFi status
+				CapacitorHttp.get({ url: `${url}/api/network/wifi/current`, headers, webFetchExtra: { credentials: "include" } })
+					.then(res => res.status === 200 ? z.object({ SSID: z.string() }).parse(JSON.parse(res.data)) : null)
+					.then(network => currentWifiNetworkCache.set(deviceId, { network, timestamp: Date.now() }))
+					.catch(() => {}),
+
+				// Fresh modem data
+				CapacitorHttp.get({ url: `${url}/api/modem`, headers, webFetchExtra: { credentials: "include" } })
+					.then(res => res.status === 200 ? tc2ModemSchema.parse(res.data) : null)
+					.then(modem => modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }))
+					.catch(() => {}),
+
+				// Fresh WiFi internet connectivity
+				CapacitorHttp.get({ url: `${url}/api/wifi-check`, headers, webFetchExtra: { credentials: "include" } })
+					.then(res => {
+						let connected = false;
+						if (res.status === 200) {
+							const parsedData = JSON.parse(res.data);
+							if (typeof parsedData.connected === "boolean") {
+								connected = parsedData.connected;
+							}
+						}
+						wifiInternetConnectionCache.set(deviceId, { connected, timestamp: Date.now() });
+					})
+					.catch(() => {}),
+
+				// Fresh modem internet connectivity
+				CapacitorHttp.get({ url: `${url}/api/modem-check`, headers, webFetchExtra: { credentials: "include" } })
+					.then(res => res.status === 200 ? JSON.parse(res.data).connected : false)
+					.then(connected => modemInternetConnectionCache.set(deviceId, { connected, timestamp: Date.now() }))
+					.catch(() => {}),
+			]);
+		} catch (error) {
+			console.error("Error in background network refresh:", error);
+		}
+	};
+
+	const getWifiNetworks = async (
+		deviceId: DeviceId,
+	): Promise<WifiNetwork[] | null> => {
+		const cached = availableWifiNetworksCache.get(deviceId);
+		if (
+			cached &&
+			Date.now() - cached.timestamp < NETWORK_DATA_CACHE_DURATION_MS
+		) {
+			return cached.networks;
+		}
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return []; // Keep returning [] for this case for now
 			const { url } = device;
 			const res = await CapacitorHttp.get({
 				url: `${url}/api/network/wifi`,
@@ -1723,12 +1889,18 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 				webFetchExtra: {
 					credentials: "include",
 				},
+				connectTimeout: 5000, // Added timeout
+				readTimeout: 5000, // Added timeout
 			});
 			if (res.status !== 200) {
+				availableWifiNetworksCache.set(deviceId, {
+					networks: null,
+					timestamp: Date.now(),
+				});
 				return null;
 			}
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
-			return networks
+			const processedNetworks = networks
 				? networks
 					.filter((network) => network.SSID)
 					.reduce((acc, curr) => {
@@ -1739,13 +1911,31 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 						return acc;
 					}, [] as WifiNetwork[])
 				: [];
+			availableWifiNetworksCache.set(deviceId, {
+				networks: processedNetworks,
+				timestamp: Date.now(),
+			});
+			return processedNetworks;
 		} catch (e) {
-			console.error(e);
-			return [];
+			console.error("Error in getWifiNetworks:", e);
+			availableWifiNetworksCache.set(deviceId, {
+				networks: [],
+				timestamp: Date.now(),
+			}); // Cache empty on error
+			return []; // Keep returning [] for this case for now
 		}
 	};
 
-	const getCurrentWifiNetwork = async (deviceId: DeviceId) => {
+	const getCurrentWifiNetwork = async (
+		deviceId: DeviceId,
+	): Promise<{ SSID: string } | null> => {
+		const cached = currentWifiNetworkCache.get(deviceId);
+		if (
+			cached &&
+			Date.now() - cached.timestamp < NETWORK_DATA_CACHE_DURATION_MS
+		) {
+			return cached.network;
+		}
 		try {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
@@ -1760,6 +1950,10 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 			});
 
 			if (res.status !== 200) {
+				currentWifiNetworkCache.set(deviceId, {
+					network: null,
+					timestamp: Date.now(),
+				});
 				return null;
 			}
 
@@ -1767,10 +1961,18 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 				.object({ SSID: z.string() })
 				.safeParse(JSON.parse(res.data));
 
-			// If this was successful, maintain the device as connected
-			return network.success ? network.data : null;
+			const result = network.success ? network.data : null;
+			currentWifiNetworkCache.set(deviceId, {
+				network: result,
+				timestamp: Date.now(),
+			});
+			return result;
 		} catch (error) {
-			// Don't automatically disconnect on errors - let the main connection check handle that
+			console.error("Error in getCurrentWifiNetwork:", error);
+			currentWifiNetworkCache.set(deviceId, {
+				network: null,
+				timestamp: Date.now(),
+			});
 			return null;
 		}
 	};
@@ -1793,9 +1995,16 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 				},
 				data: { ssid, password },
 			});
-			return res.status === 200;
+			const success = res.status === 200;
+			if (success) {
+				savedWifiNetworksCache.delete(deviceId);
+				// Optionally, also invalidate currentWifiNetworkCache and availableWifiNetworksCache
+				// if saving a network implies it might become the current one or appear in the list.
+				// For now, just savedWifiNetworksCache as it's the most direct impact.
+			}
+			return success;
 		} catch (error) {
-			console.error(error);
+			console.error("Error in saveWifiNetwork:", error);
 			return false;
 		}
 	};
@@ -1813,9 +2022,15 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 				},
 				data: { apn },
 			});
-			return res.status === 200;
+			const success = res.status === 200;
+			if (success) {
+				internetConnectionCache.delete(deviceId);
+				modemDetailsCache.delete(deviceId); // APN affects modem behavior
+				modemInternetConnectionCache.delete(deviceId); // Invalidate modem internet cache
+			}
+			return success;
 		} catch (error) {
-			console.error(error);
+			console.error("Error in saveAPN:", error);
 			return false;
 		}
 	};
@@ -1918,8 +2133,14 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 					credentials: "include",
 				},
 			});
-			return res.status === 200;
+			const success = res.status === 200;
+			if (success) {
+				internetConnectionCache.delete(deviceId); // Invalidate cache
+				wifiInternetConnectionCache.delete(deviceId); // Invalidate WiFi internet cache
+			}
+			return success;
 		} catch (error) {
+			console.error("Error in disconnectFromWifi:", error);
 			return false;
 		}
 	};
@@ -1984,16 +2205,31 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 							readTimeout: 20000,
 						});
 						if (res.status === 200) {
-							resolve(true);
-							clearInterval(interval);
+							const currentSsidData = z
+								.object({ SSID: z.string() })
+								.safeParse(JSON.parse(res.data));
+							if (
+								currentSsidData.success &&
+								currentSsidData.data.SSID === ssid
+							) {
+								resolve(true);
+								clearInterval(interval);
+							}
 						}
 					} catch (e) {
-						console.error(e);
+						// Ignore errors, wait for successful connection or timeout
+						console.error("Error checking wifi current during connect:", e);
 					}
 				}, 5000);
 			});
+
+			if (connected) {
+				internetConnectionCache.delete(deviceId); // Invalidate cache
+				wifiInternetConnectionCache.delete(deviceId); // Invalidate WiFi internet cache
+			}
 			return connected;
 		} catch (error) {
+			console.error("Error in connectToWifi:", error);
 			return false;
 		}
 	};
@@ -2003,9 +2239,22 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 	});
 
 	const checkDeviceWifiInternetConnection = async (deviceId: DeviceId) => {
+		const cached = wifiInternetConnectionCache.get(deviceId);
+		if (
+			cached &&
+			Date.now() - cached.timestamp < NETWORK_DATA_CACHE_DURATION_MS
+		) {
+			return cached.connected;
+		}
 		try {
 			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
+			if (!device || !device.isConnected) {
+				wifiInternetConnectionCache.set(deviceId, {
+					connected: false,
+					timestamp: Date.now(),
+				});
+				return false;
+			}
 			const { url } = device;
 			const res = await CapacitorHttp.get({
 				url: `${url}/api/wifi-check`,
@@ -2014,21 +2263,49 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 					credentials: "include",
 				},
 			});
-			const connection =
-				res.status === 200
-					? ConnectionRes.parse(JSON.parse(res.data)).connected
-					: res.status === 404;
-			return connection;
+			let connected = false;
+			if (res.status === 200) {
+				// Check if 'connected' field exists, default to false if not (for older TC2s)
+				const parsedData = JSON.parse(res.data);
+				if (typeof parsedData.connected === "boolean") {
+					connected = ConnectionRes.parse(parsedData).connected;
+				}
+				// If 'connected' field is missing, assume false for internet check
+			}
+			// For any other status, including 404 (endpoint not found),
+			// we cannot confirm internet via this WiFi check.
+			wifiInternetConnectionCache.set(deviceId, {
+				connected,
+				timestamp: Date.now(),
+			});
+			return connected;
 		} catch (error) {
-			console.error(error);
+			console.error("Error in checkDeviceWifiInternetConnection:", error);
+			wifiInternetConnectionCache.set(deviceId, {
+				connected: false,
+				timestamp: Date.now(),
+			});
 			return false;
 		}
 	};
 
 	const checkDeviceModemInternetConnection = async (deviceId: DeviceId) => {
+		const cached = modemInternetConnectionCache.get(deviceId);
+		if (
+			cached &&
+			Date.now() - cached.timestamp < NETWORK_DATA_CACHE_DURATION_MS
+		) {
+			return cached.connected;
+		}
 		try {
 			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
+			if (!device || !device.isConnected) {
+				modemInternetConnectionCache.set(deviceId, {
+					connected: false,
+					timestamp: Date.now(),
+				});
+				return false;
+			}
 			const { url } = device;
 			const res = await CapacitorHttp.get({
 				url: `${url}/api/modem-check`,
@@ -2037,14 +2314,30 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 					credentials: "include",
 				},
 			});
-			return ConnectionRes.parse(JSON.parse(res.data)).connected;
+			const connected = ConnectionRes.parse(JSON.parse(res.data)).connected;
+			modemInternetConnectionCache.set(deviceId, {
+				connected,
+				timestamp: Date.now(),
+			});
+			return connected;
 		} catch (error) {
 			console.error("Connection Error:", error);
+			modemInternetConnectionCache.set(deviceId, {
+				connected: false,
+				timestamp: Date.now(),
+			});
 			return false;
 		}
 	};
 
 	const getModem = async (deviceId: DeviceId): Promise<Modem | null> => {
+		const cached = modemDetailsCache.get(deviceId);
+		if (
+			cached &&
+			Date.now() - cached.timestamp < NETWORK_DATA_CACHE_DURATION_MS
+		) {
+			return cached.modem;
+		}
 		try {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
@@ -2055,10 +2348,19 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 				webFetchExtra: {
 					credentials: "include",
 				},
+				connectTimeout: 5000, // Added timeout
+				readTimeout: 5000, // Added timeout
 			});
-			return res.status === 200 ? tc2ModemSchema.parse(res.data) : null;
+			const modemData =
+				res.status === 200 ? tc2ModemSchema.parse(res.data) : null;
+			modemDetailsCache.set(deviceId, {
+				modem: modemData,
+				timestamp: Date.now(),
+			});
+			return modemData;
 		} catch (error) {
-			console.error("Get Modem Error:", error);
+			console.error("Error in getModem:", error);
+			modemDetailsCache.set(deviceId, { modem: null, timestamp: Date.now() });
 			return null;
 		}
 	};
@@ -2069,6 +2371,11 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 			if (!device || !device.isConnected) return false;
 			const { url } = device;
 			const res = await DevicePlugin.turnOnModem({ url, minutes: "5" });
+			if (res.success) {
+				internetConnectionCache.delete(deviceId);
+				modemDetailsCache.delete(deviceId); // Modem state changed
+				modemInternetConnectionCache.delete(deviceId); // Invalidate modem internet cache
+			}
 			return res.success;
 		} catch (error) {
 			console.error("Turn On Error: ", error);
@@ -2122,29 +2429,52 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 		}
 	};
 
-	const getSavedWifiNetworks = async (deviceId: DeviceId) => {
+	const getSavedWifiNetworks = async (
+		deviceId: DeviceId,
+	): Promise<string[] | null> => {
+		const cached = savedWifiNetworksCache.get(deviceId);
+		if (
+			cached &&
+			Date.now() - cached.timestamp < NETWORK_DATA_CACHE_DURATION_MS
+		) {
+			return cached.networks;
+		}
 		try {
 			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return [];
+			if (!device || !device.isConnected) return []; // Keep returning [] for now
 			const { url } = device;
-			const savedNetworks = await CapacitorHttp.get({
+			const savedNetworksRes = await CapacitorHttp.get({
 				url: `${url}/api/network/wifi/saved`,
 				headers,
 				webFetchExtra: {
 					credentials: "include",
 				},
+				connectTimeout: 5000, // Added timeout
+				readTimeout: 5000, // Added timeout
 			});
-			if (savedNetworks.status !== 200) return [];
-			return z
+			if (savedNetworksRes.status !== 200) {
+				savedWifiNetworksCache.set(deviceId, {
+					networks: null,
+					timestamp: Date.now(),
+				});
+				return null;
+			}
+			const networks = z
 				.array(
 					z
 						.string()
 						.or(z.object({ SSID: z.string() }).transform((val) => val.SSID)),
 				)
-				.parse(JSON.parse(savedNetworks.data));
+				.parse(JSON.parse(savedNetworksRes.data));
+			savedWifiNetworksCache.set(deviceId, { networks, timestamp: Date.now() });
+			return networks;
 		} catch (error) {
-			console.error(error);
-			return [];
+			console.error("Error in getSavedWifiNetworks:", error);
+			savedWifiNetworksCache.set(deviceId, {
+				networks: [],
+				timestamp: Date.now(),
+			}); // Cache empty on error
+			return []; // Keep returning [] for now
 		}
 	};
 
@@ -2324,7 +2654,7 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 				},
 			});
 			return res.status === 200
-				? AudioModeResSchema.parse(JSON.parse(res.data))["audio-mode"]
+				? AudioRecordingResSchema.parse(JSON.parse(res.data))["audio-mode"]
 				: null;
 		} catch (error) {
 			console.error(error);
@@ -2858,18 +3188,51 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 		}
 	};
 
-	const deviceHasInternet = async (deviceId: DeviceId) => {
+	const deviceHasInternet = async (deviceId: DeviceId): Promise<boolean> => {
+		const cachedEntry = internetConnectionCache.get(deviceId);
+		if (
+			cachedEntry &&
+			Date.now() - cachedEntry.timestamp < INTERNET_CACHE_DURATION_MS
+		) {
+			return cachedEntry.status;
+		}
+
 		try {
 			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
+			if (!device || !device.isConnected) {
+				internetConnectionCache.set(deviceId, {
+					status: false,
+					timestamp: Date.now(),
+				});
+				return false;
+			}
 
-			const wifi = await getCurrentWifiNetwork(deviceId);
-			if (wifi?.SSID !== "") return true;
-			const modemConnection =
-				await checkDeviceModemInternetConnection(deviceId);
-			return modemConnection;
+			let hasInternet = false;
+			// Check WiFi internet connection first
+			const wifiNetwork = await getCurrentWifiNetwork(deviceId);
+			if (wifiNetwork?.SSID && wifiNetwork.SSID !== "") {
+				hasInternet = await checkDeviceWifiInternetConnection(deviceId);
+			}
+
+			// If not connected via WiFi or WiFi check failed/returned false, check modem
+			if (!hasInternet) {
+				hasInternet = await checkDeviceModemInternetConnection(deviceId);
+			}
+
+			internetConnectionCache.set(deviceId, {
+				status: hasInternet,
+				timestamp: Date.now(),
+			});
+			return hasInternet;
 		} catch (error) {
-			console.error("While checking device has internet", error);
+			console.error(
+				"Error in deviceHasInternet while checking device internet:",
+				error,
+			);
+			internetConnectionCache.set(deviceId, {
+				status: false,
+				timestamp: Date.now(),
+			});
 			return false;
 		}
 	};
@@ -2959,9 +3322,10 @@ const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 		saveAPN,
 		getBattery,
 		devicesConnectingToWifi,
+		backgroundRefreshNetworkData,
 	};
 });
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+// biome-ignore lint/style/noNonNullAssertion: this should no fail if provider is used correctly
 const defineUseDevice = () => useDevice()!;
 export { defineUseDevice as useDevice, DeviceProvider };

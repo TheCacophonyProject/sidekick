@@ -23,4 +23,14 @@ else
   PLATFORM='android'
 fi
 
+if [[ "$PLATFORM" == "android" ]]; then
+  # Set up ADB reverse proxy so localhost works on device
+  if command -v adb >/dev/null 2>&1; then
+    echo "Setting up ADB reverse for port 5173..."
+    adb reverse tcp:5173 tcp:5173
+  else
+    echo "Warning: adb not found. Please install Android Platform Tools."
+  fi
+fi
+
 ionic cap run $PLATFORM -l --external --port=5173 --public-host="localhost"

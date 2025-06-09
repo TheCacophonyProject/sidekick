@@ -12,7 +12,13 @@ import { useUserContext } from "../User";
 import { db } from ".";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { deleteDeviceReferenceImage } from "~/database/Entities/DeviceReferenceImages";
-import { createEffect, createResource, on, onMount } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	on,
+	onMount,
+} from "solid-js";
 import { z } from "zod";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { useDevice } from "../Device";
@@ -21,7 +27,18 @@ import { Network } from "@capacitor/network";
 export function useDeviceImagesStorage() {
 	const log = useLogsContext();
 	const userContext = useUserContext();
+	const [shouldUpload, setShouldUpload] = createSignal(true);
 
+	onMount(async () => {
+		try {
+			await db.execute(createDeviceReferenceImageSchema);
+		} catch (error) {
+			log.logError({
+				message: "Failed to create device reference image table",
+				error,
+			});
+		}
+	});
 	const [deviceImages, { refetch: refetchDeviceImages }] = createResource(
 		async () => {
 			try {
@@ -49,17 +66,6 @@ export function useDeviceImagesStorage() {
 		) ?? [];
 
 	const hasItemsToUpload = () => itemsToUpload().length > 0;
-
-	onMount(async () => {
-		try {
-			await db.execute(createDeviceReferenceImageSchema);
-		} catch (error) {
-			log.logError({
-				message: "Failed to create device reference image table",
-				error,
-			});
-		}
-	});
 
 	function base64ToArrayBuffer(base64: string): ArrayBuffer {
 		// atob() decodes a base64-encoded string into a binary string
@@ -164,6 +170,36 @@ export function useDeviceImagesStorage() {
 					existingImage.filePath,
 				);
 			}
+			// Check for authorization errors before processing
+			if (res.status === 403 || res.status === 401) {
+				// Check if this is a device access issue
+				const errorData = res.data as { messages?: string[]; message?: string };
+				const errorMessage =
+					errorData.message ||
+					(errorData.messages && errorData.messages.join(", ")) ||
+					"";
+
+				if (
+					errorMessage.includes("Could not find a device") ||
+					errorMessage.includes("authorization") ||
+					errorMessage.includes("access")
+				) {
+					// Trigger device access request popup using deviceId
+					userContext.setUserNeedsGroupAccess({
+						deviceId: deviceId,
+						deviceName: "",
+						groupName: "",
+					});
+
+					log.logWarning({
+						message: `Device access required for device ${deviceId}`,
+						details: `You need access to device ${deviceId} to upload images`,
+					});
+
+					return false;
+				}
+			}
+
 			const insertRes = await insertDeviceReferenceImage(db)({
 				deviceId: Number.parseInt(deviceId),
 				filePath,
@@ -181,10 +217,17 @@ export function useDeviceImagesStorage() {
 					: { serverStatus: "pending-upload" }),
 			});
 
-			log.logSuccess({
-				message: "Successfully uploaded device photo",
-				details: JSON.stringify(insertRes),
-			});
+			if (res.status === 200) {
+				log.logSuccess({
+					message: "Successfully uploaded device photo",
+					details: JSON.stringify(insertRes),
+				});
+			} else {
+				log.logWarning({
+					message: "Device photo upload failed or pending",
+					details: `Status: ${res.status}, marked as pending upload`,
+				});
+			}
 
 			return res.status === 200;
 		} catch (error) {
@@ -710,6 +753,7 @@ export function useDeviceImagesStorage() {
 	};
 
 	const syncPendingPhotos = async () => {
+		setShouldUpload(true);
 		try {
 			// If device AP is connected, skip server calls
 			const user = await userContext.getUser();
@@ -717,13 +761,17 @@ export function useDeviceImagesStorage() {
 			const pendingPhotos = itemsToUpload();
 
 			for (const photo of pendingPhotos) {
+				if (!shouldUpload()) break; // Check if upload was cancelled
 				try {
 					const url = userContext.getServerUrl();
 
 					const { deviceId, filePath, isProd } = photo;
 					if (photo.serverStatus === "pending-deletion") {
 						await deleteDevicePhoto(photo, false);
-					} else if (photo.serverStatus === "pending-upload") {
+					} else if (
+						photo.serverStatus === "pending-upload" &&
+						shouldUpload()
+					) {
 						let fileContents;
 						try {
 							fileContents = await Filesystem.readFile({
@@ -845,6 +893,11 @@ export function useDeviceImagesStorage() {
 			refetchDeviceImages();
 		}
 	};
+
+	const stopUploading = () => {
+		setShouldUpload(false);
+	};
+
 	return {
 		deviceImages,
 		itemsToUpload,
@@ -858,5 +911,6 @@ export function useDeviceImagesStorage() {
 		syncPendingPhotos,
 		syncWithServer,
 		processPendingOperations,
+		stopUploading,
 	};
 }

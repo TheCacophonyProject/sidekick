@@ -348,6 +348,27 @@ class NsdHelper(private val context: Context) {
                         return@let
                     }
 
+                    // Special handling for FAILURE_ALREADY_ACTIVE, which indicates a stuck resolver in NsdManager
+                    if (errorCode == NsdManager.FAILURE_ALREADY_ACTIVE) {
+                        Log.w(TAG, "Resolve failed for ${failedService.serviceName} because a resolve was already active. This is often due to a bug in Android's NsdManager. Not retrying.")
+
+                        // Notify listener with a more specific message
+                        onServiceResolveFailed?.invoke(
+                            failedService.serviceName,
+                            errorCode,
+                            "A resolve operation was already active. This can happen if the network changes frequently. The system will try again automatically."
+                        )
+
+                        // Reset state to allow a new attempt later, and unblock the queue
+                        state.isCurrentlyResolving = false
+                        state.pendingRetryRunnable?.let { mainHandler.removeCallbacks(it) } // Cancel any pending retry
+                        state.pendingRetryRunnable = null
+                        // IMPORTANT: Process the next service in the queue to prevent one stuck service from blocking all others.
+                        mainHandler.post { tryResolveNext() }
+                        return@let
+                    }
+
+
                     val delayMs = calculateBackoffDelay(attempt)
 
                     // Notify listener about the specific error

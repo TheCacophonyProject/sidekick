@@ -1049,129 +1049,115 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     }
     
     @objc override public func checkPermissions(_ call: CAPPluginCall) {
-        let serviceType = "_preflight_check._tcp"
-        let queue = DispatchQueue(label: "LocalNetworkPermissionCheckQueue")
+        // Use one of the app's main service types, e.g., the one used for actual discovery.
+        // This avoids creating a listener with a UUID name just for a check.
+        let serviceTypeToCheck = "_cacophonator-management._tcp"
+        let queue = DispatchQueue(label: "LocalNetworkPermissionCheckQueue", qos: .userInitiated)
         
-        var listener: NWListener?
         var browser: NWBrowser?
-        var didComplete = false
-        
-        // Define the Policy Denied error code
-        let kDNSServiceErr_PolicyDenied: Int32 = -72007
-        
-        do {
-            let parameters = NWParameters.tcp
-            listener = try NWListener(using: parameters)
-            listener?.service = NWListener.Service(name: UUID().uuidString, type: serviceType)
-            listener?.newConnectionHandler = { _ in } // Must be set or else the listener will error with POSIX error 22
-        } catch {
-            call.reject("Failed to create NWListener: \(error.localizedDescription)")
-            return
+        var callHasBeenResolved = false // Ensure call is resolved only once
+        var resolutionTimer: Timer?
+
+        // Utility to safely resolve the call on the main thread
+        func resolveCall(granted: Bool, message: String? = nil) {
+            DispatchQueue.main.async {
+                if !callHasBeenResolved {
+                    callHasBeenResolved = true
+                    resolutionTimer?.invalidate()
+                    browser?.cancel() // Ensure browser is cancelled
+                    if let msg = message {
+                        print("checkPermissions: \(msg)")
+                    }
+                    call.resolve(["granted": granted])
+                }
+            }
         }
-        
-        listener?.stateUpdateHandler = { newState in
+
+        let parameters = NWParameters()
+        parameters.includePeerToPeer = true // Often used for local peer discovery
+        // parameters.requiredInterfaceType = .wifi // Consider if discovery is Wi-Fi only
+
+        browser = NWBrowser(for: .bonjour(type: serviceTypeToCheck, domain: nil), using: parameters)
+
+        browser?.stateUpdateHandler = { [weak browser] newState in
+            // Ensure we don't act if already resolved
+            guard !callHasBeenResolved else { return }
+
             switch newState {
             case .ready:
-                // Listener is ready
-                break
+                resolveCall(granted: true, message: "Browser is .ready for \(serviceTypeToCheck)")
             case .failed(let error):
-                // Handle failure with error
-                if !didComplete {
-                    didComplete = true
-                    listener?.cancel()
-                    browser?.cancel()
-                    DispatchQueue.main.async {
-                        call.reject("Listener failed with error: \(error.localizedDescription)")
-                    }
-                }
-            case .cancelled:
-                // Handle cancellation without error
-                if !didComplete {
-                    didComplete = true
-                    browser?.cancel()
-                    DispatchQueue.main.async {
-                        call.reject("Listener was cancelled")
-                    }
-                }
-            default:
-                break
-            }
-        }
-        
-        let browserParameters = NWParameters()
-        browserParameters.includePeerToPeer = true
-        browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: browserParameters)
-        
-        browser?.stateUpdateHandler = { newState in
-            switch newState {
-            case .failed(let error):
-                // Handle browser failure with error
-                if !didComplete {
-                    didComplete = true
-                    listener?.cancel()
-                    browser?.cancel()
-                    DispatchQueue.main.async {
-                        call.reject("Browser failed with error: \(error.localizedDescription)")
-                    }
-                }
-            case .cancelled:
-                // Handle browser cancellation without error
-                if (!didComplete) {
-                    didComplete = true
-                    listener?.cancel()
-                    DispatchQueue.main.async {
-                        call.reject("Browser was cancelled")
-                    }
-                }
-            case .waiting(let error):
-                // Handle waiting state to check for policy denied
-                if case let NWError.dns(dnsError) = error, dnsError == kDNSServiceErr_PolicyDenied {
-                    if !didComplete {
-                        didComplete = true
-                        listener?.cancel()
-                        browser?.cancel()
-                        DispatchQueue.main.async {
-                            call.resolve(["granted": false])
+                var errorMessage = "Browser for \(serviceTypeToCheck) failed. Error: \(error.localizedDescription)"
+                var permissionDeniedBySystem = false
+                if let nwError = error as? NWError {
+                    switch nwError {
+                    case .dns(let dnsErrorType):
+                        // kDNSServiceErr_PolicyDenied is -65549. This indicates permission was denied by the system.
+                        if dnsErrorType == -65549 {
+                            errorMessage = "Browser failed: DNS Policy Denied (\(dnsErrorType)) for \(serviceTypeToCheck)."
+                            permissionDeniedBySystem = true
+                        } else {
+                            errorMessage = "Browser failed: DNS Error \(dnsErrorType) for \(serviceTypeToCheck)."
                         }
-                    }
-                }
-            default:
-                break
-            }
-        }
-        
-        browser?.browseResultsChangedHandler = { results, changes in
-            if !didComplete {
-                for result in results {
-                    if case let .service(name, _, _, _) = result.endpoint, name == listener?.service?.name {
-                        // Permission granted
-                        didComplete = true
-                        listener?.cancel()
-                        browser?.cancel()
-                        DispatchQueue.main.async {
-                            call.resolve(["granted": true])
+                    case .posix(let posixError):
+                        // POSIX EPERM (1) or EACCES (13) can also indicate permission issues.
+                        if posixError == .EPERM || posixError == .EACCES {
+                            errorMessage = "Browser failed: POSIX Permission Error (\(posixError.rawValue)) for \(serviceTypeToCheck)."
+                            permissionDeniedBySystem = true
+                        } else if posixError == .ECANCELED {
+                             // If we cancelled it (e.g., via timeout or after resolution), this is expected.
+                             // If browser?.state is .cancelled, it means we likely initiated it.
+                             // This path should ideally not be hit if callHasBeenResolved is checked.
+                            print("Browser failed: POSIX Cancelled. Current browser state: \(String(describing: browser?.state)) for \(serviceTypeToCheck).")
+                            return // Avoid generic failure resolution if it's our cancel or already handled.
+                        } else {
+                            errorMessage = "Browser failed: POSIX Error \(posixError.rawValue) for \(serviceTypeToCheck)."
                         }
+                    default:
+                        // Other NWError types
                         break
                     }
                 }
-            }
-        }
-        
-        listener?.start(queue: queue)
-        browser?.start(queue: queue)
-        
-        // Set a timeout to prevent indefinite waiting
-        queue.asyncAfter(deadline: .now() + 5) {
-            if !didComplete {
-                didComplete = true
-                listener?.cancel()
-                browser?.cancel()
-                // Assume permission is denied after timeout
-                DispatchQueue.main.async {
-                    call.resolve(["granted": false])
+                // If a specific permission denial error was identified, resolve false. Otherwise, it's a generic network failure.
+                // For a permission check, any failure to become .ready might be treated as permission not available.
+                resolveCall(granted: permissionDeniedBySystem, message: errorMessage)
+            case .cancelled:
+                // This state is usually hit after browser.cancel() is called (e.g. in resolveCall or timeout).
+                // If hit before resolution, it implies an external cancellation or issue.
+                resolveCall(granted: false, message: "Browser for \(serviceTypeToCheck) was cancelled before resolution.")
+            case .waiting(let error):
+                // Browser is waiting, possibly for the permission prompt if status is undetermined.
+                if let currentError = error, case let NWError.dns(dnsErrorType) = currentError, dnsErrorType == -65549 {
+                    resolveCall(granted: false, message: "Browser waiting: DNS Policy Denied (\(dnsErrorType)) for \(serviceTypeToCheck).")
+                } else {
+                    // Still waiting, don't resolve yet. Let timeout handle if it persists.
+                    print("Browser for \(serviceTypeToCheck) is .waiting. Error (if any): \(String(describing: error))")
                 }
+            default:
+                // Other states like .setup.
+                break
             }
         }
+        
+        // Start browsing.
+        browser?.start(queue: queue)
+
+        // Timeout: If after a few seconds (e.g., 3-5s) we haven't definitively resolved,
+        // assume permission is not granted or the prompt is taking too long / user isn't interacting.
+        // The system's permission prompt is modal.
+        resolutionTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+            // This timer runs on the main thread, dispatch to queue for browser state check if needed,
+            // but resolveCall handles main thread dispatch for CAPPluginCall.
+            if !callHasBeenResolved {
+                var msg = "Timeout (3s) reached for \(serviceTypeToCheck) permission check."
+                // We need to check browser state on its queue or ensure thread safety if accessing directly.
+                // For simplicity, just resolve.
+                // If browser?.state was .waiting, the prompt might have been up.
+                msg += " Assuming permission not granted or prompt not acted upon."
+                resolveCall(granted: false, message: msg)
+            }
+        }
+        call.keepAlive = true // Keep Capacitor call alive until we explicitly resolve it.
     }
 }
 

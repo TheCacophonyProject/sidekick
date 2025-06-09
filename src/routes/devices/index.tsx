@@ -29,7 +29,7 @@ import {
 import { Portal } from "solid-js/web";
 import ActionContainer from "~/components/ActionContainer";
 import BackgroundLogo from "~/components/BackgroundLogo";
-import { DeviceSettingsModal } from "~/components/DeviceSettings";
+import DeviceSettingsModal from "~/components/DeviceSettings";
 import { useHeaderContext } from "~/components/Header";
 import SetupWizard from "~/components/SetupWizard";
 import { type Device, useDevice } from "~/contexts/Device";
@@ -167,19 +167,17 @@ function DeviceDetails(props: DeviceDetailsProps) {
               Recordings Saved: {savedRecs().length}/{deviceRecs().length}{" "}
             </p>
           </div>
-          <Show when={user.dev()}>
-            <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
-              <AiOutlineUnorderedList size={20} />
-              <p class="text-sm">
-                Events Saved:{" "}
-                {
-                  storage.savedEvents().filter((val) => val.device === props.id)
-                    .length
-                }
-                /{context.deviceEventKeys.get(props.id)?.length ?? 0}{" "}
-              </p>
-            </div>
-          </Show>
+          <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
+            <AiOutlineUnorderedList size={20} />
+            <p class="text-sm">
+              Events Saved:{" "}
+              {
+                storage.savedEvents().filter((val) => val.device === props.id)
+                  .length
+              }
+              /{context.deviceEventKeys.get(props.id)?.length ?? 0}{" "}
+            </p>
+          </div>
         </div>
         <Show
           when={props.isConnected}
@@ -354,6 +352,8 @@ function Devices() {
   const headerContext = useHeaderContext();
   const log = useLogsContext();
   const [tryDisconnect, setTryDisconnect] = createSignal(false);
+  const [showButtonTooltip, setShowButtonTooltip] = createSignal(false);
+  let tooltipTimeout: NodeJS.Timeout;
 
   onMount(() => {
     // Add delete button to header
@@ -362,61 +362,120 @@ function Devices() {
     headerContext?.headerMap.set("/devices", [
       header[0],
       () => (
-        <Show
-          when={
-            !["loadingConnect", "loadingDisconnect"].includes(context.apState())
-          }
-          fallback={
-            <span class="text-blue-500">
-              <FaSolidSpinner size={28} class="animate-spin" />
-            </span>
-          }
-        >
-          <button
-            onClick={async () => {
-              console.log(
-                "AP button clicked, current state:",
-                context.apState()
-              );
-              try {
-                if (context.apState() === "connected") {
-                  if (tryDisconnect()) return;
-                  setTryDisconnect(true);
-                  const dialog = await Prompt.confirm({
-                    title: "Disconnect from Device",
-                    message:
-                      "You are currently connected to the device's WiFi network. Disconnect from the device to connect to another network?",
-                  });
-                  if (dialog.value) {
-                    await context.disconnectFromDeviceAP();
-                  }
-                } else {
-                  context.connectToDeviceAP();
-                }
-              } catch (error) {
-                console.error(
-                  "Error in connecting/disconnecting from device",
-                  error
-                );
-                log.logError({
-                  message: "Error connecting/disconnecting",
-                  error,
+        <button
+          onClick={async () => {
+            // Prevent clicks during loading states
+            if (["loadingConnect", "loadingDisconnect"].includes(context.apState())) return;
+
+            console.log(
+              "AP button clicked, current state:",
+              context.apState()
+            );
+            try {
+              if (context.apState() === "connected") {
+                if (tryDisconnect()) return;
+                setTryDisconnect(true);
+                const dialog = await Prompt.confirm({
+                  title: "Disconnect from Device",
+                  message:
+                    "You are currently connected to the device's WiFi network. Disconnect from the device to connect to another network?",
                 });
-              } finally {
-                setTryDisconnect(false);
+                if (dialog.value) {
+                  await context.disconnectFromDeviceAP();
+                }
+              } else {
+                context.connectToDeviceAP();
               }
-            }}
-            classList={{
-              "text-blue-500":
-                context.apState() === "default" ||
-                context.apState() === "disconnected",
-              "text-highlight": context.apState() === "connected",
-            }}
-            title={getButtonTitle(context.apState())}
+            } catch (error) {
+              console.error(
+                "Error in connecting/disconnecting from device",
+                error
+              );
+              log.logError({
+                message: "Error connecting/disconnecting",
+                error,
+              });
+            } finally {
+              setTryDisconnect(false);
+            }
+          }}
+          onTouchStart={() => {
+            // Show tooltip on touch for mobile
+            clearTimeout(tooltipTimeout);
+            setShowButtonTooltip(true);
+            // Hide after 2 seconds
+            tooltipTimeout = setTimeout(() => {
+              setShowButtonTooltip(false);
+            }, 2000);
+          }}
+          class="group relative flex items-center gap-2 rounded-lg px-3 py-2 shadow-md transition-all active:scale-95"
+          classList={{
+            "bg-blue-500 text-white hover:bg-blue-600 hover:shadow-lg":
+              context.apState() === "default" ||
+              context.apState() === "disconnected",
+            "bg-orange-500 text-white hover:bg-orange-600 hover:shadow-lg":
+              context.apState() === "connected",
+            "bg-blue-400 text-white cursor-wait":
+              context.apState() === "loadingConnect",
+            "bg-orange-400 text-white cursor-wait":
+              context.apState() === "loadingDisconnect",
+          }}
+          disabled={["loadingConnect", "loadingDisconnect"].includes(context.apState())}
+          title={getButtonTitle(context.apState())}
+        >
+          <Show
+            when={!["loadingConnect", "loadingDisconnect"].includes(context.apState())}
+            fallback={
+              <FaSolidSpinner size={20} class="animate-spin" />
+            }
           >
-            <RiDeviceRouterFill size={28} />
-          </button>
-        </Show>
+            <RiDeviceRouterFill size={24} />
+          </Show>
+          <span class="hidden font-medium sm:inline">
+            <Switch>
+              <Match when={context.apState() === "connected"}>
+                Disconnect Device
+              </Match>
+              <Match when={context.apState() === "disconnected"}>
+                Connect to Device
+              </Match>
+              <Match when={context.apState() === "loadingConnect"}>
+                Connecting...
+              </Match>
+              <Match when={context.apState() === "loadingDisconnect"}>
+                Disconnecting...
+              </Match>
+              <Match when={context.apState() === "default"}>
+                Connect to Device
+              </Match>
+            </Switch>
+          </span>
+          <span class="font-medium sm:hidden">
+            <Switch>
+              <Match when={context.apState() === "connected"}>
+                Disconnect
+              </Match>
+              <Match when={context.apState() === "disconnected"}>
+                Connect
+              </Match>
+              <Match when={context.apState() === "loadingConnect"}>
+                Connecting
+              </Match>
+              <Match when={context.apState() === "loadingDisconnect"}>
+                Disconnecting
+              </Match>
+              <Match when={context.apState() === "default"}>
+                Connect
+              </Match>
+            </Switch>
+          </span>
+          {/* Mobile-friendly tooltip */}
+          <Show when={showButtonTooltip()}>
+            <div class="pointer-events-none absolute top-full right-0 mt-2 w-max animate-fade-in rounded bg-gray-800 px-2 py-1 text-xs text-white shadow-lg sm:hidden">
+              {getButtonTitle(context.apState())}
+            </div>
+          </Show>
+        </button>
       ),
     ]);
   });
@@ -425,13 +484,17 @@ function Devices() {
   function getButtonTitle(state: string | undefined): string {
     switch (state) {
       case "connected":
-        return "Disconnect from device WiFi";
+        return "Disconnect from device network";
       case "disconnected":
-        return "Connect to device WiFi";
+        return "Connect directly to device";
       case "default":
-        return "Connect to device WiFi";
+        return "Connect directly to device";
+      case "loadingConnect":
+        return "Connecting to device...";
+      case "loadingDisconnect":
+        return "Disconnecting from device...";
       default:
-        return "Device WiFi connection";
+        return "Device connection";
     }
   }
 
@@ -627,7 +690,7 @@ function Devices() {
               class="flex rounded-md bg-white px-4 py-4"
               onClick={findDevice}
             >
-              <div class="text-blue-500">
+              <div class="text-blue-500 pr-1">
                 <ImSearch size={28} />
               </div>
               <p>Find Device</p>

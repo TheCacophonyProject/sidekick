@@ -130,11 +130,30 @@ export function useRecordingStorage() {
 				setSavedRecordings((prev) => prev.filter((r) => r.id !== recording.id));
 				// No need to try deleting from device again, it's already gone.
 			} else if (res.message.includes("AuthError")) {
-				log.logWarning({
-					message: "Your account does not have access to upload recordings",
-					details: res.message,
-					warn,
-				});
+				// Check if this is specifically a device access issue
+				if (
+					res.message.includes("Could not find a device") &&
+					res.message.includes("for user")
+				) {
+					// Trigger device access request popup using deviceName + groupName
+					userContext.setUserNeedsGroupAccess({
+						deviceId: "",
+						deviceName: recording.deviceName,
+						groupName: recording.groupName,
+					});
+
+					log.logWarning({
+						message: `Device access required for ${recording.deviceName} in group ${recording.groupName}`,
+						details: `You need access to device ${recording.deviceName} to upload recordings`,
+						warn: false,
+					});
+				} else {
+					log.logWarning({
+						message: "Your account does not have access to upload recordings",
+						details: res.message,
+						warn,
+					});
+				}
 				const otherRecordings = recordings.filter(
 					(r) => r.device !== recording.device,
 				);
@@ -180,8 +199,8 @@ export function useRecordingStorage() {
 	};
 
 	const saveRecording = async ({
-		id, // Device ID
-		name, // Group name
+		id,
+		name,
 		group,
 		path,
 		filename,
@@ -238,7 +257,6 @@ export function useRecordingStorage() {
 			);
 			if (!toDelete.length) return;
 
-			// Attempt to delete from the device file system
 			for (const rec of toDelete) {
 				const res = await DevicePlugin.deleteRecording({
 					recordingPath: rec.name,

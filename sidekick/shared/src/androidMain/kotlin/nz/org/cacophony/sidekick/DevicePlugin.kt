@@ -1,5 +1,6 @@
 package nz.org.cacophony.sidekick
 
+import android.Manifest
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -10,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -66,6 +68,7 @@ class DevicePlugin : Plugin() {
     /**
      * Plugin initialization
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     override fun load() {
         super.load()
         Log.d(TAG, "Loading DevicePlugin")
@@ -213,6 +216,7 @@ class DevicePlugin : Plugin() {
     /**
      * Start continuous monitoring of the AP connection state
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun startAPConnectionMonitoring() {
         if (isMonitoringActive) {
             return
@@ -548,6 +552,7 @@ class DevicePlugin : Plugin() {
     /**
      * Check if we have an active network connection
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     @PluginMethod
     fun hasConnection(call: PluginCall) {
         Log.d(TAG, "Checking network connection")
@@ -556,15 +561,9 @@ class DevicePlugin : Plugin() {
         try {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-            val isConnected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val network = cm.activeNetwork
-                val capabilities = cm.getNetworkCapabilities(network)
-                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-            } else {
-                @Suppress("DEPRECATION")
-                val networkInfo = cm.activeNetworkInfo
-                networkInfo?.isConnected == true
-            }
+            val network = cm.activeNetwork
+            val capabilities = cm.getNetworkCapabilities(network)
+            val isConnected = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 
             result.put("success", true)
             result.put("connected", isConnected)
