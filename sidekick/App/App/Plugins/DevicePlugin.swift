@@ -97,6 +97,7 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     
     // Connection state enum to match Android implementation
     enum ConnectionState: String {
+        case `default` = "DEFAULT"
         case disconnected = "DISCONNECTED"
         case connecting = "CONNECTING"
         case connectionVerifying = "CONNECTION_VERIFYING"
@@ -634,92 +635,116 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
     
+    private func finalizeConnectionAttempt(status: ConnectionState, error: String?, call: CAPPluginCall) {
+        // 1. Invalidate all timers to prevent further actions
+        self.connectionTimeoutTimer?.invalidate()
+        self.verificationTimer?.invalidate()
+        self.connectionTimeoutTimer = nil
+        self.verificationTimer = nil
+        
+        // 2. Update the connection state and notify listeners
+        self.updateConnectionState(status)
+        
+        // 3. Resolve the plugin call with the final status
+        if status == .connected {
+            call.resolve(["status": "connected"])
+            // Start monitoring the health of the connection now that we're connected
+            self.startConnectionMonitoring()
+        } else {
+            call.resolve([
+                "status": "error",
+                "error": error ?? "An unknown error occurred."
+            ])
+        }
+    }
+
     @objc func connectToDeviceAP(_ call: CAPPluginCall) {
-        guard self.bridge != nil else { 
+        guard self.bridge != nil else {
             call.reject("Could not access bridge")
             return
         }
         
-        // Ensure we're in a valid state to start connection
-        guard connectionState == .disconnected || 
-              connectionState == .connectionFailed || 
-              connectionState == .connectionLost else {
+        // Ensure we're in a valid state to start a new connection attempt
+        guard connectionState == .disconnected ||
+              connectionState == .connectionFailed ||
+              connectionState == .connectionLost ||
+              connectionState == .default /* Allow from initial state */ else {
             call.resolve(["status": "error", "error": "Cannot connect in state: \(connectionState.rawValue)"])
             return
         }
         
-        DispatchQueue.global().async { [weak self] in
-            guard let self = self else { return }
+        // Keep the call alive as we'll be resolving it in an async callback
+        call.keepAlive = true
+        
+        // First, check if we're already connected to the target network
+        self.checkCurrentConnection { [weak self] isConnected in
+            guard let self = self else {
+                call.reject("Plugin instance deallocated")
+                return
+            }
             
-            // First, check if already connected to bushnet
-            self.checkCurrentConnection { isConnected in
-                if isConnected {
-                    self.updateConnectionState(.connected)
-                    call.resolve(["status": "connected"])
-                    
-                    // Start connection monitoring
-                    self.startConnectionMonitoring()
+            if isConnected {
+                // Already connected, finalize immediately
+                self.finalizeConnectionAttempt(status: .connected, error: nil, call: call)
+                return
+            }
+            
+            // --- Start of the new connection flow ---
+            
+            // Set state to connecting
+            self.updateConnectionState(.connecting)
+            
+            // Set a reasonable master timeout for the entire operation (e.g., 30 seconds)
+            // This is our safety net.
+            self.connectionTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                
+                // If we are still trying to connect or verify after 30s, fail the attempt.
+                if self.connectionState == .connecting || self.connectionState == .connectionVerifying {
+                    self.finalizeConnectionAttempt(status: .connectionFailed, error: "Connection timed out.", call: call)
+                }
+            }
+            
+            // Ensure configuration is set to join only once if needed, and remove old configs
+            self.configuration.joinOnce = true // Use true to prevent iOS from auto-reconnecting later
+            NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
+            
+            // Apply the hotspot configuration
+            NEHotspotConfigurationManager.shared.apply(self.configuration) { [weak self] error in
+                guard let self = self else { return }
+                
+                // If the connection has already been finalized by the timeout, do nothing.
+                guard self.connectionState == .connecting else { return }
+
+                if let error = error {
+                    // The OS rejected the request to connect. Fail immediately.
+                    self.finalizeConnectionAttempt(status: .connectionFailed, error: error.localizedDescription, call: call)
                     return
                 }
                 
-                // Update state to connecting
-                self.updateConnectionState(.connecting)
+                // The OS has accepted the request. Now, move to verifying the connection.
+                self.updateConnectionState(.connectionVerifying)
                 
-                // Cancel any existing timers
-                self.connectionTimeoutTimer?.invalidate()
-                self.verificationTimer?.invalidate()
-                
-                // Set connection timeout
-                self.connectionTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 45.0, repeats: false) { [weak self] _ in
-                    guard let self = self else { return }
-                    
-                    if self.connectionState == .connecting || self.connectionState == .connectionVerifying {
-                        self.updateConnectionState(.connectionFailed)
-                        call.resolve(["status": "error", "error": "Connection timed out"])
-                    }
-                }
-                
-                self.configuration.joinOnce = false
-                
-                // If not connected, proceed with connection attempt
-                NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
-                
-                NEHotspotConfigurationManager.shared.apply(self.configuration) { [weak self] error in
-                    guard let self = self else { return }
-                    
-                    if let error = error {
-                        self.connectionTimeoutTimer?.invalidate()
-                        self.updateConnectionState(.connectionFailed)
-                        call.resolve(["status": "error", "error": error.localizedDescription])
+                // Start polling to check if the connection has been established.
+                self.verificationTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+                    guard let self = self else {
+                        timer.invalidate()
                         return
                     }
                     
-                    // Connection initiated, now verify it
-                    self.updateConnectionState(.connectionVerifying)
-                    
-                    // Verify the connection after a short delay
-                    self.verificationTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-                        guard let self = self else {
-                            timer.invalidate()
-                            return
+                    self.checkCurrentConnection { isConnected in
+                        if isConnected {
+                            // Success! We are connected.
+                            self.finalizeConnectionAttempt(status: .connected, error: nil, call: call)
                         }
-                        
-                        self.checkCurrentConnection { isConnected in
-                            if isConnected {
-                                timer.invalidate()
-                                self.connectionTimeoutTimer?.invalidate()
-                                self.updateConnectionState(.connected)
-                                call.resolve(["status": "connected"])
-                                
-                                // Start connection monitoring
-                                self.startConnectionMonitoring()
-                            }
-                        }
+                        // If not connected, do nothing and let the timer poll again.
+                        // The master connectionTimeoutTimer will eventually stop the process if it never connects.
                     }
                 }
             }
         }
     }
+
     
     @objc func disconnectFromDeviceAP(_ call: CAPPluginCall) {
         guard let bridge = self.bridge else { 
@@ -1127,7 +1152,7 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
                 resolveCall(granted: false, message: "Browser for \(serviceTypeToCheck) was cancelled before resolution.")
             case .waiting(let error):
                 // Browser is waiting, possibly for the permission prompt if status is undetermined.
-                if let currentError = error, case let NWError.dns(dnsErrorType) = currentError, dnsErrorType == -65549 {
+                if case let NWError.dns(dnsErrorType) = error, dnsErrorType == -65549 {
                     resolveCall(granted: false, message: "Browser waiting: DNS Policy Denied (\(dnsErrorType)) for \(serviceTypeToCheck).")
                 } else {
                     // Still waiting, don't resolve yet. Let timeout handle if it persists.

@@ -104,7 +104,14 @@ export function useEventStorage() {
 					detailsForGrouping = JSON.parse(event.details);
 				} catch (e) {
 					console.warn(
-						`Event (key: ${event.key}, type: ${event.type}) details are not valid JSON. Using raw string for grouping. Error: ${e instanceof Error ? e.message : String(e)}. Details (first 100 chars): "${event.details.substring(0, 100)}..."`,
+						`Event (key: ${event.key}, type: ${
+							event.type
+						}) details are not valid JSON. Using raw string for grouping. Error: ${
+							e instanceof Error ? e.message : String(e)
+						}. Details (first 100 chars): "${event.details.substring(
+							0,
+							100,
+						)}..."`,
 					);
 					detailsForGrouping = event.details; // Fallback to the raw string
 				}
@@ -206,6 +213,11 @@ export function useEventStorage() {
 		try {
 			const events = unuploadedEvents().filter(
 				(e) => e.isProd === userContext.isProd(),
+			);
+			console.log(
+				`Uploading ${events.length} events for user ${user} (${
+					userContext.isProd() ? "prod" : "dev"
+				} mode)`,
 			);
 
 			const errors: string[] = [];

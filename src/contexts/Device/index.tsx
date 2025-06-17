@@ -574,12 +574,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 	async function verifyDeviceConnection(url: string): Promise<boolean> {
 		try {
-			const deviceInfoResult = await Effect.runPromise(
-				Effect.retry(
-					Effect.tryPromise(() => DevicePlugin.getDeviceInfo({ url })),
-					{ times: 2, delay: 1000 },
-				),
-			).catch(() => ({ success: false }));
+			const deviceInfoResult = await DevicePlugin.getDeviceInfo({ url });
 
 			return deviceInfoResult.success;
 		} catch (error) {
@@ -782,37 +777,57 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		]);
 	};
 
-	const handleServiceLost = async (lostDevice: { endpoint: string }) => {
+	const handleServiceLost = (lostDevice: { endpoint: string }) => {
 		const device = [...devices.values()].find(
 			(d) => d.endpoint === lostDevice.endpoint && d.isConnected,
 		);
 
 		if (device) {
-			// Check both URL and host connections before disconnecting
-			const [urlReachable, hostReachable] = await Promise.all([
+			// Immediately mark device as potentially disconnected to update UI
+			devices.set(device.id, {
+				...device,
+				isConnected: false,
+			});
+
+			// Verify connection in the background
+			Promise.any([
 				verifyDeviceConnection(device.url),
 				verifyDeviceConnection(`http://${device.host}`),
-			]);
+			])
+				.then((reachable) => {
+					if (reachable) {
+						// Device is still reachable, restore connection status
+						console.log(`Device ${device.name} reported as lost but still reachable`);
+						devices.set(device.id, {
+							...device,
+							isConnected: true,
+						});
+					} else {
+						// Device is truly lost, keep disconnected status
+						internetConnectionCache.delete(device.id); // Clear cache entry
+						wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
+						modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
 
-			// Only disconnect if both connection methods fail
-			if (!urlReachable && !hostReachable) {
-				devices.set(device.id, {
-					...device,
-					isConnected: false,
-				});
-				internetConnectionCache.delete(device.id); // Clear cache entry
-				wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
-				modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
+						log.logEvent("device_lost", {
+							name: device.name,
+							saltId: device.saltId,
+							group: device.group,
+						});
+					}
+				})
+				.catch((error) => {
+					// Both connection methods failed, device is lost
+					console.error("Failed to verify device connection:", error);
+					internetConnectionCache.delete(device.id); // Clear cache entry
+					wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
+					modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
 
-				log.logEvent("device_lost", {
-					name: device.name,
-					saltId: device.saltId,
-					group: device.group,
+					log.logEvent("device_lost", {
+						name: device.name,
+						saltId: device.saltId,
+						group: device.group,
+					});
 				});
-			} else {
-				// Device is still reachable via one of the methods
-				console.log(`Device ${device.name} reported as lost but still reachable via ${urlReachable ? 'URL' : 'host'}`);
-			}
 		}
 	};
 
