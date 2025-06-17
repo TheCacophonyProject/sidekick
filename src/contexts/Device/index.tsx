@@ -537,7 +537,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 						if (device.isConnected) {
 							if (!interval) {
 								const id = setInterval(() => {
-									DevicePlugin.turnOnModem({ url: device.url, minutes: "5" });
+									DevicePlugin.turnOnModem({ url: device.url, minutes: "10" });
 								}, 300000); // Every 5 minutes
 								modemOnIntervals.set(device.id, id);
 							}
@@ -1829,39 +1829,75 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			// Make fresh API calls that will update cache if data has changed
 			// These will bypass cache timeouts but won't clear existing cache first
 			const { url } = device;
-			
+
 			// Fetch fresh data in parallel
 			await Promise.allSettled([
 				// Force fresh network data by making direct API calls
-				CapacitorHttp.get({ url: `${url}/api/network/wifi`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? WifiNetwork.array().parse(JSON.parse(res.data)) : [])
-					.then(networks => {
+				CapacitorHttp.get({
+					url: `${url}/api/network/wifi`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200
+							? WifiNetwork.array().parse(JSON.parse(res.data))
+							: [],
+					)
+					.then((networks) => {
 						const processedNetworks = networks
-							.filter(network => network.SSID)
+							.filter((network) => network.SSID)
 							.reduce((acc, curr) => {
-								const found = acc.find(a => a.SSID === curr.SSID);
+								const found = acc.find((a) => a.SSID === curr.SSID);
 								if (!found) acc.push(curr);
 								return acc;
 							}, [] as WifiNetwork[]);
-						availableWifiNetworksCache.set(deviceId, { networks: processedNetworks, timestamp: Date.now() });
+						availableWifiNetworksCache.set(deviceId, {
+							networks: processedNetworks,
+							timestamp: Date.now(),
+						});
 					})
 					.catch(() => {}),
 
 				// Fresh current WiFi status
-				CapacitorHttp.get({ url: `${url}/api/network/wifi/current`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? z.object({ SSID: z.string() }).parse(JSON.parse(res.data)) : null)
-					.then(network => currentWifiNetworkCache.set(deviceId, { network, timestamp: Date.now() }))
+				CapacitorHttp.get({
+					url: `${url}/api/network/wifi/current`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200
+							? z.object({ SSID: z.string() }).parse(JSON.parse(res.data))
+							: null,
+					)
+					.then((network) =>
+						currentWifiNetworkCache.set(deviceId, {
+							network,
+							timestamp: Date.now(),
+						}),
+					)
 					.catch(() => {}),
 
 				// Fresh modem data
-				CapacitorHttp.get({ url: `${url}/api/modem`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? tc2ModemSchema.parse(res.data) : null)
-					.then(modem => modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }))
+				CapacitorHttp.get({
+					url: `${url}/api/modem`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200 ? tc2ModemSchema.parse(res.data) : null,
+					)
+					.then((modem) =>
+						modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }),
+					)
 					.catch(() => {}),
 
 				// Fresh WiFi internet connectivity
-				CapacitorHttp.get({ url: `${url}/api/wifi-check`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => {
+				CapacitorHttp.get({
+					url: `${url}/api/wifi-check`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) => {
 						let connected = false;
 						if (res.status === 200) {
 							const parsedData = JSON.parse(res.data);
@@ -1869,14 +1905,28 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 								connected = parsedData.connected;
 							}
 						}
-						wifiInternetConnectionCache.set(deviceId, { connected, timestamp: Date.now() });
+						wifiInternetConnectionCache.set(deviceId, {
+							connected,
+							timestamp: Date.now(),
+						});
 					})
 					.catch(() => {}),
 
 				// Fresh modem internet connectivity
-				CapacitorHttp.get({ url: `${url}/api/modem-check`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? JSON.parse(res.data).connected : false)
-					.then(connected => modemInternetConnectionCache.set(deviceId, { connected, timestamp: Date.now() }))
+				CapacitorHttp.get({
+					url: `${url}/api/modem-check`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200 ? JSON.parse(res.data).connected : false,
+					)
+					.then((connected) =>
+						modemInternetConnectionCache.set(deviceId, {
+							connected,
+							timestamp: Date.now(),
+						}),
+					)
 					.catch(() => {}),
 			]);
 		} catch (error) {
@@ -1917,14 +1967,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
 			const processedNetworks = networks
 				? networks
-					.filter((network) => network.SSID)
-					.reduce((acc, curr) => {
-						const found = acc.find((a) => a.SSID === curr.SSID);
-						if (!found) {
-							acc.push(curr);
-						}
-						return acc;
-					}, [] as WifiNetwork[])
+						.filter((network) => network.SSID)
+						.reduce((acc, curr) => {
+							const found = acc.find((a) => a.SSID === curr.SSID);
+							if (!found) {
+								acc.push(curr);
+							}
+							return acc;
+						}, [] as WifiNetwork[])
 				: [];
 			availableWifiNetworksCache.set(deviceId, {
 				networks: processedNetworks,
@@ -2385,7 +2435,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return false;
 			const { url } = device;
-			const res = await DevicePlugin.turnOnModem({ url, minutes: "5" });
+			const res = await DevicePlugin.turnOnModem({ url, minutes: "10" });
 			if (res.success) {
 				internetConnectionCache.delete(deviceId);
 				modemDetailsCache.delete(deviceId); // Modem state changed
