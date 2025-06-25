@@ -69,6 +69,7 @@
 		"@solid-primitives/set": "^0.4.12",
 		"@solidjs/meta": "^0.29.4",
 		"@solidjs/router": "^0.8.4",
+		"@tanstack/solid-form": "^1.12.3",
 		"capacitor-ios-autofill-save-password": "^5.0.0",
 		"capacitor-native-settings": "^7.0.1",
 		"drizzle-orm": "^0.33.0",

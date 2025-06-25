@@ -1,17 +1,20 @@
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import {
+	Capacitor, // Added Capacitor import
 	type HttpResponse,
 	type PluginListenerHandle,
 	registerPlugin,
-	Capacitor, // Added Capacitor import
 } from "@capacitor/core";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
 import { Geolocation } from "@capacitor/geolocation";
+import { Network } from "@capacitor/network";
 import { createContextProvider } from "@solid-primitives/context";
 import { ReactiveMap } from "@solid-primitives/map";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
+import { useSearchParams } from "@solidjs/router";
+import { Effect } from "effect";
 import {
 	batch,
 	createEffect,
@@ -25,14 +28,11 @@ import { z } from "zod";
 import { GoToPermissions } from "~/components/GoToPermissions";
 import type { Location } from "~/database/Entities/Location";
 import type { Result, URL } from "..";
+import { useLogsContext } from "../LogsContext";
 import { useStorage } from "../Storage";
 import { isWithinRange } from "../Storage/location";
-import DeviceCamera from "./Camera";
-import { Effect } from "effect";
-import { useLogsContext } from "../LogsContext";
-import { useSearchParams } from "@solidjs/router";
 import { useUserContext } from "../User";
-import { Network } from "@capacitor/network";
+import DeviceCamera from "./Camera";
 // Use a fixed threshold for location update checks (in meters)
 const UPDATE_DISTANCE_THRESHOLD_METERS = 25;
 
@@ -149,6 +149,45 @@ export type DeviceHost = string;
 export type DeviceType = "pi" | "tc2";
 export type DeviceUrl = { url: string };
 export type RecordingName = string;
+
+// AI Control types
+export type AiControlConfig = {
+	aiEnabled: boolean;
+	controlEnabled: boolean;
+	operatingMode: "simple" | "uart";
+	triggerLogic: "activateOnTarget" | "deactivateOnProtected";
+	targetSpecies: { name: string; confidence: ConfidenceValue }[];
+	activationDuration: string;
+	protectedSpecies: { name: string; confidence: ConfidenceValue }[];
+	deactivationDuration: string;
+};
+
+// Available species list for the UI
+export const availableSpecies = [
+	"possum",
+	"rodent",
+	"cat",
+	"hedgehog",
+	"mustelid",
+	"bird",
+	"kiwi",
+	"leporidae",
+	"wallaby",
+	"penguin",
+	"vehicle",
+	"human",
+	"deer",
+	"dog",
+	"sheep",
+];
+
+// Define the confidence mapping
+export const confidenceLevels = {
+	Normal: 80,
+	High: 90,
+	VeryHigh: 95,
+};
+export type ConfidenceValue = keyof typeof confidenceLevels;
 
 export type DeviceDetails = {
 	id: DeviceId;
@@ -2834,6 +2873,125 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		return DeviceCamera(url.split("http://")[1]);
 	};
 
+	// AI Control functions
+	const getAiControlConfig = async (
+		deviceId: DeviceId,
+	): Promise<AiControlConfig | null> => {
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return null;
+
+			const configRes = await getDeviceConfig(deviceId);
+			if (!configRes) return null;
+
+			const thermalConfig = configRes.values.thermalMotion ?? {};
+			const commsConfig = configRes.values.comms ?? {};
+
+			const parseSpecies = (
+				species: Record<string, number> | string | undefined | null,
+			) => {
+				if (typeof species === "object" && species !== null) {
+					return Object.entries(species).map(([name, confidence]) => {
+						let confidenceValue: ConfidenceValue = "Normal";
+						if (confidence >= 95) confidenceValue = "VeryHigh";
+						else if (confidence >= 90) confidenceValue = "High";
+						return { name, confidence: confidenceValue };
+					});
+				}
+				return [];
+			};
+
+			return {
+				aiEnabled: thermalConfig.RunClassifier ?? false,
+				controlEnabled: commsConfig.enable ?? false,
+				operatingMode: commsConfig["comms-out"] === "uart" ? "uart" : "simple",
+				triggerLogic: commsConfig["trap-enabled-by-default"]
+					? "deactivateOnProtected"
+					: "activateOnTarget",
+				targetSpecies: parseSpecies(commsConfig["trap-species"]),
+				activationDuration: commsConfig["trap-duration"] ?? "1m0s",
+				protectedSpecies: parseSpecies(commsConfig["protect-species"]),
+				deactivationDuration: commsConfig["protect-duration"] ?? "1m0s",
+			};
+		} catch (error) {
+			console.error("Error getting AI control config:", error);
+			return null;
+		}
+	};
+
+	const saveAiControlConfig = async (
+		deviceId: DeviceId,
+		config: AiControlConfig,
+	) => {
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return false;
+			const { url } = device;
+
+			// 1. Prepare thermal-motion config
+			const thermalMotionConfig = {
+				"do-tracking-on-pi": config.aiEnabled,
+				"run-classifier": config.aiEnabled,
+				"tracking-events": config.aiEnabled,
+			};
+
+			// 2. Prepare comms config
+			const speciesToObject = (
+				speciesList: { name: string; confidence: ConfidenceValue }[],
+			) => {
+				if (!speciesList || speciesList.length === 0) return null;
+				return speciesList.reduce(
+					(obj, item) => {
+						// Translate user-friendly value back to a number for the API
+						obj[item.name] = confidenceLevels[item.confidence];
+						return obj;
+					},
+					{} as Record<string, number>,
+				);
+			};
+
+			const commsConfig = {
+				enable: config.controlEnabled,
+				"comms-out": config.operatingMode,
+				"trap-enabled-by-default":
+					config.triggerLogic === "deactivateOnProtected",
+				"trap-species": speciesToObject(config.targetSpecies),
+				"trap-duration": config.activationDuration,
+				"protect-species": speciesToObject(config.protectedSpecies),
+				"protect-duration": config.deactivationDuration,
+			};
+
+			// 3. Send both configs to the device
+			const thermalPromise = DevicePlugin.setDeviceConfig({
+				url,
+				section: "thermal-motion",
+				config: JSON.stringify(thermalMotionConfig),
+			});
+
+			const commsPromise = DevicePlugin.setDeviceConfig({
+				url,
+				section: "comms",
+				config: JSON.stringify(commsConfig),
+			});
+
+			const [thermalResult, commsResult] = await Promise.all([
+				thermalPromise,
+				commsPromise,
+			]);
+
+			if (!thermalResult.success || !commsResult.success) {
+				log.logWarning({ message: "Failed to save one or more AI settings." });
+				return false;
+			}
+
+			log.logSuccess({ message: "AI Control settings saved successfully." });
+			return true;
+		} catch (error) {
+			log.logError({ message: "Error saving AI Control settings", error });
+			return false;
+		}
+	};
+
 	const InGroupDeviceSchema = z.object({
 		success: z.boolean(),
 		messages: z.array(z.string()).optional(),
@@ -3364,6 +3522,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		setAudioRecordingSettings,
 		takeAudioRecording,
 		takeLongAudioRecording,
+		// AI Control
+		getAiControlConfig,
+		saveAiControlConfig,
 		// Update
 		checkDeviceUpdate,
 		updateDevice,
