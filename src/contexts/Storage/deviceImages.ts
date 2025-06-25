@@ -432,8 +432,6 @@ export function useDeviceImagesStorage() {
 
 	const syncWithServer = async (deviceId: string, isProd: boolean) => {
 		try {
-			const networkStatus = await Network.getStatus();
-			if (!networkStatus.connected) return;
 			// Process any pending operations first
 			await processPendingOperations();
 

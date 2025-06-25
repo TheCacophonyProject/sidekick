@@ -26,6 +26,7 @@ import type {
   LocalNotificationSchema,
 } from "@capacitor/local-notifications";
 import { debounce } from "@solid-primitives/scheduled";
+import { DevicePlugin } from "../Device";
 
 const DatabaseName = "Cacophony";
 
@@ -157,10 +158,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
       }
 
       // Start the uploads - they will check shouldUpload() regularly
-      await event.uploadEvents();
-      await recording.uploadRecordings(warn);
       await location.resyncLocations();
       await deviceImages.syncPendingPhotos();
+      await event.uploadEvents();
+      await recording.uploadRecordings(warn);
     } catch (error) {
       log.logError({
         message: "Error during uploading events/recordings/locations",
@@ -322,30 +323,28 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
   );
   createEffect(on(hasItemsToUpload, throttleScheduleReminders));
 
-  // // Check initial network status when storage is ready
-  // let hasTriedAutoUpload = false;
-  // createEffect(
-  //   on(
-  //     [hasItemsToUpload, isUploading, autoUploadEnabled],
-  //     async ([hasItems, uploading, autoEnabled]) => {
-  //       if (hasItems && !uploading && autoEnabled) {
-  //         const currentStatus = await Network.getStatus();
-  //         if (
-  //           currentStatus.connected &&
-  //           currentStatus.connectionType === "wifi" &&
-  //           !hasTriedAutoUpload
-  //         ) {
-  //           hasTriedAutoUpload = true;
-  //           log.logSync({
-  //             message: "WiFi detected, starting automatic upload",
-  //             warn: false,
-  //           });
-  //           await uploadItems(false, false); // warn=false, isManual=false
-  //         }
-  //       }
-  //     }
-  //   )
-  // );
+  // Check initial network status when storage is ready
+  let hasTriedAutoUpload = false;
+  createEffect(
+    on(
+      [hasItemsToUpload, isUploading, autoUploadEnabled],
+      async ([hasItems, uploading, autoEnabled]) => {
+        if (hasItems && !uploading && autoEnabled) {
+          if (
+            !hasTriedAutoUpload &&
+            !(await DevicePlugin.checkIsAPConnected()).connected
+          ) {
+            hasTriedAutoUpload = true;
+            log.logSync({
+              message: "WiFi detected, starting automatic upload",
+              warn: false,
+            });
+            await uploadItems(false, false); // warn=false, isManual=false
+          }
+        }
+      }
+    )
+  );
   return {
     ...recording,
     ...location,
