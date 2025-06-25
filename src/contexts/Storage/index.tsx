@@ -19,6 +19,7 @@ import type {
 	LocalNotificationSchema,
 } from "@capacitor/local-notifications";
 import { debounce } from "@solid-primitives/scheduled";
+import { DevicePlugin } from "../Device";
 
 const DatabaseName = "Cacophony";
 
@@ -53,7 +54,6 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
 	const log = useLogsContext();
 	const cancelAllReminders = async () => {
 		try {
-			debugger;
 			const cancelOptions: CancelOptions = {
 				notifications: ALL_REMINDER_IDS.map((id) => ({ id })),
 			};
@@ -144,10 +144,10 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
 			}
 
 			// Start the uploads - they will check shouldUpload() regularly
-			await event.uploadEvents();
-			await recording.uploadRecordings(warn);
 			await location.resyncLocations();
 			await deviceImages.syncPendingPhotos();
+			await event.uploadEvents();
+			await recording.uploadRecordings(warn);
 		} catch (error) {
 			log.logError({
 				message: "Error during uploading events/recordings/locations",
@@ -317,8 +317,7 @@ const [StorageProvider, useStorage] = createContextProvider(() => {
 	createEffect(
 		on([hasItemsToUpload, isUploading, autoUploadEnabled], async ([hasItems, uploading, autoEnabled]) => {
 			if (hasItems && !uploading && autoEnabled) {
-				const currentStatus = await Network.getStatus();
-				if (currentStatus.connected && currentStatus.connectionType === 'wifi' && !hasTriedAutoUpload) {
+				if (!hasTriedAutoUpload && !(await DevicePlugin.checkIsAPConnected()).connected) {
 					hasTriedAutoUpload = true;
 					log.logSync({
 						message: "WiFi detected, starting automatic upload",

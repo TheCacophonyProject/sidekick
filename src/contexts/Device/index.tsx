@@ -18,6 +18,7 @@ import { Effect } from "effect";
 import {
 	batch,
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	on,
@@ -360,7 +361,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		DeviceId,
 		{ status: boolean; timestamp: number }
 	>();
-	const INTERNET_CACHE_DURATION_MS = 60 * 1000; // 1 minute
+	const INTERNET_CACHE_DURATION_MS = 10 * 1000; // 1 minute
 
 	const availableWifiNetworksCache = new ReactiveMap<
 		DeviceId,
@@ -406,7 +407,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	onMount(() => {
 		const interval = setInterval(async () => {
 			for (const device of devices.values()) {
-				await storage.syncWithServer(device.id, device.isProd);
+				if (apState() !== "connected") {
+					await storage.syncWithServer(device.id, device.isProd);
+				}
 				if (device.isConnected) {
 					await clearUploaded(device);
 					await refreshCheckAudioCapabilities(device);
@@ -1640,9 +1643,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				timestamp: z.string(),
 			});
 
-			const res = await DevicePlugin.getDeviceLocation({ url });
+			const res = await CapacitorHttp.get({
+				url: `${url}/api/location`,
+				headers: { Authorization },
+			});
 
-			if (res.success) {
+			if (res.data) {
 				const location = locationSchema.safeParse(JSON.parse(res.data));
 				if (!location.success) {
 					return {
@@ -1671,49 +1677,49 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 	};
 
-	const getLocationByDevice = (deviceId: DeviceId) =>
-		createResource(
-			() => [storage.savedLocations(), devices.get(deviceId)] as const,
-			async (data): Promise<Location | null> => {
-				try {
-					const [locations, device] = data;
-					if (!device || !locations?.length || !device.isConnected) return null;
-					const deviceLocation = await getLocationCoords(device.id);
-					if (!deviceLocation.success) return null;
-					const sameGroupLocations = locations.filter(
-						(loc) =>
-							loc.groupName === device.group && loc.isProd === device.isProd,
-					);
-					const location = sameGroupLocations.filter((loc) =>
-						isWithinRange(
-							[loc.coords.lat, loc.coords.lng],
-							[deviceLocation.data.latitude, deviceLocation.data.longitude],
-							deviceLocation.data.accuracy,
-						),
-					);
+	const getLocationByDevice = (deviceId: DeviceId) => createResource(
+		() => [storage.savedLocations(), devices.get(deviceId)] as const,
+		async (data): Promise<Location | null> => {
+			try {
+				const [locations, device] = data;
+				if (!device || !locations?.length || !device.isConnected) return null;
+				const deviceLocation = await getLocationCoords(device.id);
+				if (!deviceLocation.success) return null;
+				const sameGroupLocations = locations.filter(
+					(loc) =>
+						loc.groupName === device.group && loc.isProd === device.isProd,
+				);
+				const location = sameGroupLocations.filter((loc) =>
+					isWithinRange(
+						[loc.coords.lat, loc.coords.lng],
+						[deviceLocation.data.latitude, deviceLocation.data.longitude],
+						deviceLocation.data.accuracy,
+					),
+				);
 
-					if (!location.length) return null;
-					return location.sort(
-						(a, b) =>
-							new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-					)[0];
-				} catch (error) {
-					if (error instanceof Error) {
-						log.logError({
-							message: "Could not get location",
-							details: error.message,
-							error,
-						});
-					} else {
-						log.logWarning({
-							message: "Could not get location",
-							details: `${error}`,
-						});
-					}
-					return null;
+				if (!location.length) return null;
+				return location.sort(
+					(a, b) =>
+						new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+				)[0];
+			} catch (error) {
+				if (error instanceof Error) {
+					log.logError({
+						message: "Could not get location",
+						details: error.message,
+						error,
+					});
+				} else {
+					log.logWarning({
+						message: "Could not get location",
+						details: `${error}`,
+					});
 				}
-			},
-		);
+				return null;
+			}
+		},
+	);
+
 
 	const [permission, { refetch: refetchLocationPermission }] = createResource(
 		async () => {
@@ -1882,7 +1888,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh current WiFi status
 				CapacitorHttp.get({
@@ -1901,7 +1907,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh modem data
 				CapacitorHttp.get({
@@ -1915,7 +1921,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					.then((modem) =>
 						modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }),
 					)
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh WiFi internet connectivity
 				CapacitorHttp.get({
@@ -1936,7 +1942,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh modem internet connectivity
 				CapacitorHttp.get({
@@ -1953,7 +1959,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => {}),
+					.catch(() => { }),
 			]);
 		} catch (error) {
 			console.error("Error in background network refresh:", error);
@@ -1993,14 +1999,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
 			const processedNetworks = networks
 				? networks
-						.filter((network) => network.SSID)
-						.reduce((acc, curr) => {
-							const found = acc.find((a) => a.SSID === curr.SSID);
-							if (!found) {
-								acc.push(curr);
-							}
-							return acc;
-						}, [] as WifiNetwork[])
+					.filter((network) => network.SSID)
+					.reduce((acc, curr) => {
+						const found = acc.find((a) => a.SSID === curr.SSID);
+						if (!found) {
+							acc.push(curr);
+						}
+						return acc;
+					}, [] as WifiNetwork[])
 				: [];
 			availableWifiNetworksCache.set(deviceId, {
 				networks: processedNetworks,
@@ -2700,9 +2706,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	};
 
 	const takeTestRecording = async (deviceId: DeviceId) => {
+		const device = devices.get(deviceId);
+		if (!device || !device.isConnected) return false;
 		try {
-			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
 			const { url } = device;
 			const res = await CapacitorHttp.put({
 				url: `${url}/api/camera/snapshot-recording`,
@@ -2714,13 +2720,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			return res.status === 200;
 		} catch (error) {
 			return false;
+		} finally {
+			setTimeout(async () => {
+				await setCurrRecs(device);
+			},
+				2000);
 		}
 	};
 
 	const takeAudioRecording = async (deviceId: DeviceId) => {
+		const device = devices.get(deviceId);
+		if (!device || !device.isConnected) return false;
 		try {
-			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
 			const { url } = device;
 			const res = await CapacitorHttp.put({
 				url: `${url}/api/audio/test-recording`,
@@ -2732,6 +2743,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			return res.status === 200;
 		} catch (error) {
 			return false;
+		} finally {
+			await setCurrRecs(device);
 		}
 	};
 

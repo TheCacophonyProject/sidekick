@@ -17,6 +17,7 @@ import {
 } from "../CacophonyApi";
 import { useUserContext } from "../User";
 import { useLogsContext } from "../LogsContext";
+import { DevicePlugin } from "../Device";
 
 const MIN_STATION_SEPARATION_METERS = 60;
 const MAX_DISTANCE_FROM_STATION_FOR_RECORDING =
@@ -192,13 +193,14 @@ export function useLocationStorage() {
 						const res = await createLocation(
 							{
 								...location,
-								name: location.updateName ?? location.name,
+								name: location.name ?? location.updateName,
 							},
-							false,
+							(await DevicePlugin.checkIsAPConnected()).connected,
 						);
 						return res;
 					}
-					if (location.updateName && shouldUpload()) { // Check before syncing
+					if (location.updateName) {
+						// Check before syncing
 						let name = location.updateName;
 						// Make sure the name is unique
 						while (locations.some((loc) => loc.name === name)) {
@@ -226,38 +228,40 @@ export function useLocationStorage() {
 			try {
 				const user = data;
 				if (!user) return [];
-				const locations = await getServerLocations();
-				const dbLocations = await getLocations(db)();
-				if (locations !== null) {
-					// Insert brand new locations from server
-					const locationsToInsert = locations.filter(
-						(location) =>
-							!dbLocations.some(
-								(savedLocation) =>
-									savedLocation.id === location.id &&
-									savedLocation.isProd === location.isProd,
-							),
-					);
-					const locationsToUpdate = getLocationsToUpdate(
-						locations,
-						dbLocations,
-					);
+				if ((await DevicePlugin.checkIsAPConnected()).connected) {
+					const locations = await getServerLocations();
+					const dbLocations = await getLocations(db)();
+					if (locations !== null) {
+						// Insert brand new locations from server
+						const locationsToInsert = locations.filter(
+							(location) =>
+								!dbLocations.some(
+									(savedLocation) =>
+										savedLocation.id === location.id &&
+										savedLocation.isProd === location.isProd,
+								),
+						);
+						const locationsToUpdate = getLocationsToUpdate(
+							locations,
+							dbLocations,
+						);
 
-					await insertLocations(db)(locationsToInsert);
-					await Promise.all(locationsToUpdate.map(updateLocation(db)));
+						await insertLocations(db)(locationsToInsert);
+						await Promise.all(locationsToUpdate.map(updateLocation(db)));
 
-					// Remove any that the server says are gone
-					const locationsToDelete = dbLocations.filter(
-						(location) =>
-							!locations.some(
-								(loc) => loc.id === location.id && loc.name === location.name,
+						// Remove any that the server says are gone
+						const locationsToDelete = dbLocations.filter(
+							(location) =>
+								!locations.some(
+									(loc) => loc.id === location.id && loc.name === location.name,
+								),
+						);
+						await Promise.all(
+							locationsToDelete.map((location) =>
+								deleteLocation(db)(location.id.toString(), location.isProd),
 							),
-					);
-					await Promise.all(
-						locationsToDelete.map((location) =>
-							deleteLocation(db)(location.id.toString(), location.isProd),
-						),
-					);
+						);
+					}
 				}
 
 				const newLocations = await syncLocations();
@@ -400,8 +404,6 @@ export function useLocationStorage() {
 				isProd: loc.isProd,
 				updateName: name,
 			});
-		} finally {
-			refetch();
 		}
 		return false;
 	};
@@ -432,15 +434,16 @@ export function useLocationStorage() {
 			}
 
 			// Base local location object
-			const baseLocation: Location = {
+			const name =
+				settings.name || `New Location ${new Date().toLocaleDateString()}`;
+			const baseLocation = {
 				id: newId,
 				...settings,
-				name:
-					settings.name || `New Location ${new Date().toLocaleDateString()}`,
+				name,
 				updatedAt: fromDate,
 				needsCreation: true,
 				coords: settings.coords,
-				updateName: undefined,
+				updateName: settings.name,
 				needsRename: false,
 			};
 
@@ -472,7 +475,7 @@ export function useLocationStorage() {
 				const rename = await CacophonyPlugin.updateStation({
 					token: user.token,
 					id: match.id.toString(),
-					name: baseLocation.name!,
+					name: baseLocation.name,
 				});
 				if (rename.success) {
 					// Reflect in baseLocation
@@ -484,15 +487,13 @@ export function useLocationStorage() {
 			};
 
 			try {
-				// 1) If the server already has a station near these coords, rename it
-				const foundExisting = await renameIfServerHasSameCoords();
-				if (!foundExisting) {
-					// 2) If no existing station, create a new one on the server
-					if (user && user.prod === settings.isProd && !isConnectedToDeviceAp) {
-						await retry(async () => {
+				if (!isConnectedToDeviceAp) {
+					const foundExisting = await renameIfServerHasSameCoords();
+					if (!foundExisting) {
+						if (user && user.prod === settings.isProd) {
 							const res = await CacophonyPlugin.createStation({
 								token: user.token,
-								name: baseLocation.name!,
+								name: baseLocation.name,
 								groupName: settings.groupName,
 								lat: settings.coords.lat.toString(),
 								lng: settings.coords.lng.toString(),
@@ -503,7 +504,7 @@ export function useLocationStorage() {
 								baseLocation.id = Number.parseInt(res.data);
 								baseLocation.needsCreation = false;
 							}
-						}, 3);
+						}
 					}
 				}
 			} catch (e) {
@@ -512,11 +513,9 @@ export function useLocationStorage() {
 					details: "Device is offline or server communication failed",
 				});
 			} finally {
-				// Cleanup old local location if it had an ID
 				if (settings.id) {
 					await deleteLocation(db)(settings.id.toString(), settings.isProd);
 				}
-				// Upsert our new local location
 				await insertLocation(db)(baseLocation);
 				mutate((locations) => [
 					...(locations ?? []).filter((loc) => loc.id !== settings.id),
@@ -528,7 +527,9 @@ export function useLocationStorage() {
 			log.logError({ error, message: "Failed to create location" });
 			return undefined;
 		} finally {
-			refetch();
+			if (!isConnectedToDeviceAp) {
+				refetch();
+			}
 		}
 	};
 

@@ -79,7 +79,7 @@ export function LocationSettingsTab(props: SettingProps) {
 	// Location state management
 	const [locationRes, { refetch: refetchLocation }] =
 		context.getLocationByDevice(id());
-	const location = createMemo(() => locationRes());
+	const location = () => locationRes.latest;
 	const [newName, setNewName] = createSignal("");
 	const [photoFileToUpload, setPhotoFileToUpload] = createSignal<{
 		url: string;
@@ -528,11 +528,10 @@ export function LocationSettingsTab(props: SettingProps) {
 
 				<Show when={hasChangesToUpload() || hasPendingChanges()}>
 					<div
-						class={`mb-2 flex items-start space-x-2 rounded-lg border p-2 transition-all duration-300 ${
-							context.apState() === "connected"
-								? "border-blue-400 bg-blue-50"
-								: "border-orange-400 bg-orange-50"
-						}`}
+						class={`mb-2 flex items-start space-x-2 rounded-lg border p-2 transition-all duration-300 ${context.apState() === "connected"
+							? "border-blue-400 bg-blue-50"
+							: "border-orange-400 bg-orange-50"
+							}`}
 					>
 						<div class="flex-shrink-0 mt-0.5">
 							<Switch>
@@ -552,11 +551,10 @@ export function LocationSettingsTab(props: SettingProps) {
 						</div>
 						<div class="flex-1">
 							<p
-								class={`text-sm ${
-									context.apState() === "connected"
-										? "text-blue-800"
-										: "text-orange-800"
-								}`}
+								class={`text-sm ${context.apState() === "connected"
+									? "text-blue-800"
+									: "text-orange-800"
+									}`}
 							>
 								{getUploadStatusMessage()}
 							</p>
