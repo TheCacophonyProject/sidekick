@@ -40,9 +40,6 @@ export default function DeviceSettingsModal() {
 		const currentDevice = device();
 		console.log("Current test Device", currentDevice);
 
-		if (currentDevice?.type === "tc2") {
-			items.push("Device Control");
-		}
 		if (currentDevice?.hasAudioCapabilities) {
 			items.push("Audio");
 		}
@@ -201,13 +198,6 @@ export default function DeviceSettingsModal() {
 								</Match>
 								<Match when={currTab() === "Camera"}>
 									<CameraSettingsTab deviceId={id()} />
-								</Match>
-								<Match
-									when={
-										currTab() === "Device Control" && device()?.type === "tc2"
-									}
-								>
-									<DeviceControlTab deviceId={id()} />
 								</Match>
 								<Match
 									when={currTab() === "Audio" && device()?.hasAudioCapabilities}

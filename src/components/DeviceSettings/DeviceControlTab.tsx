@@ -1,42 +1,38 @@
-import { createForm } from "@tanstack/solid-form";
-import { FaSolidPlus, FaSolidSpinner, FaSolidTrashCan } from "solid-icons/fa";
+import { debounce } from "@solid-primitives/scheduled";
+import {
+	FaSolidCheck,
+	FaSolidPlus,
+	FaSolidSpinner,
+	FaSolidTrashCan,
+} from "solid-icons/fa";
 import { ImCross } from "solid-icons/im";
 import {
 	For,
 	Index,
+	Match,
 	Show,
+	Switch,
 	createEffect,
 	createResource,
 	createSignal,
+	on,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import type { ConfidenceValue, DeviceId } from "~/contexts/Device";
+import type {
+	AiControlConfig,
+	ConfidenceValue,
+	DeviceId,
+} from "~/contexts/Device";
 import { availableSpecies, useDevice } from "~/contexts/Device";
 
 import { DurationInput } from "~/components/UI/DurationInput";
-import { RadioGroup } from "~/components/UI/RadioGroup";
-import {
-	type ConfidenceOption,
-	SegmentedControl,
-} from "~/components/UI/SegmentedControl";
 import { SettingRow } from "~/components/UI/SettingRow";
 import { ToggleSwitch } from "~/components/UI/ToggleSwitch";
 
 type SettingProps = { deviceId: DeviceId };
 
-type AiControlFormData = {
-	aiEnabled: boolean;
-	controlEnabled: boolean;
-	operatingMode: "simple" | "uart";
-	triggerLogic: "activateOnTarget" | "deactivateOnProtected";
-	targetSpecies: { name: string; confidence: ConfidenceValue }[];
-	activationDuration: string;
-	protectedSpecies: { name: string; confidence: ConfidenceValue }[];
-	deactivationDuration: string;
-};
-
-// The SpeciesSelectorModal updated for new confidence type
+// The SpeciesSelectorModal is compatible with the new approach and remains unchanged.
 const SpeciesSelectorModal = (props: {
 	isOpen: boolean;
 	onClose: () => void;
@@ -60,7 +56,7 @@ const SpeciesSelectorModal = (props: {
 		setLocalSelection(
 			isSelected(speciesName)
 				? (p) => p.filter((s) => s.name !== speciesName)
-				: (p) => [...p, { name: speciesName, confidence: "Normal" }], // Changed default
+				: (p) => [...p, { name: speciesName, confidence: "High" }], // Default to High confidence
 		);
 	};
 
@@ -123,51 +119,107 @@ export function DeviceControlTab(props: SettingProps) {
 		context.getAiControlConfig(id),
 	);
 
-	const form = createForm(() => ({
-		defaultValues: configResource() ?? {
-			aiEnabled: false,
-			controlEnabled: false,
-			operatingMode: "simple" as const,
-			triggerLogic: "activateOnTarget" as const,
-			targetSpecies: [] as { name: string; confidence: ConfidenceValue }[],
-			activationDuration: "1m0s",
-			protectedSpecies: [] as { name: string; confidence: ConfidenceValue }[],
-			deactivationDuration: "5m0s",
-		},
-		onSubmit: async ({ value }) => {
-			await context.saveAiControlConfig(id(), value);
-		},
-	}));
+	const [config, setConfig] = createStore<AiControlConfig>({
+		aiEnabled: false,
+		controlEnabled: false,
+		operatingMode: "simple",
+		triggerLogic: "activateOnTarget",
+		targetSpecies: [],
+		activationDuration: "1m0s",
+		protectedSpecies: [],
+		deactivationDuration: "5m0s",
+	});
 
-	// Update form when config loads
+	// Store the original loaded config to compare against for changes
+	const [originalConfig, setOriginalConfig] = createSignal<AiControlConfig | null>(null);
+
+	const [saveStatus, setSaveStatus] = createSignal<
+		"idle" | "saving" | "saved" | "error"
+	>("idle");
+
+	// Effect to populate the local store once the config is fetched from the device.
 	createEffect(() => {
-		const config = configResource();
-		if (config) {
-			form.reset(config);
+		const loadedConfig = configResource();
+		if (loadedConfig) {
+			setConfig(loadedConfig);
+			setOriginalConfig(loadedConfig); // Store the original for comparison
+			setSaveStatus("idle"); // Ready to accept changes
 		}
 	});
 
+	// Function to deep compare two configs to check if they're different
+	const configsAreEqual = (config1: AiControlConfig, config2: AiControlConfig): boolean => {
+		return (
+			config1.aiEnabled === config2.aiEnabled &&
+			config1.controlEnabled === config2.controlEnabled &&
+			config1.operatingMode === config2.operatingMode &&
+			config1.triggerLogic === config2.triggerLogic &&
+			config1.activationDuration === config2.activationDuration &&
+			config1.deactivationDuration === config2.deactivationDuration &&
+			config1.targetSpecies.length === config2.targetSpecies.length &&
+			config1.protectedSpecies.length === config2.protectedSpecies.length &&
+			config1.targetSpecies.every((species, index) => 
+				species.name === config2.targetSpecies[index]?.name &&
+				species.confidence === config2.targetSpecies[index]?.confidence
+			) &&
+			config1.protectedSpecies.every((species, index) => 
+				species.name === config2.protectedSpecies[index]?.name &&
+				species.confidence === config2.protectedSpecies[index]?.confidence
+			)
+		);
+	};
+
+	// Debounced function to save the configuration to the device.
+	// This prevents a flood of API calls on rapid changes (e.g., typing).
+	const debouncedSave = debounce(async (newConfig: AiControlConfig) => {
+		setSaveStatus("saving");
+		try {
+			const success = await context.saveAiControlConfig(id(), newConfig);
+			if (success) {
+				// Update the original config to the newly saved config
+				setOriginalConfig(newConfig);
+				setSaveStatus("saved");
+				setTimeout(() => {
+					// Only transition from 'saved' to 'idle' if the status hasn't changed.
+					if (saveStatus() === "saved") setSaveStatus("idle");
+				}, 2500); // Show "saved" message for 2.5 seconds
+			} else {
+				throw new Error("API reported save failure");
+			}
+		} catch (error) {
+			console.error("Failed to save AI settings:", error);
+			setSaveStatus("error");
+			// Optionally, allow user to see error for longer before it disappears
+			setTimeout(() => {
+				if (saveStatus() === "error") setSaveStatus("idle");
+			}, 5000);
+		}
+	}, 1000); // 1-second debounce window
+
+	// Effect that triggers the save operation whenever the config store changes.
+	// Only saves if the config is actually different from the originally loaded config.
+	createEffect(
+		on(
+			() => ({ ...config }),
+			(newConfig) => {
+				// Don't save while the initial data is still loading
+				if (configResource.loading) return;
+				
+				// Don't save if we don't have an original config to compare against
+				const original = originalConfig();
+				if (!original) return;
+				
+				// Only save if the config has actually changed
+				if (!configsAreEqual(newConfig, original)) {
+					debouncedSave(newConfig);
+				}
+			},
+			{ defer: true },
+		),
+	);
+
 	const [isTargetModalOpen, setTargetModalOpen] = createSignal(false);
 	const [isProtectModalOpen, setProtectModalOpen] = createSignal(false);
-
-	const confidenceOptions: ConfidenceOption[] = [
-		{ label: "Normal", value: "Normal" },
-		{ label: "High", value: "High" },
-		{ label: "V. High", value: "VeryHigh" },
-	];
-
-	const triggerLogicOptions = [
-		{
-			value: "activateOnTarget",
-			title: "Activate on Target",
-			description: "Signal is normally OFF, turns ON for targets.",
-		},
-		{
-			value: "deactivateOnProtected",
-			title: "Deactivate on Protected",
-			description: "Signal is normally ON, turns OFF for protected.",
-		},
-	];
 
 	return (
 		<section class="bg-gray-50 p-2 sm:p-4">
@@ -180,65 +232,43 @@ export function DeviceControlTab(props: SettingProps) {
 					</div>
 				}
 			>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						form.handleSubmit();
-					}}
-				>
+				{/* The form tag is no longer needed as there's no submit event */}
+				<div class="relative">
 					<div class="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm px-2">
-						<form.Field name="aiEnabled">
-							{(field) => (
-								<SettingRow
-									title="Onboard AI Processing"
-									description="Enables real-time animal identification."
-								>
-									<ToggleSwitch
-										checked={field().state.value}
-										onChange={field().handleChange}
-									/>
-								</SettingRow>
-							)}
-						</form.Field>
+						<SettingRow
+							title="Onboard AI Processing"
+							description="Enables real-time animal identification."
+						>
+							<ToggleSwitch
+								checked={config.aiEnabled}
+								onChange={(checked) => setConfig("aiEnabled", checked)}
+							/>
+						</SettingRow>
 
-						<form.Field name="controlEnabled">
-							{(field) => (
-								<Show when={field().form.state.values.aiEnabled}>
-									<SettingRow
-										title="External Device Control"
-										description="Control devices via the auxiliary port."
-									>
-										<ToggleSwitch
-											checked={field().state.value}
-											onChange={field().handleChange}
-										/>
-									</SettingRow>
-								</Show>
-							)}
-						</form.Field>
+						<Show when={config.aiEnabled}>
+							<SettingRow
+								title="External Device Control"
+								description="Control devices via the auxiliary port's digital signal."
+							>
+								<ToggleSwitch
+									checked={config.controlEnabled}
+									onChange={(checked) => setConfig("controlEnabled", checked)}
+								/>
+							</SettingRow>
+						</Show>
 					</div>
 
-					<Show
-						when={() =>
-							form.state.values.aiEnabled && form.state.values.controlEnabled
-						}
-					>
+					<Show when={config.aiEnabled && config.controlEnabled}>
 						<div class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-							<h3 class="text-md font-semibold text-gray-800">
-								Trigger Configuration
-							</h3>
-
-							<form.Field name="triggerLogic">
-								{(field) => (
-									<RadioGroup
-										name="triggerLogic"
-										options={triggerLogicOptions}
-										selectedValue={field().state.value}
-										onChange={(value) => field().handleChange(value)}
-									/>
-								)}
-							</form.Field>
+							<div>
+								<h3 class="text-md font-semibold text-gray-800">
+									Species Detection Settings
+								</h3>
+								<p class="mt-1 text-sm text-gray-600">
+									The device activates when target species are detected and
+									automatically deactivates when protected species are found.
+								</p>
+							</div>
 
 							{/* Target Species Section */}
 							<div class="space-y-3 pt-2">
@@ -246,73 +276,43 @@ export function DeviceControlTab(props: SettingProps) {
 									When a <span class="font-semibold">Target Species</span> is
 									detected...
 								</p>
-								<form.Field name="targetSpecies" mode="array">
-									{(field) => (
-										<div class="space-y-2">
-											<Index each={field().state.value}>
-												{(subField, i) => (
-													<div class="flex items-center justify-between rounded-md bg-gray-50 p-2">
-														<span class="text-sm font-medium text-gray-900">
-															{subField().name.charAt(0).toUpperCase() +
-																subField().name.slice(1)}
-														</span>
-														<div class="flex items-center gap-x-3">
-															<SegmentedControl
-																options={confidenceOptions}
-																selectedValue={subField().confidence}
-																onChange={(value) => {
-																	const currentSpecies =
-																		form.getFieldValue("targetSpecies") || [];
-																	const updated = currentSpecies.map(
-																		(species, idx) =>
-																			idx === i
-																				? {
-																						...species,
-																						confidence:
-																							value as ConfidenceValue,
-																					}
-																				: species,
-																	);
-																	form.setFieldValue("targetSpecies", updated);
-																}}
-															/>
-															<button
-																type="button"
-																onClick={() => {
-																	const currentSpecies =
-																		form.getFieldValue("targetSpecies") || [];
-																	const updated = currentSpecies.filter(
-																		(_, idx) => idx !== i,
-																	);
-																	form.setFieldValue("targetSpecies", updated);
-																}}
-																class="text-red-500"
-															>
-																<FaSolidTrashCan size={14} />
-															</button>
-														</div>
-													</div>
-												)}
-											</Index>
-											<button
-												type="button"
-												onClick={() => setTargetModalOpen(true)}
-												class="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 p-2 text-sm text-blue-600 transition hover:bg-gray-50"
-											>
-												<FaSolidPlus size={12} /> Add Target Species
-											</button>
-										</div>
-									)}
-								</form.Field>
+								<div class="space-y-2">
+									<Index each={config.targetSpecies}>
+										{(_subField, i) => (
+											<div class="flex items-center justify-between rounded-md bg-gray-50 p-2">
+												<span class="text-sm font-medium text-gray-900">
+													{config.targetSpecies[i].name
+														.charAt(0)
+														.toUpperCase() +
+														config.targetSpecies[i].name.slice(1)}
+												</span>
+												<button
+													type="button"
+													onClick={() => {
+														setConfig("targetSpecies", (p) =>
+															p.filter((_, idx) => idx !== i),
+														);
+													}}
+													class="text-red-500 transition-colors hover:text-red-700"
+												>
+													<FaSolidTrashCan size={14} />
+												</button>
+											</div>
+										)}
+									</Index>
+									<button
+										type="button"
+										onClick={() => setTargetModalOpen(true)}
+										class="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 p-2 text-sm text-blue-600 transition hover:bg-gray-50"
+									>
+										<FaSolidPlus size={12} /> Add Target Species
+									</button>
+								</div>
 								<p class="text-sm text-gray-800">...activate the device for:</p>
-								<form.Field name="activationDuration">
-									{(field) => (
-										<DurationInput
-											value={field().state.value}
-											onChange={field().handleChange}
-										/>
-									)}
-								</form.Field>
+								<DurationInput
+									value={config.activationDuration}
+									onChange={(value) => setConfig("activationDuration", value)}
+								/>
 							</div>
 
 							<hr class="my-2" />
@@ -324,136 +324,85 @@ export function DeviceControlTab(props: SettingProps) {
 									<span class="font-semibold text-orange-600">
 										Protected Species
 									</span>{" "}
-									is detected...
+									is detected, the device will automatically deactivate.
 								</p>
-								<form.Field name="protectedSpecies" mode="array">
-									{(field) => (
-										<div class="space-y-2">
-											<Index each={field().state.value}>
-												{(subField, i) => (
-													<div class="flex items-center justify-between rounded-md bg-orange-50 p-2">
-														<span class="text-sm font-medium text-gray-900">
-															{subField().name.charAt(0).toUpperCase() +
-																subField().name.slice(1)}
-														</span>
-														<div class="flex items-center gap-x-3">
-															<SegmentedControl
-																options={confidenceOptions}
-																selectedValue={subField().confidence}
-																onChange={(value) => {
-																	const currentSpecies =
-																		form.getFieldValue("protectedSpecies") ||
-																		[];
-																	const updated = currentSpecies.map(
-																		(species, idx) =>
-																			idx === i
-																				? {
-																						...species,
-																						confidence:
-																							value as ConfidenceValue,
-																					}
-																				: species,
-																	);
-																	form.setFieldValue(
-																		"protectedSpecies",
-																		updated,
-																	);
-																}}
-															/>
-															<button
-																type="button"
-																onClick={() => {
-																	const currentSpecies =
-																		form.getFieldValue("protectedSpecies") ||
-																		[];
-																	const updated = currentSpecies.filter(
-																		(_, idx) => idx !== i,
-																	);
-																	form.setFieldValue(
-																		"protectedSpecies",
-																		updated,
-																	);
-																}}
-																class="text-red-500"
-															>
-																<FaSolidTrashCan size={14} />
-															</button>
-														</div>
-													</div>
-												)}
-											</Index>
-											<button
-												type="button"
-												onClick={() => setProtectModalOpen(true)}
-												class="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 p-2 text-sm text-blue-600 transition hover:bg-gray-50"
-											>
-												<FaSolidPlus size={12} /> Add Protected Species
-											</button>
-										</div>
-									)}
-								</form.Field>
-								<p class="text-sm text-gray-800">
-									...deactivate the device for:
-								</p>
-								<form.Field name="deactivationDuration">
-									{(field) => (
-										<DurationInput
-											value={field().state.value}
-											onChange={field().handleChange}
-										/>
-									)}
-								</form.Field>
+
+								<div class="space-y-2">
+									<Index each={config.protectedSpecies}>
+										{(_subField, i) => (
+											<div class="flex items-center justify-between rounded-md bg-orange-50 p-2">
+												<span class="text-sm font-medium text-gray-900">
+													{config.protectedSpecies[i].name
+														.charAt(0)
+														.toUpperCase() +
+														config.protectedSpecies[i].name.slice(1)}
+												</span>
+												<button
+													type="button"
+													onClick={() => {
+														setConfig("protectedSpecies", (p) =>
+															p.filter((_, idx) => idx !== i),
+														);
+													}}
+													class="text-red-500 transition-colors hover:text-red-700"
+												>
+													<FaSolidTrashCan size={14} />
+												</button>
+											</div>
+										)}
+									</Index>
+									<button
+										type="button"
+										onClick={() => setProtectModalOpen(true)}
+										class="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 p-2 text-sm text-blue-600 transition hover:bg-gray-50"
+									>
+										<FaSolidPlus size={12} /> Add Protected Species
+									</button>
+								</div>
 							</div>
 						</div>
 					</Show>
 
-					<div class="pt-4">
-						<form.Subscribe
-							selector={(state) => [
-								state.canSubmit,
-								state.isDirty,
-								state.isSubmitting,
-							]}
-						>
-							{(state) => {
-								const [canSubmit, isDirty, isSubmitting] = state();
-								return (
-									<button
-										type="submit"
-										disabled={!canSubmit || !isDirty || isSubmitting}
-										class="flex w-full items-center justify-center space-x-2 rounded-lg bg-blue-500 py-3 text-white shadow-md transition disabled:bg-gray-400 disabled:shadow-none"
-									>
-										<Show
-											when={isSubmitting}
-											fallback={<span>Save Settings</span>}
-										>
-											<FaSolidSpinner class="animate-spin" />
-											<span>Saving...</span>
-										</Show>
-									</button>
-								);
-							}}
-						</form.Subscribe>
-					</div>
-				</form>
+					{/* Saving Status Indicator */}
+					<Show when={saveStatus() !== "idle"}>
+						<div class="pt-4 h-8 flex items-center justify-end px-2">
+							<Switch>
+								<Match when={saveStatus() === "saving"}>
+									<div class="flex items-center gap-2 text-sm text-gray-600">
+										<FaSolidSpinner class="animate-spin" />
+										<span>Saving...</span>
+									</div>
+								</Match>
+								<Match when={saveStatus() === "saved"}>
+									<div class="flex items-center gap-2 text-sm text-green-600">
+										<FaSolidCheck />
+										<span>Settings saved</span>
+									</div>
+								</Match>
+								<Match when={saveStatus() === "error"}>
+									<div class="flex items-center gap-2 text-sm text-red-600">
+										<ImCross size={14} />
+										<span>Save failed. Please try again.</span>
+									</div>
+								</Match>
+							</Switch>
+						</div>
+					</Show>
+				</div>
 			</Show>
 
 			<SpeciesSelectorModal
 				isOpen={isTargetModalOpen()}
 				onClose={() => setTargetModalOpen(false)}
-				selected={form.getFieldValue("targetSpecies") || []}
-				onUpdate={(newSelection) =>
-					form.setFieldValue("targetSpecies", newSelection)
-				}
+				selected={config.targetSpecies}
+				onUpdate={(newSelection) => setConfig("targetSpecies", newSelection)}
 				title="Select Target Species"
 			/>
 			<SpeciesSelectorModal
 				isOpen={isProtectModalOpen()}
 				onClose={() => setProtectModalOpen(false)}
-				selected={form.getFieldValue("protectedSpecies") || []}
-				onUpdate={(newSelection) =>
-					form.setFieldValue("protectedSpecies", newSelection)
-				}
+				selected={config.protectedSpecies}
+				onUpdate={(newSelection) => setConfig("protectedSpecies", newSelection)}
 				title="Select Protected Species"
 			/>
 		</section>

@@ -182,13 +182,12 @@ export const availableSpecies = [
 	"sheep",
 ];
 
-// Define the confidence mapping
-export const confidenceLevels = {
-	Normal: 80,
-	High: 90,
-	VeryHigh: 95,
-};
-export type ConfidenceValue = keyof typeof confidenceLevels;
+export const ConfidenceValueSchema = z
+	.number()
+	.min(0)
+	.max(1)
+	.transform((val) => Math.round(val * 100));
+export type ConfidenceValue = z.infer<typeof ConfidenceValueSchema>;
 
 export type DeviceDetails = {
 	id: DeviceId;
@@ -839,7 +838,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				.then((reachable) => {
 					if (reachable) {
 						// Device is still reachable, restore connection status
-						console.log(`Device ${device.name} reported as lost but still reachable`);
+						console.log(
+							`Device ${device.name} reported as lost but still reachable`,
+						);
 						devices.set(device.id, {
 							...device,
 							isConnected: true,
@@ -1706,49 +1707,49 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 	};
 
-	const getLocationByDevice = (deviceId: DeviceId) => createResource(
-		() => [storage.savedLocations(), devices.get(deviceId)] as const,
-		async (data): Promise<Location | null> => {
-			try {
-				const [locations, device] = data;
-				if (!device || !locations?.length || !device.isConnected) return null;
-				const deviceLocation = await getLocationCoords(device.id);
-				if (!deviceLocation.success) return null;
-				const sameGroupLocations = locations.filter(
-					(loc) =>
-						loc.groupName === device.group && loc.isProd === device.isProd,
-				);
-				const location = sameGroupLocations.filter((loc) =>
-					isWithinRange(
-						[loc.coords.lat, loc.coords.lng],
-						[deviceLocation.data.latitude, deviceLocation.data.longitude],
-						deviceLocation.data.accuracy,
-					),
-				);
+	const getLocationByDevice = (deviceId: DeviceId) =>
+		createResource(
+			() => [storage.savedLocations(), devices.get(deviceId)] as const,
+			async (data): Promise<Location | null> => {
+				try {
+					const [locations, device] = data;
+					if (!device || !locations?.length || !device.isConnected) return null;
+					const deviceLocation = await getLocationCoords(device.id);
+					if (!deviceLocation.success) return null;
+					const sameGroupLocations = locations.filter(
+						(loc) =>
+							loc.groupName === device.group && loc.isProd === device.isProd,
+					);
+					const location = sameGroupLocations.filter((loc) =>
+						isWithinRange(
+							[loc.coords.lat, loc.coords.lng],
+							[deviceLocation.data.latitude, deviceLocation.data.longitude],
+							deviceLocation.data.accuracy,
+						),
+					);
 
-				if (!location.length) return null;
-				return location.sort(
-					(a, b) =>
-						new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-				)[0];
-			} catch (error) {
-				if (error instanceof Error) {
-					log.logError({
-						message: "Could not get location",
-						details: error.message,
-						error,
-					});
-				} else {
-					log.logWarning({
-						message: "Could not get location",
-						details: `${error}`,
-					});
+					if (!location.length) return null;
+					return location.sort(
+						(a, b) =>
+							new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+					)[0];
+				} catch (error) {
+					if (error instanceof Error) {
+						log.logError({
+							message: "Could not get location",
+							details: error.message,
+							error,
+						});
+					} else {
+						log.logWarning({
+							message: "Could not get location",
+							details: `${error}`,
+						});
+					}
+					return null;
 				}
-				return null;
-			}
-		},
-	);
-
+			},
+		);
 
 	const [permission, { refetch: refetchLocationPermission }] = createResource(
 		async () => {
@@ -1917,7 +1918,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh current WiFi status
 				CapacitorHttp.get({
@@ -1936,7 +1937,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh modem data
 				CapacitorHttp.get({
@@ -1950,7 +1951,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					.then((modem) =>
 						modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }),
 					)
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh WiFi internet connectivity
 				CapacitorHttp.get({
@@ -1971,7 +1972,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh modem internet connectivity
 				CapacitorHttp.get({
@@ -1988,7 +1989,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => { }),
+					.catch(() => {}),
 			]);
 		} catch (error) {
 			console.error("Error in background network refresh:", error);
@@ -2028,14 +2029,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
 			const processedNetworks = networks
 				? networks
-					.filter((network) => network.SSID)
-					.reduce((acc, curr) => {
-						const found = acc.find((a) => a.SSID === curr.SSID);
-						if (!found) {
-							acc.push(curr);
-						}
-						return acc;
-					}, [] as WifiNetwork[])
+						.filter((network) => network.SSID)
+						.reduce((acc, curr) => {
+							const found = acc.find((a) => a.SSID === curr.SSID);
+							if (!found) {
+								acc.push(curr);
+							}
+							return acc;
+						}, [] as WifiNetwork[])
 				: [];
 			availableWifiNetworksCache.set(deviceId, {
 				networks: processedNetworks,
@@ -2693,7 +2694,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							try {
 								const checkRes = await DevicePlugin.checkIsAPConnected();
 								if (checkRes.connected) {
-									console.log("Fallback check detected connection - updating UI");
+									console.log(
+										"Fallback check detected connection - updating UI",
+									);
 									log.logEvent("AP_connected");
 									setApState("connected");
 									if (masterConnectTimeout) {
@@ -2750,7 +2753,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			// This prevents network errors when we lose AP connection
 			await stopDiscovery();
 			devices.clear(); // Clear discovered devices
-			
+
 			const disconnectTimeout = setTimeout(() => {
 				if (apState() === "loadingDisconnect") {
 					setApState("disconnected");
@@ -2797,8 +2800,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		} finally {
 			setTimeout(async () => {
 				await setCurrRecs(device);
-			},
-				2000);
+			}, 2000);
 		}
 	};
 
@@ -2970,6 +2972,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			const configRes = await getDeviceConfig(deviceId);
 			if (!configRes) return null;
+			debugger;
 
 			const thermalConfig = configRes.values.thermalMotion ?? {};
 			const commsConfig = configRes.values.comms ?? {};
@@ -2990,12 +2993,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			return {
 				aiEnabled: thermalConfig.RunClassifier ?? false,
-				controlEnabled: commsConfig.enable ?? false,
+				controlEnabled: commsConfig.Enable ?? false,
 				operatingMode: commsConfig["comms-out"] === "uart" ? "uart" : "simple",
 				triggerLogic: commsConfig["trap-enabled-by-default"]
 					? "deactivateOnProtected"
 					: "activateOnTarget",
-				targetSpecies: parseSpecies(commsConfig["trap-species"]),
+				targetSpecies: commsConfig["trap-species"],
 				activationDuration: commsConfig["trap-duration"] ?? "1m0s",
 				protectedSpecies: parseSpecies(commsConfig["protect-species"]),
 				deactivationDuration: commsConfig["protect-duration"] ?? "1m0s",
@@ -3017,7 +3020,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			// 1. Prepare thermal-motion config
 			const thermalMotionConfig = {
-				"do-tracking-on-pi": config.aiEnabled,
+				"do-tracking": config.aiEnabled,
 				"run-classifier": config.aiEnabled,
 				"tracking-events": config.aiEnabled,
 			};
@@ -3249,6 +3252,42 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			thermalRecorder: z
 				.object({
 					UseLowPowerMode: z.boolean(),
+				})
+				.partial(),
+			thermalMotion: z
+				.object({
+					RunClassifier: z.boolean(),
+					TrackEvents: z.boolean(),
+					DoTracking: z.boolean(),
+				})
+				.partial(),
+			comms: z
+				.object({
+					Enable: z.boolean(),
+					controlEnabled: z.boolean(),
+					"comms-out": z.enum(["uart", "simple"]),
+					"trap-enabled-by-default": z.enum([
+						"activateOnTarget",
+						"deactivateOnProtected",
+					]),
+					"trap-species": z
+						.array(
+							z.object({
+								name: z.string(),
+								confidence: z.number().int().min(0).max(100),
+							}),
+						)
+						.optional(),
+					activationDuration: z.string().optional(),
+					protectedSpecies: z
+						.array(
+							z.object({
+								name: z.string(),
+								confidence: z.number().int().min(0).max(100),
+							}),
+						)
+						.optional(),
+					deactivationDuration: z.string().optional(),
 				})
 				.partial(),
 		})

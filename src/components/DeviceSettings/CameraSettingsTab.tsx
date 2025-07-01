@@ -13,14 +13,15 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import {
-	FaSolidCheck,
-	FaSolidVideo,
-	FaSolidSpinner,
-} from "solid-icons/fa";
+import { FaSolidCheck, FaSolidVideo, FaSolidSpinner } from "solid-icons/fa";
 import { ImCross } from "solid-icons/im";
 import { VsArrowSwap } from "solid-icons/vs";
+import { FiSettings } from "solid-icons/fi";
 import FieldWrapper from "~/components/Field";
+import { SubPageNavigation } from "~/components/UI/SubPageNavigation";
+import { SettingsListItem } from "~/components/UI/SettingsListItem";
+import { DeviceControlTab } from "./DeviceControlTab";
+import { useSearchParams } from "@solidjs/router";
 
 type CameraCanvas = HTMLCanvasElement | undefined;
 const colours = ["#ff0000", "#00ff00", "#ffff00", "#80ffff"];
@@ -29,6 +30,8 @@ type SettingProps = { deviceId: DeviceId };
 export function CameraSettingsTab(props: SettingProps) {
 	const context = useDevice();
 	const device = () => context.devices.get(props.deviceId);
+	const [params, setParams] = useSearchParams();
+	const currentPage = () => params.page || "main";
 	const [audioStatus, { refetch: refetchAudioStatus }] = createResource(
 		props.deviceId,
 		async (id) => {
@@ -460,8 +463,19 @@ export function CameraSettingsTab(props: SettingProps) {
 		console.log("Audio Mode: ", audioMode());
 	});
 
-	return (
-		<section>
+	const navigateToPage = (page: string) => {
+		setParams({ ...params, page });
+	};
+
+	const navigateBack = () => {
+		setParams({ ...params, page: undefined });
+	};
+
+	// Check if device is TC2 to show Device Control option
+	const showDeviceControl = () => device()?.type === "tc2";
+
+	const MainCameraSettings = () => (
+		<>
 			<Switch>
 				<Match when={audioMode() === "AudioOnly"}>
 					<p class="w-full p-8 text-center text-2xl text-neutral-600">
@@ -646,6 +660,31 @@ export function CameraSettingsTab(props: SettingProps) {
 					</div>
 				</Show>
 			</div>
+			<Show when={showDeviceControl()}>
+				<div class="mt-4 px-4">
+					<SettingsListItem
+						title="Device Control"
+						description="Configure AI processing and external device control"
+						icon={<FiSettings size={20} />}
+						onClick={() => navigateToPage("device-control")}
+					/>
+				</div>
+			</Show>
+		</>
+	);
+
+	return (
+		<section class="pb-2">
+			<Switch>
+				<Match when={currentPage() === "main"}>
+					<MainCameraSettings />
+				</Match>
+				<Match when={currentPage() === "device-control"}>
+					<SubPageNavigation title="Device Control" onBack={navigateBack} />
+					<DeviceControlTab deviceId={props.deviceId} />
+				</Match>
+			</Switch>
 		</section>
 	);
 }
+

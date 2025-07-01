@@ -16,7 +16,7 @@ data class pluginCall(val call: com.getcapacitor.PluginCall): PluginCall {
         return call.getString(key)
     }
 
-    override fun getDataAsJsonString(): String? {
+    fun getDataAsJsonString(): String? {
         val jsObject = call.data
         return jsObject?.toString()
     }
