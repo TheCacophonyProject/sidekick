@@ -6634,42 +6634,6 @@
 			};
 			name = Debug;
 		};
-		0AC275AFE0B6C0319B9CDD25C6DCCAE1 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = A52597326AC5A4F841EA15A82233292A /* CapacitorNativeSettings.debug.xcconfig */;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_PREFIX_HEADER = "Target Support Files/CapacitorNativeSettings/CapacitorNativeSettings-prefix.pch";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Target Support Files/CapacitorNativeSettings/CapacitorNativeSettings-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = "Target Support Files/CapacitorNativeSettings/CapacitorNativeSettings.modulemap";
-				PRODUCT_MODULE_NAME = CapacitorNativeSettings;
-				PRODUCT_NAME = CapacitorNativeSettings;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
-				SWIFT_INSTALL_OBJC_HEADER = YES;
-				SWIFT_VERSION = 5.1;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Debug;
-		};
 		0CDD5CF19FD18265982E59EB84598D16 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 19F9AD0C61FD63800F046C21A6655D10 /* CapacitorCamera.release.xcconfig */;
@@ -6706,6 +6670,79 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
+		};
+		0D8BD0D6EA5B1C791381DDB72A447DD3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3CB437103C2B88B7608D2D44AB11B2E2 /* CapacitorCommunitySqlite.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite.modulemap";
+				PRODUCT_MODULE_NAME = CapacitorCommunitySqlite;
+				PRODUCT_NAME = CapacitorCommunitySqlite;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		0FE3C440E3DD8D678C42FE71FA4C4FC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0855D463D637525F498363FA27B9F7D1 /* CapacitorCommunitySqlite.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite.modulemap";
+				PRODUCT_MODULE_NAME = CapacitorCommunitySqlite;
+				PRODUCT_NAME = CapacitorCommunitySqlite;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
 		};
 		191585AF037A2BF39EDD740470AAED45 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -7001,6 +7038,42 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
+		};
+		37B6D5F5540E8F5B6C746E5DEFBA8B6A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A8D4AB3E092BA6FEFDAF484A757B1FC1 /* CapacitorCommunityKeepAwake.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake.modulemap";
+				PRODUCT_MODULE_NAME = CapacitorCommunityKeepAwake;
+				PRODUCT_NAME = CapacitorCommunityKeepAwake;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
 		};
 		3AEEFCFA5833A83F59A790C72582E43C /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -7376,42 +7449,6 @@
 			};
 			name = Release;
 		};
-		5E71D2014AE61827A37290A399D92E11 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = A8D4AB3E092BA6FEFDAF484A757B1FC1 /* CapacitorCommunityKeepAwake.debug.xcconfig */;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-prefix.pch";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake.modulemap";
-				PRODUCT_MODULE_NAME = CapacitorCommunityKeepAwake;
-				PRODUCT_NAME = CapacitorCommunityKeepAwake;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
-				SWIFT_INSTALL_OBJC_HEADER = YES;
-				SWIFT_VERSION = 5.1;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Debug;
-		};
 		600E8B41BFE942ECED33B088C82E9215 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3C4AF057482F6A431E653D7FF1866B35 /* ZIPFoundation.debug.xcconfig */;
@@ -7643,79 +7680,6 @@
 			};
 			name = Debug;
 		};
-		7A910EA7191DF8896F7405E41D40019C /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3CB437103C2B88B7608D2D44AB11B2E2 /* CapacitorCommunitySqlite.release.xcconfig */;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-prefix.pch";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite.modulemap";
-				PRODUCT_MODULE_NAME = CapacitorCommunitySqlite;
-				PRODUCT_NAME = CapacitorCommunitySqlite;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
-				SWIFT_INSTALL_OBJC_HEADER = YES;
-				SWIFT_VERSION = 5.1;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Release;
-		};
-		7B1AD7E9D5BEDCCCAFC4C3D62691FAA2 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 0855D463D637525F498363FA27B9F7D1 /* CapacitorCommunitySqlite.debug.xcconfig */;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-prefix.pch";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = "Target Support Files/CapacitorCommunitySqlite/CapacitorCommunitySqlite.modulemap";
-				PRODUCT_MODULE_NAME = CapacitorCommunitySqlite;
-				PRODUCT_NAME = CapacitorCommunitySqlite;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
-				SWIFT_INSTALL_OBJC_HEADER = YES;
-				SWIFT_VERSION = 5.1;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Debug;
-		};
 		7B8A4666774A89F679E67A4014312178 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 6E9145D8DC47C8B70CBC2541468123BF /* CapacitorCamera.debug.xcconfig */;
@@ -7922,6 +7886,43 @@
 			};
 			name = Release;
 		};
+		95BDF9AAAA545A2FCB29AC5FC3B6953F /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D1B6D75850F46A1F9090A137496D4F5B /* CapacitorCommunityKeepAwake.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake.modulemap";
+				PRODUCT_MODULE_NAME = CapacitorCommunityKeepAwake;
+				PRODUCT_NAME = CapacitorCommunityKeepAwake;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
 		97F511C3C6AAFB6474B816AB7CDE94DD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = E1D4478BC7D85FC0B67FDA0C96AF6A85 /* CapacitorIosAutofillSavePassword.debug.xcconfig */;
@@ -7995,7 +7996,7 @@
 			};
 			name = Release;
 		};
-		A7167343CFD645059E69710EC9EF6C1E /* Release */ = {
+		9FF4E678078557305BAA17D826B5CA5A /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = ECD99EA20DDFD49B5DF5E6F3A5DF8869 /* CapacitorNativeSettings.release.xcconfig */;
 			buildSettings = {
@@ -8211,6 +8212,42 @@
 			};
 			name = Release;
 		};
+		D2E67A86983ACA9D45F698A4EAD08766 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A52597326AC5A4F841EA15A82233292A /* CapacitorNativeSettings.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/CapacitorNativeSettings/CapacitorNativeSettings-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/CapacitorNativeSettings/CapacitorNativeSettings-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/CapacitorNativeSettings/CapacitorNativeSettings.modulemap";
+				PRODUCT_MODULE_NAME = CapacitorNativeSettings;
+				PRODUCT_NAME = CapacitorNativeSettings;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
 		DCD3E87EB2EDB61D8B6C380436E8094D /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 545189AD123BC027F44E3F9CF213FDB0 /* ZIPFoundation.release.xcconfig */;
@@ -8374,43 +8411,6 @@
 			};
 			name = Debug;
 		};
-		FDCFAD17A20E6B7B91FF1961A2EDAF4D /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D1B6D75850F46A1F9090A137496D4F5B /* CapacitorCommunityKeepAwake.release.xcconfig */;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_PREFIX_HEADER = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-prefix.pch";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = "Target Support Files/CapacitorCommunityKeepAwake/CapacitorCommunityKeepAwake.modulemap";
-				PRODUCT_MODULE_NAME = CapacitorCommunityKeepAwake;
-				PRODUCT_NAME = CapacitorCommunityKeepAwake;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
-				SWIFT_INSTALL_OBJC_HEADER = YES;
-				SWIFT_VERSION = 5.1;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -8435,8 +8435,8 @@
 		1CD23A4701714C8563F5B58D6A13D744 /* Build configuration list for PBXNativeTarget "CapacitorCommunitySqlite" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7B1AD7E9D5BEDCCCAFC4C3D62691FAA2 /* Debug */,
-				7A910EA7191DF8896F7405E41D40019C /* Release */,
+				0FE3C440E3DD8D678C42FE71FA4C4FC8 /* Debug */,
+				0D8BD0D6EA5B1C791381DDB72A447DD3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -8507,8 +8507,8 @@
 		4DD8EEA37B9D1E407107AD6AB9B79166 /* Build configuration list for PBXNativeTarget "CapacitorCommunityKeepAwake" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				5E71D2014AE61827A37290A399D92E11 /* Debug */,
-				FDCFAD17A20E6B7B91FF1961A2EDAF4D /* Release */,
+				37B6D5F5540E8F5B6C746E5DEFBA8B6A /* Debug */,
+				95BDF9AAAA545A2FCB29AC5FC3B6953F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -8633,8 +8633,8 @@
 		E39D96A585FEF434C48B4CE5D2BC0086 /* Build configuration list for PBXNativeTarget "CapacitorNativeSettings" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0AC275AFE0B6C0319B9CDD25C6DCCAE1 /* Debug */,
-				A7167343CFD645059E69710EC9EF6C1E /* Release */,
+				D2E67A86983ACA9D45F698A4EAD08766 /* Debug */,
+				9FF4E678078557305BAA17D826B5CA5A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

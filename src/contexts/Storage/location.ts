@@ -203,7 +203,7 @@ export function useLocationStorage() {
 						// Check before syncing
 						let name = location.updateName;
 						// Make sure the name is unique
-						while (locations.some((loc) => loc.name === name)) {
+						while (locations.some((loc) => loc.name === name && loc.groupName === location.groupName)) {
 							name = `${location.updateName}(${Math.floor(
 								Math.random() * 100,
 							)})`;
@@ -228,7 +228,7 @@ export function useLocationStorage() {
 			try {
 				const user = data;
 				if (!user) return [];
-				if ((await DevicePlugin.checkIsAPConnected()).connected) {
+				if (!(await DevicePlugin.checkIsAPConnected()).connected) {
 					const locations = await getServerLocations();
 					const dbLocations = await getLocations(db)();
 					if (locations !== null) {

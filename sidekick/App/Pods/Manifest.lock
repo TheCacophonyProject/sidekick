@@ -9,9 +9,9 @@ PODS:
     - Capacitor
   - CapacitorClipboard (7.0.1):
     - Capacitor
-  - CapacitorCommunityKeepAwake (5.0.1):
+  - CapacitorCommunityKeepAwake (7.0.0):
     - Capacitor
-  - CapacitorCommunitySqlite (6.0.1):
+  - CapacitorCommunitySqlite (7.0.0):
     - Capacitor
     - SQLCipher
     - ZIPFoundation
@@ -27,7 +27,7 @@ PODS:
     - Capacitor
   - CapacitorLocalNotifications (7.0.1):
     - Capacitor
-  - CapacitorNativeSettings (6.0.5):
+  - CapacitorNativeSettings (7.0.1):
     - Capacitor
   - CapacitorNetwork (7.0.1):
     - Capacitor
@@ -117,15 +117,15 @@ SPEC CHECKSUMS:
   CapacitorBrowser: 081852cf532acf77b9d2953f3a88fe5b9711fb06
   CapacitorCamera: eb8687d8687fed853598ec9460d94bcd5e16babe
   CapacitorClipboard: b98aead5dc7ec595547fc2c5d75bacd2ae3338bc
-  CapacitorCommunityKeepAwake: e2ddd50812e3407f8dc3a2c28e97d66e9b59b2f5
-  CapacitorCommunitySqlite: d0b543e12a06ee6fd0dc287c389e6b435ec4acdf
+  CapacitorCommunityKeepAwake: 00dfd8fa3cca0df003c9a3e2cd7bee678aeec68b
+  CapacitorCommunitySqlite: 6501e7349acf998346acf24ef757861bb3f6fc2b
   CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
   CapacitorDialog: 9b934329026b2b0ffa56939bb06df3c67541a2ab
   CapacitorFilesystem: 307f97c27a265edf8396a1c9c235592fd8572fe3
   CapacitorGeolocation: 8f8ac02ceaeb203a4762f8dc4ff5119e3f7fa50a
   CapacitorIosAutofillSavePassword: 6e7c37a13e6970bd31141371abb9e64eae882698
   CapacitorLocalNotifications: 4ea60b9347eac60b37cb4daaf62d12060bb00972
-  CapacitorNativeSettings: 60349f7d00b67d91e701ad1f80b31a8aabff5300
+  CapacitorNativeSettings: 03d126571fc0e12f89ffeb1516788bf371b528bc
   CapacitorNetwork: 07ec4c69c1bb696f41c23e00d31bda1bbb221bba
   CapacitorPreferences: cbf154e5e5519b7f5ab33817a334dda1e98387f9
   IONGeolocationLib: 81f33f88d025846946de2cf63b0c7628e7c6bc9d

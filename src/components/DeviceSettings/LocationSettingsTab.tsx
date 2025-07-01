@@ -324,23 +324,20 @@ export function LocationSettingsTab(props: SettingProps) {
 								reject("Failed converting canvas to Blob.");
 								return;
 							}
-
-							// Convert Blob → base64, so we can save via Capacitor Filesystem
 							const base64Data = await blobToBase64(blob);
 							const fileName = `cropped_${Date.now()}.jpg`;
 
-							// Write the file to the device (using a temporary location)
-							const res = await Filesystem.writeFile({
+							const file = await Filesystem.writeFile({
 								path: fileName,
 								data: base64Data,
-								directory: Directory.Cache, // or Directory.Data if you prefer
+								directory: Directory.Data,
 							});
-							// Create an object URL for quick previews in the app (optional)
+
 							const objectUrl = URL.createObjectURL(blob);
 
 							resolve({
-								url: objectUrl, // for immediate preview (e.g. <img src={url} />)
-								filePath: res.uri, // the actual local URI of the cropped file
+								url: objectUrl,
+								filePath: file.uri,
 							});
 						},
 						"image/jpeg",
