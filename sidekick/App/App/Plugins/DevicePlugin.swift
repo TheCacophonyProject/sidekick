@@ -117,10 +117,13 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     private var lastKnownConnectionState = false
     private var isMonitoringActive = false
     private var isMonitoringInitialized = false
+    private var connectionIntensiveMonitorTimer: Timer?
+    private var connectionNativeTimeoutTimer: Timer?
     
     private var knownDefunctConnections = Set<String>()
     private let CONNECTION_CHECK_INTERVAL: TimeInterval = 2.0
     private let DISCONNECT_DETECTION_TIMEOUT: TimeInterval = 5.0
+    private let CONNECTION_TIMEOUT: TimeInterval = 10.0
     
     public override func load() {
         super.load()
@@ -162,13 +165,22 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         
         // Set up periodic monitoring with shorter interval for faster disconnect detection
+        // Use more frequent checking when connecting for better responsiveness
         connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: CONNECTION_CHECK_INTERVAL, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             
             self.checkCurrentConnection { isConnected in
                 // Only update if state has changed and we're already initialized
                 if isConnected != self.lastKnownConnectionState {
-                    self.updateConnectionState(isConnected ? .connected : .disconnected)
+                    let newState: ConnectionState = isConnected ? .connected : .disconnected
+                    
+                    // Special handling for connecting state - if we detect connection while connecting, transition to connected
+                    if self.connectionState == .connecting && isConnected {
+                        self.updateConnectionState(.connected)
+                    } else {
+                        self.updateConnectionState(newState)
+                    }
+                    
                     self.lastKnownConnectionState = isConnected
                 }
             }
@@ -178,7 +190,57 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
     private func stopWiFiMonitoring() {
         connectionMonitorTimer?.invalidate()
         connectionMonitorTimer = nil
+        stopIntensiveConnectionMonitoring()
+        stopConnectionTimeout()
         isMonitoringActive = false
+    }
+    
+    // Start more frequent monitoring during connection attempts
+    private func startIntensiveConnectionMonitoring() {
+        stopIntensiveConnectionMonitoring() // Stop any existing intensive monitoring
+        
+        connectionIntensiveMonitorTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Only run intensive monitoring when we're in connecting state
+            guard self.connectionState == .connecting else {
+                self.stopIntensiveConnectionMonitoring()
+                return
+            }
+            
+            self.checkCurrentConnection { isConnected in
+                if isConnected {
+                    self.stopIntensiveConnectionMonitoring()
+                    self.updateConnectionState(.connected)
+                    self.lastKnownConnectionState = isConnected
+                }
+            }
+        }
+    }
+    
+    private func stopIntensiveConnectionMonitoring() {
+        connectionIntensiveMonitorTimer?.invalidate()
+        connectionIntensiveMonitorTimer = nil
+    }
+    
+    // Start native timeout to detect stuck connections when network unavailable
+    private func startConnectionTimeout() {
+        stopConnectionTimeout() // Stop any existing timeout
+        
+        connectionNativeTimeoutTimer = Timer.scheduledTimer(withTimeInterval: CONNECTION_TIMEOUT, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // If still connecting after timeout, consider it failed
+            if self.connectionState == .connecting {
+                print("Native connection timeout - network likely unavailable")
+                self.updateConnectionState(.connectionFailed)
+            }
+        }
+    }
+    
+    private func stopConnectionTimeout() {
+        connectionNativeTimeoutTimer?.invalidate()
+        connectionNativeTimeoutTimer = nil
     }
     
     private func updateDiscoveryState(_ newState: DiscoveryState) {
@@ -193,6 +255,15 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
             connectionState = newState
             notifyListeners("onAPConnectionStateChanged", data: ["state": newState.rawValue])
             
+            // Stop intensive monitoring and timeout when reaching terminal states
+            switch newState {
+            case .connected, .connectionFailed, .disconnected, .connectionLost:
+                stopIntensiveConnectionMonitoring()
+                stopConnectionTimeout()
+            default:
+                break
+            }
+            
             // Additional notifications based on state transitions
             switch newState {
             case .connected:
@@ -202,7 +273,7 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
             case .connectionFailed:
                 notifyListeners("onAPConnectionFailed", data: [
                     "status": "error",
-                    "error": "Connection failed",
+                    "error": "Connection failed - network may not be available",
                     "canRetry": true
                 ])
             case .connectionLost:
@@ -673,9 +744,6 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         
-        // Keep the call alive as we'll be resolving it in an async callback
-        call.keepAlive = true
-        
         // First, check if we're already connected to the target network
         self.checkCurrentConnection { [weak self] isConnected in
             guard let self = self else {
@@ -684,61 +752,47 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
             }
             
             if isConnected {
-                // Already connected, finalize immediately
-                self.finalizeConnectionAttempt(status: .connected, error: nil, call: call)
+                // Already connected, resolve immediately
+                call.resolve(["status": "connected"])
                 return
             }
             
-            // --- Start of the new connection flow ---
-            
-            // Set state to connecting
+            // Set state to connecting and notify listeners
             self.updateConnectionState(.connecting)
             
-            // Set a reasonable master timeout for the entire operation (e.g., 30 seconds)
-            // This is our safety net.
-            self.connectionTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
-                guard let self = self else { return }
-                
-                // If we are still trying to connect or verify after 30s, fail the attempt.
-                if self.connectionState == .connecting || self.connectionState == .connectionVerifying {
-                    self.finalizeConnectionAttempt(status: .connectionFailed, error: "Connection timed out.", call: call)
-                }
-            }
+            // Start intensive monitoring to catch connection state changes quickly
+            self.startIntensiveConnectionMonitoring()
             
-            // Ensure configuration is set to join only once if needed, and remove old configs
-            self.configuration.joinOnce = true // Use true to prevent iOS from auto-reconnecting later
+            // Start native timeout to catch stuck connections
+            self.startConnectionTimeout()
+            
+            // Ensure configuration is set to join only once and remove old configs
+            self.configuration.joinOnce = false
             NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: "bushnet")
             
             // Apply the hotspot configuration
             NEHotspotConfigurationManager.shared.apply(self.configuration) { [weak self] error in
                 guard let self = self else { return }
                 
-                // If the connection has already been finalized by the timeout, do nothing.
-                guard self.connectionState == .connecting else { return }
-
                 if let error = error {
-                    // The OS rejected the request to connect. Fail immediately.
-                    self.finalizeConnectionAttempt(status: .connectionFailed, error: error.localizedDescription, call: call)
+                    // The OS rejected the request to connect - immediate failure
+                    self.stopIntensiveConnectionMonitoring()
+                    self.stopConnectionTimeout()
+                    self.updateConnectionState(.connectionFailed)
+                    call.resolve(["status": "error", "error": error.localizedDescription])
                     return
                 }
                 
-                // The OS has accepted the request. Now, move to verifying the connection.
-                self.updateConnectionState(.connectionVerifying)
+                // The OS has accepted the connection request
+                call.resolve(["status": "connecting"])
                 
-                // Start polling to check if the connection has been established.
-                self.verificationTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-                    guard let self = self else {
-                        timer.invalidate()
-                        return
-                    }
-                    
+                // Immediately check if we're already connected (connection might be instant)
+                // and trigger more frequent checks during the connection process
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     self.checkCurrentConnection { isConnected in
-                        if isConnected {
-                            // Success! We are connected.
-                            self.finalizeConnectionAttempt(status: .connected, error: nil, call: call)
+                        if isConnected && self.connectionState == .connecting {
+                            self.updateConnectionState(.connected)
                         }
-                        // If not connected, do nothing and let the timer poll again.
-                        // The master connectionTimeoutTimer will eventually stop the process if it never connects.
                     }
                 }
             }
@@ -789,7 +843,7 @@ public class DevicePlugin: CAPPlugin, CAPBridgedPlugin {
                 if let currentSSID = currentConfiguration?.ssid, currentSSID == "bushnet" {
                     // The device is still connected to the "bushnet" network, disconnection failed
                     self.updateConnectionState(.connected) // Revert to connected state
-                    call.resolve(["success": false, "error": "Failed to disconnect from the desired network"])
+                    call.resolve(["success": false, "message": "Failed to disconnect from the desired network"])
                 } else {
                     // Successfully disconnected or was not connected to "bushnet"
                     self.updateConnectionState(.disconnected)

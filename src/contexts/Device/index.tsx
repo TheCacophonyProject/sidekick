@@ -908,12 +908,20 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const handleAPConnected = (res: { status: string }) => {
 		log.logEvent("AP_connected");
 		setApState("connected");
+		// Clear the master timeout since connection succeeded
+		if (masterConnectTimeout) {
+			clearTimeout(masterConnectTimeout);
+			masterConnectTimeout = null;
+		}
 		searchDevice();
 	};
 
 	const handleAPDisconnected = (res: { status: string }) => {
 		log.logEvent("AP_disconnect");
 		setApState("disconnected");
+		// Clean up devices when AP disconnection is detected
+		devices.clear();
+		stopDiscovery().catch(console.error);
 	};
 
 	const handleAPConnectionFailed = (res: {
@@ -922,6 +930,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		canRetry: boolean;
 	}) => {
 		log.logEvent("AP_failed");
+		// Clear the master timeout since connection failed
+		if (masterConnectTimeout) {
+			clearTimeout(masterConnectTimeout);
+			masterConnectTimeout = null;
+		}
 		log.logWarning({
 			message:
 				res.error ||
@@ -938,6 +951,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			warn: false,
 		});
 		setApState("disconnected");
+		// Clean up devices when AP connection is lost
+		devices.clear();
+		stopDiscovery().catch(console.error);
 	};
 
 	const setupListeners = async () => {
@@ -2604,6 +2620,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		),
 	);
 
+	let masterConnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	const connectToDeviceAP = leading(
 		debounce,
 		async () => {
@@ -2615,24 +2633,52 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			// Always start from a clean state when initiating a connection
 			setApState("loadingConnect");
 
-			const connectTimeout = setTimeout(() => {
+			// Establish master timeout - acts as ultimate safety net
+			masterConnectTimeout = setTimeout(() => {
 				if (apState() === "loadingConnect") {
+					console.log("Master timeout reached - forcing state reset");
 					setApState("default");
+					masterConnectTimeout = null;
 				}
-			}, 120000); // 2 minute timeout
+			}, 60000); // 60 second timeout
 
 			try {
 				log.logEvent("AP_connect");
 				const res = await DevicePlugin.connectToDeviceAP();
 
 				if (res.status === "connecting") {
-					console.log("AP connection process started");
+					console.log("AP connection process started - waiting for events");
+					// Add a fallback check in case the event system misses the connection
+					setTimeout(async () => {
+						if (apState() === "loadingConnect") {
+							try {
+								const checkRes = await DevicePlugin.checkIsAPConnected();
+								if (checkRes.connected) {
+									console.log("Fallback check detected connection - updating UI");
+									log.logEvent("AP_connected");
+									setApState("connected");
+									if (masterConnectTimeout) {
+										clearTimeout(masterConnectTimeout);
+										masterConnectTimeout = null;
+									}
+									searchDevice();
+								}
+							} catch (e) {
+								console.error("Fallback connection check failed:", e);
+							}
+						}
+					}, 3000); // Check after 3 seconds
 				} else if (res.status === "connected") {
+					// Immediate connection success
 					log.logEvent("AP_connected");
 					setApState("connected");
-					clearTimeout(connectTimeout);
+					if (masterConnectTimeout) {
+						clearTimeout(masterConnectTimeout);
+						masterConnectTimeout = null;
+					}
 					searchDevice();
 				} else if (res.status === "error") {
+					// Immediate connection error
 					log.logEvent("AP_failed");
 					log.logWarning({
 						message:
@@ -2640,12 +2686,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							"Please try again, or connect to 'bushnet' with password 'feathers' in your wifi settings. Alternatively, set up a hotspot named 'bushnet' password: 'feathers'.",
 					});
 					setApState("default");
-					clearTimeout(connectTimeout);
+					if (masterConnectTimeout) {
+						clearTimeout(masterConnectTimeout);
+						masterConnectTimeout = null;
+					}
 				}
 			} catch (err) {
 				log.logEvent("AP_failed");
 				setApState("default");
-				clearTimeout(connectTimeout);
+				if (masterConnectTimeout) {
+					clearTimeout(masterConnectTimeout);
+					masterConnectTimeout = null;
+				}
 			}
 		},
 		800,
@@ -2655,6 +2707,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		try {
 			setApState("loadingDisconnect");
 
+			// Stop discovery and clear devices before disconnecting
+			// This prevents network errors when we lose AP connection
+			await stopDiscovery();
+			devices.clear(); // Clear discovered devices
+			
 			const disconnectTimeout = setTimeout(() => {
 				if (apState() === "loadingDisconnect") {
 					setApState("disconnected");
@@ -2662,18 +2719,22 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			}, 30000); // 30 second timeout
 
 			const res = await DevicePlugin.disconnectFromDeviceAP();
+			clearTimeout(disconnectTimeout);
 
-			if (!res.success) {
+			if (res.success) {
+				setApState("disconnected");
+				log.logEvent("AP_disconnect");
+			} else {
 				log.logWarning({
-					message: `Failed to disconnect: ${res.message}`,
+					message: `${res.message}`,
 					warn: true,
 				});
 				setApState("default");
-				clearTimeout(disconnectTimeout);
 			}
 
 			return res.success;
 		} catch (error) {
+			console.error("Error during AP disconnect:", error);
 			setApState("default");
 			return false;
 		}
