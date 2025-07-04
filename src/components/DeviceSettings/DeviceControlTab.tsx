@@ -1,4 +1,8 @@
-import { debounce } from "@solid-primitives/scheduled";
+import {
+	debounce,
+	leadingAndTrailing,
+	throttle,
+} from "@solid-primitives/scheduled";
 import {
 	FaSolidCheck,
 	FaSolidPlus,
@@ -16,6 +20,8 @@ import {
 	createResource,
 	createSignal,
 	on,
+	onCleanup,
+	onMount,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
@@ -42,7 +48,7 @@ const SpeciesSelectorModal = (props: {
 	) => void;
 	title: string;
 }) => {
-	const [localSelection, setLocalSelection] = createStore<
+	const [localSelection, setLocalSelection] = createSignal<
 		{ name: string; confidence: ConfidenceValue }[]
 	>([]);
 	createEffect(() => {
@@ -50,18 +56,18 @@ const SpeciesSelectorModal = (props: {
 	});
 
 	const isSelected = (speciesName: string) =>
-		localSelection.some((s) => s.name === speciesName);
+		localSelection().some((s) => s.name === speciesName);
 
 	const toggleSpecies = (speciesName: string) => {
 		setLocalSelection(
 			isSelected(speciesName)
 				? (p) => p.filter((s) => s.name !== speciesName)
-				: (p) => [...p, { name: speciesName, confidence: "High" }], // Default to High confidence
+				: (p) => [...p, { name: speciesName, confidence: 80 }], // Default to High confidence
 		);
 	};
 
 	const handleSave = () => {
-		props.onUpdate(localSelection);
+		props.onUpdate(localSelection());
 		props.onClose();
 	};
 
@@ -131,7 +137,8 @@ export function DeviceControlTab(props: SettingProps) {
 	});
 
 	// Store the original loaded config to compare against for changes
-	const [originalConfig, setOriginalConfig] = createSignal<AiControlConfig | null>(null);
+	const [originalConfig, setOriginalConfig] =
+		createSignal<AiControlConfig | null>(null);
 
 	const [saveStatus, setSaveStatus] = createSignal<
 		"idle" | "saving" | "saved" | "error"
@@ -148,7 +155,10 @@ export function DeviceControlTab(props: SettingProps) {
 	});
 
 	// Function to deep compare two configs to check if they're different
-	const configsAreEqual = (config1: AiControlConfig, config2: AiControlConfig): boolean => {
+	const configsAreEqual = (
+		config1: AiControlConfig,
+		config2: AiControlConfig,
+	): boolean => {
 		return (
 			config1.aiEnabled === config2.aiEnabled &&
 			config1.controlEnabled === config2.controlEnabled &&
@@ -158,43 +168,49 @@ export function DeviceControlTab(props: SettingProps) {
 			config1.deactivationDuration === config2.deactivationDuration &&
 			config1.targetSpecies.length === config2.targetSpecies.length &&
 			config1.protectedSpecies.length === config2.protectedSpecies.length &&
-			config1.targetSpecies.every((species, index) => 
-				species.name === config2.targetSpecies[index]?.name &&
-				species.confidence === config2.targetSpecies[index]?.confidence
+			config1.targetSpecies.every(
+				(species, index) =>
+					species.name === config2.targetSpecies[index]?.name &&
+					species.confidence === config2.targetSpecies[index]?.confidence,
 			) &&
-			config1.protectedSpecies.every((species, index) => 
-				species.name === config2.protectedSpecies[index]?.name &&
-				species.confidence === config2.protectedSpecies[index]?.confidence
+			config1.protectedSpecies.every(
+				(species, index) =>
+					species.name === config2.protectedSpecies[index]?.name &&
+					species.confidence === config2.protectedSpecies[index]?.confidence,
 			)
 		);
 	};
 
 	// Debounced function to save the configuration to the device.
 	// This prevents a flood of API calls on rapid changes (e.g., typing).
-	const debouncedSave = debounce(async (newConfig: AiControlConfig) => {
-		setSaveStatus("saving");
-		try {
-			const success = await context.saveAiControlConfig(id(), newConfig);
-			if (success) {
-				// Update the original config to the newly saved config
-				setOriginalConfig(newConfig);
-				setSaveStatus("saved");
+	const debouncedSave = leadingAndTrailing(
+		debounce,
+		async (newConfig: AiControlConfig) => {
+			setSaveStatus("saving");
+			try {
+				const success = await context.saveAiControlConfig(id(), newConfig);
+				if (success) {
+					// Update the original config to the newly saved config
+					setOriginalConfig(newConfig);
+					setSaveStatus("saved");
+					setTimeout(() => {
+						// Only transition from 'saved' to 'idle' if the status hasn't changed.
+						if (saveStatus() === "saved") setSaveStatus("idle");
+					}, 2500); // Show "saved" message for 2.5 seconds
+				} else {
+					throw new Error("API reported save failure");
+				}
+			} catch (error) {
+				console.error("Failed to save AI settings:", error);
+				setSaveStatus("error");
+				// Optionally, allow user to see error for longer before it disappears
 				setTimeout(() => {
-					// Only transition from 'saved' to 'idle' if the status hasn't changed.
-					if (saveStatus() === "saved") setSaveStatus("idle");
-				}, 2500); // Show "saved" message for 2.5 seconds
-			} else {
-				throw new Error("API reported save failure");
+					if (saveStatus() === "error") setSaveStatus("idle");
+				}, 5000);
 			}
-		} catch (error) {
-			console.error("Failed to save AI settings:", error);
-			setSaveStatus("error");
-			// Optionally, allow user to see error for longer before it disappears
-			setTimeout(() => {
-				if (saveStatus() === "error") setSaveStatus("idle");
-			}, 5000);
-		}
-	}, 1000); // 1-second debounce window
+		},
+		1000,
+	); // 1-second debounce window
 
 	// Effect that triggers the save operation whenever the config store changes.
 	// Only saves if the config is actually different from the originally loaded config.
@@ -204,11 +220,11 @@ export function DeviceControlTab(props: SettingProps) {
 			(newConfig) => {
 				// Don't save while the initial data is still loading
 				if (configResource.loading) return;
-				
+
 				// Don't save if we don't have an original config to compare against
 				const original = originalConfig();
 				if (!original) return;
-				
+
 				// Only save if the config has actually changed
 				if (!configsAreEqual(newConfig, original)) {
 					debouncedSave(newConfig);
@@ -217,6 +233,13 @@ export function DeviceControlTab(props: SettingProps) {
 			{ defer: true },
 		),
 	);
+
+	onMount(() => {
+		onCleanup(() => {
+			// save the current config when the component is unmounted
+			debouncedSave(config);
+		});
+	});
 
 	const [isTargetModalOpen, setTargetModalOpen] = createSignal(false);
 	const [isProtectModalOpen, setProtectModalOpen] = createSignal(false);
@@ -265,7 +288,7 @@ export function DeviceControlTab(props: SettingProps) {
 									Species Detection Settings
 								</h3>
 								<p class="mt-1 text-sm text-gray-600">
-									The device activates when target species are detected and
+									Signal activates when target species are detected and
 									automatically deactivates when protected species are found.
 								</p>
 							</div>
@@ -358,6 +381,12 @@ export function DeviceControlTab(props: SettingProps) {
 									>
 										<FaSolidPlus size={12} /> Add Protected Species
 									</button>
+									<DurationInput
+										value={config.deactivationDuration}
+										onChange={(value) =>
+											setConfig("deactivationDuration", value)
+										}
+									/>
 								</div>
 							</div>
 						</div>

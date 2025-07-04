@@ -22,7 +22,7 @@ export function SettingsListItem(props: SettingsListItemProps) {
 				<div>
 					<h3 class="font-medium text-gray-900">{props.title}</h3>
 					<Show when={props.description}>
-						<p class="mt-1 text-sm text-gray-600">{props.description}</p>
+						<p class="mt-1 text-xs text-gray-600">{props.description}</p>
 					</Show>
 				</div>
 			</div>

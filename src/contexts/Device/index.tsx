@@ -24,6 +24,7 @@ import {
 	on,
 	onCleanup,
 	onMount,
+	untrack,
 } from "solid-js";
 import { z } from "zod";
 import { GoToPermissions } from "~/components/GoToPermissions";
@@ -1642,7 +1643,38 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			console.error(e);
 		}
 	};
+	type LocationUpdatePayload = {
+		deviceId: string;
+		location: { lat: number; lng: number };
+	};
 
+	const [locationUpdateQueue, setLocationUpdateQueue] = createSignal<
+		LocationUpdatePayload[]
+	>([]);
+	createEffect(
+		on(locationUpdateQueue, async (queue) => {
+			if (queue.length === 0) {
+				return; // Nothing to do
+			}
+
+			// Get the first item from the queue
+			const nextUpdate = queue[0];
+
+			try {
+				// Process the side-effect
+				await tryUpdateServerLocation(nextUpdate.deviceId, nextUpdate.location);
+			} catch (error) {
+				// The tryUpdateServerLocation already console.errors, but you could add more robust logging here
+				console.error(
+					"Failed to process server location update from queue:",
+					error,
+				);
+			} finally {
+				// IMPORTANT: Remove the processed item from the queue, regardless of success or failure
+				untrack(() => setLocationUpdateQueue((q) => q.slice(1)));
+			}
+		}),
+	);
 	const getLocationCoords = async (
 		device: DeviceId,
 	): Result<DeviceCoords<number>> => {
@@ -1686,10 +1718,15 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 						message: location.error.message,
 					};
 				}
-				tryUpdateServerLocation(device, {
-					lat: location.data.latitude,
-					lng: location.data.longitude,
-				});
+				const payload: LocationUpdatePayload = {
+					deviceId: device,
+					location: {
+						lat: location.data.latitude,
+						lng: location.data.longitude,
+					},
+				};
+				setLocationUpdateQueue((q) => [...q, payload]);
+
 				return {
 					success: true,
 					data: location.data,
@@ -1700,6 +1737,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				message: "Could not get location",
 			};
 		} catch (error) {
+			log.logError({
+				message: "Could not get location",
+				error: error instanceof Error ? error : new Error(String(error)),
+			});
 			return {
 				success: false,
 				message: "Could not get location",
@@ -1707,6 +1748,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 	};
 
+	// Context based resource to get the location of a device
 	const getLocationByDevice = (deviceId: DeviceId) =>
 		createResource(
 			() => [storage.savedLocations(), devices.get(deviceId)] as const,
@@ -2972,24 +3014,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			const configRes = await getDeviceConfig(deviceId);
 			if (!configRes) return null;
-			debugger;
-
 			const thermalConfig = configRes.values.thermalMotion ?? {};
 			const commsConfig = configRes.values.comms ?? {};
-
-			const parseSpecies = (
-				species: Record<string, number> | string | undefined | null,
-			) => {
-				if (typeof species === "object" && species !== null) {
-					return Object.entries(species).map(([name, confidence]) => {
-						let confidenceValue: ConfidenceValue = "Normal";
-						if (confidence >= 95) confidenceValue = "VeryHigh";
-						else if (confidence >= 90) confidenceValue = "High";
-						return { name, confidence: confidenceValue };
-					});
-				}
-				return [];
-			};
 
 			return {
 				aiEnabled: thermalConfig.RunClassifier ?? false,
@@ -2998,10 +3024,10 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				triggerLogic: commsConfig["trap-enabled-by-default"]
 					? "deactivateOnProtected"
 					: "activateOnTarget",
-				targetSpecies: commsConfig["trap-species"],
+				targetSpecies: commsConfig["trap-species"] ?? [],
 				activationDuration: commsConfig["trap-duration"] ?? "1m0s",
-				protectedSpecies: parseSpecies(commsConfig["protect-species"]),
-				deactivationDuration: commsConfig["protect-duration"] ?? "1m0s",
+				protectedSpecies: commsConfig["protect-species"] ?? [],
+				deactivationDuration: commsConfig["protect-duration"] ?? "5m0s",
 			};
 		} catch (error) {
 			console.error("Error getting AI control config:", error);
@@ -3018,14 +3044,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			if (!device || !device.isConnected) return false;
 			const { url } = device;
 
-			// 1. Prepare thermal-motion config
 			const thermalMotionConfig = {
 				"do-tracking": config.aiEnabled,
 				"run-classifier": config.aiEnabled,
 				"tracking-events": config.aiEnabled,
 			};
 
-			// 2. Prepare comms config
 			const speciesToObject = (
 				speciesList: { name: string; confidence: ConfidenceValue }[],
 			) => {
@@ -3033,13 +3057,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				return speciesList.reduce(
 					(obj, item) => {
 						// Translate user-friendly value back to a number for the API
-						obj[item.name] = confidenceLevels[item.confidence];
+						obj[item.name] = item.confidence;
 						return obj;
 					},
 					{} as Record<string, number>,
 				);
 			};
-
 			const commsConfig = {
 				enable: config.controlEnabled,
 				"comms-out": config.operatingMode,
@@ -3278,8 +3301,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							}),
 						)
 						.optional(),
-					activationDuration: z.string().optional(),
-					protectedSpecies: z
+					"trap-duration": z.string().optional(),
+					"protect-species": z
 						.array(
 							z.object({
 								name: z.string(),
@@ -3287,7 +3310,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							}),
 						)
 						.optional(),
-					deactivationDuration: z.string().optional(),
+					"protect-duration": z.string().optional(),
 				})
 				.partial(),
 		})

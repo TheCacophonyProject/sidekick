@@ -663,8 +663,8 @@ export function CameraSettingsTab(props: SettingProps) {
 			<Show when={showDeviceControl()}>
 				<div class="mt-4 px-4">
 					<SettingsListItem
-						title="Device Control"
-						description="Configure AI processing and external device control"
+						title="On-Device Processing"
+						description="Configure AI and device control"
 						icon={<FiSettings size={20} />}
 						onClick={() => navigateToPage("device-control")}
 					/>
@@ -680,7 +680,7 @@ export function CameraSettingsTab(props: SettingProps) {
 					<MainCameraSettings />
 				</Match>
 				<Match when={currentPage() === "device-control"}>
-					<SubPageNavigation title="Device Control" onBack={navigateBack} />
+					<SubPageNavigation title="On-Device Processing" onBack={navigateBack} />
 					<DeviceControlTab deviceId={props.deviceId} />
 				</Match>
 			</Switch>
