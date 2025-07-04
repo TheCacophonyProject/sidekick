@@ -339,6 +339,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const log = useLogsContext();
 	const user = useUserContext();
 
+	// Platform detection helper
+	const isIOS = () => Capacitor.getPlatform() === "ios";
+
 	const devices = new ReactiveMap<DeviceId, Device>();
 	const deviceRecordings = new ReactiveMap<DeviceId, RecordingName[] | null>();
 	const deviceEventKeys = new ReactiveMap<DeviceId, number[]>();
@@ -960,9 +963,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const handleAPDisconnected = (res: { status: string }) => {
 		log.logEvent("AP_disconnect");
 		setApState("disconnected");
-		// Clean up devices when AP disconnection is detected
-		devices.clear();
-		stopDiscovery().catch(console.error);
+		// iOS requires aggressive cleanup to prevent stale connections
+		// Android can maintain discovered devices across AP changes
+		if (isIOS()) {
+			devices.clear();
+			stopDiscovery().catch(console.error);
+		}
 	};
 
 	const handleAPConnectionFailed = (res: {
@@ -992,9 +998,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			warn: false,
 		});
 		setApState("disconnected");
-		// Clean up devices when AP connection is lost
-		devices.clear();
-		stopDiscovery().catch(console.error);
+		// iOS requires aggressive cleanup to prevent stale connections
+		// Android can maintain discovered devices across AP changes
+		if (isIOS()) {
+			devices.clear();
+			stopDiscovery().catch(console.error);
+		}
 	};
 
 	const setupListeners = async () => {
@@ -1189,7 +1198,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 		try {
 			// Check for local network permissions before starting discovery
-			if (Capacitor.getPlatform() === "ios") {
+			if (isIOS()) {
 				const perm = await DevicePlugin.checkPermissions();
 				if (!perm.granted) {
 					console.warn(
@@ -2791,10 +2800,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		try {
 			setApState("loadingDisconnect");
 
-			// Stop discovery and clear devices before disconnecting
-			// This prevents network errors when we lose AP connection
-			await stopDiscovery();
-			devices.clear(); // Clear discovered devices
+			// iOS requires stopping discovery and clearing devices before disconnecting
+			// to prevent network errors when losing AP connection
+			// Android can maintain discovered devices across disconnections
+			if (isIOS()) {
+				await stopDiscovery();
+				devices.clear();
+			}
 
 			const disconnectTimeout = setTimeout(() => {
 				if (apState() === "loadingDisconnect") {
