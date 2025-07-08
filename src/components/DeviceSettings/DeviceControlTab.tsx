@@ -1,8 +1,4 @@
-import {
-	debounce,
-	leadingAndTrailing,
-	throttle,
-} from "@solid-primitives/scheduled";
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	FaSolidCheck,
 	FaSolidPlus,
@@ -33,13 +29,13 @@ import type {
 import { availableSpecies, useDevice } from "~/contexts/Device";
 
 import { DurationInput } from "~/components/UI/DurationInput";
-import { SettingRow } from "~/components/UI/SettingRow";
-import { ToggleSwitch } from "~/components/UI/ToggleSwitch";
 
 type SettingProps = { deviceId: DeviceId };
 
-// The SpeciesSelectorModal is compatible with the new approach and remains unchanged.
-const SpeciesSelectorModal = (props: {
+type AiMode = "off" | "stream" | "trigger";
+
+// The TargetSelectorModal (renamed from SpeciesSelectorModal) remains mostly unchanged
+const TargetSelectorModal = (props: {
 	isOpen: boolean;
 	onClose: () => void;
 	selected: { name: string; confidence: ConfidenceValue }[];
@@ -55,14 +51,14 @@ const SpeciesSelectorModal = (props: {
 		setLocalSelection(props.selected);
 	});
 
-	const isSelected = (speciesName: string) =>
-		localSelection().some((s) => s.name === speciesName);
+	const isSelected = (targetName: string) =>
+		localSelection().some((s) => s.name === targetName);
 
-	const toggleSpecies = (speciesName: string) => {
+	const toggleTarget = (targetName: string) => {
 		setLocalSelection(
-			isSelected(speciesName)
-				? (p) => p.filter((s) => s.name !== speciesName)
-				: (p) => [...p, { name: speciesName, confidence: 80 }], // Default to High confidence
+			isSelected(targetName)
+				? (p) => p.filter((s) => s.name !== targetName)
+				: (p) => [...p, { name: targetName, confidence: 80 }], // Default to High confidence
 		);
 	};
 
@@ -85,18 +81,18 @@ const SpeciesSelectorModal = (props: {
 						<main class="flex-grow overflow-y-auto p-4">
 							<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
 								<For each={availableSpecies}>
-									{(species) => (
+									{(target) => (
 										<button
-											onClick={() => toggleSpecies(species)}
+											onClick={() => toggleTarget(target)}
 											class="rounded-md p-3 text-center text-sm transition"
 											classList={{
 												"bg-green-500 text-white shadow-sm":
-													isSelected(species),
+													isSelected(target),
 												"bg-gray-200 text-gray-800 hover:bg-gray-300":
-													!isSelected(species),
+													!isSelected(target),
 											}}
 										>
-											{species.charAt(0).toUpperCase() + species.slice(1)}
+											{target.charAt(0).toUpperCase() + target.slice(1)}
 										</button>
 									)}
 								</For>
@@ -117,6 +113,76 @@ const SpeciesSelectorModal = (props: {
 	);
 };
 
+// Mode Selector Component
+const ModeSelector = (props: {
+	value: AiMode;
+	onChange: (mode: AiMode) => void;
+}) => {
+	const modes: { value: AiMode; label: string; description: string }[] = [
+		{
+			value: "off",
+			label: "Off",
+			description: "",
+		},
+		{
+			value: "stream",
+			label: "Stream",
+			description: "Sends continuous data stream (UART serial) with all AI detections and confidence scores via auxiliary port",
+		},
+		{
+			value: "trigger",
+			label: "Trigger",
+			description: "Outputs digital signal via auxiliary port based on target detection rules",
+		},
+	];
+
+	return (
+		<div class="space-y-4">
+			<div class="relative flex rounded-lg bg-gray-100">
+				{/* Sliding indicator */}
+				<div
+					class="absolute h-full rounded-md bg-white shadow-sm transition-all duration-300 ease-out"
+					style={{
+						width: "33.333%",
+						transform: `translateX(${modes.findIndex((m) => m.value === props.value) * 100}%)`,
+					}}
+				/>
+
+				{/* Mode buttons */}
+				<div class="relative flex w-full">
+					<For each={modes}>
+						{(mode) => (
+							<button
+								onClick={() => props.onChange(mode.value)}
+								class="relative z-10 flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-200"
+								classList={{
+									"text-gray-900": props.value === mode.value,
+									"text-gray-600 hover:text-gray-800": props.value !== mode.value,
+								}}
+							>
+								{mode.label}
+							</button>
+						)}
+					</For>
+				</div>
+			</div>
+
+			{/* Mode description */}
+			<Show when={props.value !== "off"}>
+				<div class="text-sm text-gray-600 transition-opacity duration-200">
+					<For each={modes}>
+						{(mode) => (
+							<Show when={props.value === mode.value}>
+								<p class="px-2">{mode.description}</p>
+							</Show>
+						)}
+					</For>
+				</div>
+			</Show>
+		</div>
+	);
+};
+
 export function DeviceControlTab(props: SettingProps) {
 	const context = useDevice();
 	const id = () => props.deviceId;
@@ -127,7 +193,6 @@ export function DeviceControlTab(props: SettingProps) {
 
 	const [config, setConfig] = createStore<AiControlConfig>({
 		aiEnabled: false,
-		controlEnabled: false,
 		operatingMode: "simple",
 		triggerLogic: "activateOnTarget",
 		targetSpecies: [],
@@ -143,6 +208,71 @@ export function DeviceControlTab(props: SettingProps) {
 	const [saveStatus, setSaveStatus] = createSignal<
 		"idle" | "saving" | "saved" | "error"
 	>("idle");
+
+	// Compute the current mode based on config
+	const currentMode = (): AiMode => {
+		if (!config.aiEnabled) return "off";
+		return config.operatingMode === "uart" ? "stream" : "trigger";
+	};
+
+	// Helper function to apply defaults when enabling AI for the first time
+	const applyDefaultsIfNeeded = (mode: AiMode, currentConfig: AiControlConfig) => {
+		// Only apply defaults when switching from off to on, and if the config appears to be empty/default
+		const isFirstTimeEnable = !originalConfig()?.aiEnabled && mode !== "off";
+		const hasEmptyConfig =
+			currentConfig.targetSpecies.length === 0 &&
+			currentConfig.protectedSpecies.length === 0 &&
+			(currentConfig.activationDuration === "1m0s" || currentConfig.activationDuration === "0m0s") &&
+			(currentConfig.deactivationDuration === "5m0s" || currentConfig.deactivationDuration === "0m0s");
+
+		const defaults = currentConfig.defaults;
+		if (isFirstTimeEnable && hasEmptyConfig && defaults) {
+			return {
+				...currentConfig,
+				aiEnabled: true,
+				operatingMode: mode === "stream" ? ("uart" as const) : ("simple" as const),
+				targetSpecies: defaults.targetSpecies,
+				activationDuration: defaults.activationDuration,
+				protectedSpecies: defaults.protectedSpecies,
+				deactivationDuration: defaults.deactivationDuration,
+			};
+		}
+
+		return {
+			...currentConfig,
+			aiEnabled: mode !== "off",
+			operatingMode: mode === "stream" ? ("uart" as const) : ("simple" as const),
+		};
+	};
+
+	// Handle mode changes
+	const handleModeChange = (mode: AiMode) => {
+		batch(() => {
+			if (mode === "off") {
+				setConfig("aiEnabled", false);
+			} else {
+				const newConfig = applyDefaultsIfNeeded(mode, config);
+				// Apply all the changes from the helper function
+				setConfig("aiEnabled", newConfig.aiEnabled);
+				setConfig("operatingMode", newConfig.operatingMode as "simple" | "uart");
+				if (newConfig.targetSpecies && newConfig.targetSpecies !== config.targetSpecies) {
+					setConfig("targetSpecies", newConfig.targetSpecies);
+				}
+				if (newConfig.activationDuration && newConfig.activationDuration !== config.activationDuration) {
+					setConfig("activationDuration", newConfig.activationDuration);
+				}
+				if (newConfig.protectedSpecies && newConfig.protectedSpecies !== config.protectedSpecies) {
+					setConfig("protectedSpecies", newConfig.protectedSpecies);
+				}
+				if (newConfig.deactivationDuration && newConfig.deactivationDuration !== config.deactivationDuration) {
+					setConfig("deactivationDuration", newConfig.deactivationDuration);
+				}
+				if (newConfig.triggerLogic && newConfig.triggerLogic !== config.triggerLogic) {
+					setConfig("triggerLogic", newConfig.triggerLogic as "activateOnTarget" | "deactivateOnProtected");
+				}
+			}
+		});
+	};
 
 	// Effect to populate the local store once the config is fetched from the device.
 	createEffect(() => {
@@ -161,7 +291,6 @@ export function DeviceControlTab(props: SettingProps) {
 	): boolean => {
 		return (
 			config1.aiEnabled === config2.aiEnabled &&
-			config1.controlEnabled === config2.controlEnabled &&
 			config1.operatingMode === config2.operatingMode &&
 			config1.triggerLogic === config2.triggerLogic &&
 			config1.activationDuration === config2.activationDuration &&
@@ -183,34 +312,32 @@ export function DeviceControlTab(props: SettingProps) {
 
 	// Debounced function to save the configuration to the device.
 	// This prevents a flood of API calls on rapid changes (e.g., typing).
-	const debouncedSave = leadingAndTrailing(
-		debounce,
-		async (newConfig: AiControlConfig) => {
-			setSaveStatus("saving");
-			try {
-				const success = await context.saveAiControlConfig(id(), newConfig);
-				if (success) {
-					// Update the original config to the newly saved config
-					setOriginalConfig(newConfig);
-					setSaveStatus("saved");
-					setTimeout(() => {
-						// Only transition from 'saved' to 'idle' if the status hasn't changed.
-						if (saveStatus() === "saved") setSaveStatus("idle");
-					}, 2500); // Show "saved" message for 2.5 seconds
-				} else {
-					throw new Error("API reported save failure");
-				}
-			} catch (error) {
-				console.error("Failed to save AI settings:", error);
-				setSaveStatus("error");
-				// Optionally, allow user to see error for longer before it disappears
+	const saveConfig = async (newConfig: AiControlConfig) => {
+		setSaveStatus("saving");
+		try {
+			const success = await context.saveAiControlConfig(id(), newConfig);
+			if (success) {
+				// Update the original config to the newly saved config
+				setOriginalConfig(newConfig);
+				setSaveStatus("saved");
 				setTimeout(() => {
-					if (saveStatus() === "error") setSaveStatus("idle");
-				}, 5000);
+					// Only transition from 'saved' to 'idle' if the status hasn't changed.
+					if (saveStatus() === "saved") setSaveStatus("idle");
+				}, 2500); // Show "saved" message for 2.5 seconds
+			} else {
+				throw new Error("API reported save failure");
 			}
-		},
-		1000,
-	); // 1-second debounce window
+		} catch (error) {
+			console.error("Failed to save AI settings:", error);
+			setSaveStatus("error");
+			// Optionally, allow user to see error for longer before it disappears
+			setTimeout(() => {
+				if (saveStatus() === "error") setSaveStatus("idle");
+			}, 5000);
+		}
+	};
+
+	const debouncedSave = debounce(saveConfig, 1000); // 1-second debounce window
 
 	// Effect that triggers the save operation whenever the config store changes.
 	// Only saves if the config is actually different from the originally loaded config.
@@ -236,13 +363,19 @@ export function DeviceControlTab(props: SettingProps) {
 
 	onMount(() => {
 		onCleanup(() => {
-			// save the current config when the component is unmounted
-			debouncedSave(config);
+			const original = originalConfig();
+			if (!original) return;
+
+			if (!configsAreEqual(config, original)) {
+				saveConfig(config);
+			}
 		});
 	});
 
 	const [isTargetModalOpen, setTargetModalOpen] = createSignal(false);
 	const [isProtectModalOpen, setProtectModalOpen] = createSignal(false);
+
+	const batch = (fn: () => void) => fn();
 
 	return (
 		<section class="bg-gray-50 p-2 sm:p-4">
@@ -255,60 +388,63 @@ export function DeviceControlTab(props: SettingProps) {
 					</div>
 				}
 			>
-				{/* The form tag is no longer needed as there's no submit event */}
 				<div class="relative">
-					<div class="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm px-2">
-						<SettingRow
-							title="Onboard AI Processing"
-							description="Enables real-time animal identification."
-						>
-							<ToggleSwitch
-								checked={config.aiEnabled}
-								onChange={(checked) => setConfig("aiEnabled", checked)}
+					<div class="rounded-lg border border-gray-200 bg-white shadow-sm px-4 py-4">
+						<div class="space-y-4">
+							<ModeSelector
+								value={currentMode()}
+								onChange={handleModeChange}
 							/>
-						</SettingRow>
-
-						<Show when={config.aiEnabled}>
-							<SettingRow
-								title="External Device Control"
-								description="Control devices via the auxiliary port's digital signal."
-							>
-								<ToggleSwitch
-									checked={config.controlEnabled}
-									onChange={(checked) => setConfig("controlEnabled", checked)}
-								/>
-							</SettingRow>
-						</Show>
+						</div>
 					</div>
 
-					<Show when={config.aiEnabled && config.controlEnabled}>
-						<div class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+					<Show when={config.operatingMode === "simple" && config.aiEnabled}>
+						<div class="mt-2 space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 							<div>
 								<h3 class="text-md font-semibold text-gray-800">
-									Species Detection Settings
+									Target Detection Settings
 								</h3>
 								<p class="mt-1 text-sm text-gray-600">
-									Signal activates when target species are detected and
-									automatically deactivates when protected species are found.
+									Signal ON (high voltage) when targets are detected and OFF (low voltage)
+									when protected targets are found.
 								</p>
 							</div>
 
-							{/* Target Species Section */}
+							{/* Target Section */}
 							<div class="space-y-3 pt-2">
 								<p class="text-sm text-gray-800">
-									When a <span class="font-semibold">Target Species</span> is
+									When a <span class="font-semibold">Target</span> is
 									detected...
 								</p>
 								<div class="space-y-2">
 									<Index each={config.targetSpecies}>
 										{(_subField, i) => (
-											<div class="flex items-center justify-between rounded-md bg-gray-50 p-2">
-												<span class="text-sm font-medium text-gray-900">
+											<div class="flex items-center rounded-md bg-gray-50 p-2">
+												<span class="text-sm font-medium text-gray-900 flex-1">
 													{config.targetSpecies[i].name
 														.charAt(0)
 														.toUpperCase() +
 														config.targetSpecies[i].name.slice(1)}
 												</span>
+												<div class="flex items-center gap-1 mr-3">
+													<input
+														type="number"
+														min="0"
+														max="100"
+														value={config.targetSpecies[i].confidence}
+														onChange={(e) => {
+															const newConfidence = Number.parseInt(e.currentTarget.value) || 0;
+															const clampedConfidence = Math.max(0, Math.min(100, newConfidence));
+															setConfig("targetSpecies", (targets) =>
+																targets.map((target, idx) =>
+																	idx === i ? { ...target, confidence: clampedConfidence } : target
+																)
+															);
+														}}
+														class="w-14 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-center"
+													/>
+													<span class="text-xs text-gray-500 w-4">%</span>
+												</div>
 												<button
 													type="button"
 													onClick={() => {
@@ -328,7 +464,7 @@ export function DeviceControlTab(props: SettingProps) {
 										onClick={() => setTargetModalOpen(true)}
 										class="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 p-2 text-sm text-blue-600 transition hover:bg-gray-50"
 									>
-										<FaSolidPlus size={12} /> Add Target Species
+										<FaSolidPlus size={12} /> Add Target
 									</button>
 								</div>
 								<p class="text-sm text-gray-800">...activate the device for:</p>
@@ -340,12 +476,12 @@ export function DeviceControlTab(props: SettingProps) {
 
 							<hr class="my-2" />
 
-							{/* Protected Species Section */}
+							{/* Protected Targets Section */}
 							<div class="space-y-3 pt-2">
 								<p class="text-sm text-gray-800">
 									When a{" "}
 									<span class="font-semibold text-orange-600">
-										Protected Species
+										Protected Target
 									</span>{" "}
 									is detected, the device will automatically deactivate.
 								</p>
@@ -353,13 +489,32 @@ export function DeviceControlTab(props: SettingProps) {
 								<div class="space-y-2">
 									<Index each={config.protectedSpecies}>
 										{(_subField, i) => (
-											<div class="flex items-center justify-between rounded-md bg-orange-50 p-2">
-												<span class="text-sm font-medium text-gray-900">
+											<div class="flex items-center rounded-md bg-orange-50 p-2">
+												<span class="text-sm font-medium text-gray-900 flex-1">
 													{config.protectedSpecies[i].name
 														.charAt(0)
 														.toUpperCase() +
 														config.protectedSpecies[i].name.slice(1)}
 												</span>
+												<div class="flex items-center gap-1 mr-3">
+													<input
+														type="number"
+														min="0"
+														max="100"
+														value={config.protectedSpecies[i].confidence}
+														onChange={(e) => {
+															const newConfidence = Number.parseInt(e.currentTarget.value) || 0;
+															const clampedConfidence = Math.max(0, Math.min(100, newConfidence));
+															setConfig("protectedSpecies", (targets) =>
+																targets.map((target, idx) =>
+																	idx === i ? { ...target, confidence: clampedConfidence } : target
+																)
+															);
+														}}
+														class="w-14 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-center"
+													/>
+													<span class="text-xs text-gray-500 w-4">%</span>
+												</div>
 												<button
 													type="button"
 													onClick={() => {
@@ -379,7 +534,7 @@ export function DeviceControlTab(props: SettingProps) {
 										onClick={() => setProtectModalOpen(true)}
 										class="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 p-2 text-sm text-blue-600 transition hover:bg-gray-50"
 									>
-										<FaSolidPlus size={12} /> Add Protected Species
+										<FaSolidPlus size={12} /> Add Protected Target
 									</button>
 									<DurationInput
 										value={config.deactivationDuration}
@@ -420,19 +575,19 @@ export function DeviceControlTab(props: SettingProps) {
 				</div>
 			</Show>
 
-			<SpeciesSelectorModal
+			<TargetSelectorModal
 				isOpen={isTargetModalOpen()}
 				onClose={() => setTargetModalOpen(false)}
 				selected={config.targetSpecies}
 				onUpdate={(newSelection) => setConfig("targetSpecies", newSelection)}
-				title="Select Target Species"
+				title="Select Targets"
 			/>
-			<SpeciesSelectorModal
+			<TargetSelectorModal
 				isOpen={isProtectModalOpen()}
 				onClose={() => setProtectModalOpen(false)}
 				selected={config.protectedSpecies}
 				onUpdate={(newSelection) => setConfig("protectedSpecies", newSelection)}
-				title="Select Protected Species"
+				title="Select Protected Targets"
 			/>
 		</section>
 	);

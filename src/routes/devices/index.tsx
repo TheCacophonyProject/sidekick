@@ -51,6 +51,7 @@ interface DeviceDetailsProps {
   url?: string;
   isProd: boolean;
   batteryPercentage?: string;
+  batteryVoltage?: number;
 }
 
 function DeviceDetails(props: DeviceDetailsProps) {
@@ -157,7 +158,12 @@ function DeviceDetails(props: DeviceDetailsProps) {
             {(percentage) => (
               <div class="mt-2 flex w-full items-center space-x-2 text-slate-700">
                 <FaSolidBatteryFull size={20} />
-                <p class="text-sm">Battery: {percentage()}%</p>
+                <p class="text-sm">
+                  Battery: {percentage()}%
+                  <Show when={props.batteryVoltage}>
+                    {(voltage) => <span> ({voltage().toFixed(1)}V)</span>}
+                  </Show>
+                </p>
               </div>
             )}
           </Show>
@@ -680,6 +686,7 @@ function Devices() {
               isConnected={device.isConnected}
               groupName={device.group}
               batteryPercentage={device.batteryPercentage}
+              batteryVoltage={device.batteryVoltage}
             />
           )}
         </For>

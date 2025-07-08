@@ -58,7 +58,7 @@ export function GroupSelect(props: SettingProps) {
 			log.logEvent("group_change", { name: v });
 			const [currId, success] = await context.changeGroup(id(), v, token);
 			if (params.deviceSettings) {
-				setSearchParams({ deviceSettings: currId, tab: params.tab });
+				setSearchParams({ deviceSettings: currId, tab: params.tab, page: null });
 			}
 			if (params.setupDevice) {
 				setSearchParams({ setupDevice: currId, step: params.step });
@@ -272,12 +272,27 @@ export function GeneralSettingsTab(props: SettingProps) {
 		}
 	};
 
+	// Battery voltage resource
+	const [batteryData] = createResource(
+		deviceIdState,
+		async (deviceId) => {
+			if (!deviceId) return null;
+			const device = context.devices.get(deviceId);
+			if (!device || !device.isConnected) return null;
+			try {
+				return await context.getBattery(device.url);
+			} catch (error) {
+				console.error("Error fetching battery data:", error);
+				return null;
+			}
+		}
+	);
+
 	return (
 		<div class="flex w-full flex-col space-y-2 px-2 py-4">
 			<FieldWrapper type="text" value={name()} title="Name" />
 			<GroupSelect deviceId={id()} />
 			<FieldWrapper type="text" value={saltId()} title="ID" />
-
 			<Show when={lowPowerMode() !== null}>
 				<FieldWrapper type="custom" title={"Power Mode"}>
 					<div class="flex w-full items-center gap-x-2 bg-gray-100 px-1">

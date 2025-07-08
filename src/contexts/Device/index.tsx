@@ -155,32 +155,39 @@ export type RecordingName = string;
 // AI Control types
 export type AiControlConfig = {
 	aiEnabled: boolean;
-	controlEnabled: boolean;
 	operatingMode: "simple" | "uart";
 	triggerLogic: "activateOnTarget" | "deactivateOnProtected";
 	targetSpecies: { name: string; confidence: ConfidenceValue }[];
 	activationDuration: string;
 	protectedSpecies: { name: string; confidence: ConfidenceValue }[];
 	deactivationDuration: string;
+	defaults?: {
+		targetSpecies: { name: string; confidence: ConfidenceValue }[];
+		activationDuration: string;
+		protectedSpecies: { name: string; confidence: ConfidenceValue }[];
+		deactivationDuration: string;
+		triggerLogic: "activateOnTarget" | "deactivateOnProtected";
+	};
 };
 
 // Available species list for the UI
 export const availableSpecies = [
-	"possum",
-	"rodent",
-	"cat",
-	"hedgehog",
-	"mustelid",
 	"bird",
-	"kiwi",
-	"leporidae",
-	"wallaby",
-	"penguin",
-	"vehicle",
-	"human",
+	"cat",
 	"deer",
 	"dog",
+	"false-positive",
+	"hedgehog",
+	"human",
+	"kiwi",
+	"leporidae",
+	"mustelid",
+	"penguin",
+	"possum",
+	"rodent",
 	"sheep",
+	"vehicle",
+	"wallaby",
 ];
 
 export const ConfidenceValueSchema = z
@@ -206,6 +213,7 @@ export type DeviceDetails = {
 	hasLongRecordingSupport?: boolean; // Add this flag
 	lastUpdated?: Date;
 	batteryPercentage?: string;
+	batteryVoltage?: number;
 };
 
 type DeviceCoords<T extends string | number> = {
@@ -416,6 +424,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				if (device.isConnected) {
 					await clearUploaded(device);
 					await refreshCheckAudioCapabilities(device);
+					await refreshBatteryData(device);
 				}
 			}
 		}, DEVICE_POLL_INTERVAL);
@@ -531,6 +540,22 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 	};
 
+	const refreshBatteryData = async (device: ConnectedDevice) => {
+		try {
+			const batteryData = await getBattery(device.url);
+			if (batteryData) {
+				device.batteryPercentage = batteryData.mainBattery;
+				device.batteryVoltage = batteryData.voltage;
+				devices.set(device.id, device);
+			}
+		} catch (error) {
+			log.logError({
+				message: "Error refreshing battery data",
+				error,
+			});
+		}
+	};
+
 	const endpointToDevice = async (
 		endpoint: string,
 		host: string,
@@ -547,7 +572,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			if (!device) throw new Error("Failed to connect to device");
 
-			const [batteryPercentage, hasAudio, hasLongRecording] = await Promise.all(
+			const [batteryData, hasAudio, hasLongRecording] = await Promise.all(
 				[
 					getBattery(device.url).catch(() => undefined),
 					hasAudioCapabilities(device.url).catch(() => false),
@@ -559,7 +584,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				...device,
 				host,
 				endpoint,
-				batteryPercentage: batteryPercentage?.mainBattery,
+				batteryPercentage: batteryData?.mainBattery,
+				batteryVoltage: batteryData?.voltage,
 				hasAudioCapabilities: hasAudio,
 				hasLongRecordingSupport: hasLongRecording,
 			};
@@ -668,6 +694,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 								return {
 									...device,
 									batteryPercentage: batteryInfo?.mainBattery,
+									batteryVoltage: batteryInfo?.voltage,
 									hasAudioCapabilities: hasAudio,
 								};
 							} catch (error) {
@@ -1969,7 +1996,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh current WiFi status
 				CapacitorHttp.get({
@@ -1988,7 +2015,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh modem data
 				CapacitorHttp.get({
@@ -2002,7 +2029,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					.then((modem) =>
 						modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }),
 					)
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh WiFi internet connectivity
 				CapacitorHttp.get({
@@ -2023,7 +2050,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => {}),
+					.catch(() => { }),
 
 				// Fresh modem internet connectivity
 				CapacitorHttp.get({
@@ -2040,7 +2067,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => {}),
+					.catch(() => { }),
 			]);
 		} catch (error) {
 			console.error("Error in background network refresh:", error);
@@ -2080,14 +2107,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
 			const processedNetworks = networks
 				? networks
-						.filter((network) => network.SSID)
-						.reduce((acc, curr) => {
-							const found = acc.find((a) => a.SSID === curr.SSID);
-							if (!found) {
-								acc.push(curr);
-							}
-							return acc;
-						}, [] as WifiNetwork[])
+					.filter((network) => network.SSID)
+					.reduce((acc, curr) => {
+						const found = acc.find((a) => a.SSID === curr.SSID);
+						if (!found) {
+							acc.push(curr);
+						}
+						return acc;
+					}, [] as WifiNetwork[])
 				: [];
 			availableWifiNetworksCache.set(deviceId, {
 				networks: processedNetworks,
@@ -2268,6 +2295,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		})
 		.transform((data) => ({
 			time: new Date(data.time),
+			voltage: Number(data.mainBattery.replace(/\s/g, "")),
 			mainBattery: Number(
 				interpolateVoltageToPercentage(
 					Number(data.mainBattery.replace(/\s/g, "")),
@@ -2289,6 +2317,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				},
 			});
 			if (res.status !== 200) return;
+			console.log("Battery data received:", res.data);
 			const parsedBattery = dataSchema.safeParse(JSON.parse(res.data)).data;
 			return parsedBattery;
 		} catch (e) {
@@ -3028,18 +3057,30 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			if (!configRes) return null;
 			const thermalConfig = configRes.values.thermalMotion ?? {};
 			const commsConfig = configRes.values.comms ?? {};
+			
+			// Get defaults from device config
+			const commsDefaults = configRes.defaults.comms ?? {};
+			const thermalDefaults = configRes.defaults.thermalMotion ?? {};
 
 			return {
 				aiEnabled: thermalConfig.RunClassifier ?? false,
-				controlEnabled: commsConfig.Enable ?? false,
-				operatingMode: commsConfig["comms-out"] === "uart" ? "uart" : "simple",
-				triggerLogic: commsConfig["trap-enabled-by-default"]
+				operatingMode: commsConfig.CommsOut === "uart" ? "uart" : "simple",
+				triggerLogic: commsConfig.TrapEnabledByDefault
 					? "deactivateOnProtected"
 					: "activateOnTarget",
-				targetSpecies: commsConfig["trap-species"] ?? [],
-				activationDuration: commsConfig["trap-duration"] ?? "1m0s",
-				protectedSpecies: commsConfig["protect-species"] ?? [],
-				deactivationDuration: commsConfig["protect-duration"] ?? "5m0s",
+				targetSpecies: commsConfig.TrapSpecies ?? [],
+				activationDuration: commsConfig.TrapDuration ?? "1m0s",
+				protectedSpecies: commsConfig.ProtectSpecies ?? [],
+				deactivationDuration: commsConfig.ProtectDuration ?? "5m0s",
+				defaults: {
+					targetSpecies: commsDefaults.TrapSpecies ?? [],
+					activationDuration: commsDefaults.TrapDuration ?? "1m0s",
+					protectedSpecies: commsDefaults.ProtectSpecies ?? [],
+					deactivationDuration: commsDefaults.ProtectDuration ?? "5m0s",
+					triggerLogic: commsDefaults.TrapEnabledByDefault
+						? "deactivateOnProtected"
+						: "activateOnTarget",
+				},
 			};
 		} catch (error) {
 			console.error("Error getting AI control config:", error);
@@ -3076,7 +3117,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				);
 			};
 			const commsConfig = {
-				enable: config.controlEnabled,
+				enable: config.aiEnabled,
 				"comms-out": config.operatingMode,
 				"trap-enabled-by-default":
 					config.triggerLogic === "deactivateOnProtected",
@@ -3274,6 +3315,76 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			})
 			.partial()
 			.optional(),
+		comms: z
+			.object({
+				Enable: z.boolean(),
+				TrapEnabledByDefault: z.boolean(),
+				CommsOut: z.string(),
+				Bluetooth: z.boolean(),
+				PowerOutput: z.string(),
+				PowerUpDuration: z.number(),
+				TrapSpecies: z
+					.record(z.string(), z.number().int().min(0).max(100))
+					.transform((val) => {
+						if (!val) return [];
+						return Object.entries(val).map(([name, confidence]) => ({
+							name,
+							confidence: confidence as ConfidenceValue,
+						}));
+					})
+					.nullish(),
+				TrapDuration: z
+					.number()
+					.optional()
+					.transform((val) => {
+						if (val === undefined || val === null) return "1m0s";
+						const minutes = Math.floor(val / 60000000000);
+						const seconds = Math.floor((val % 60000000000) / 1000000000);
+						return `${minutes}m${seconds}s`;
+					}),
+				ProtectSpecies: z
+					.record(z.string(), z.number().int().min(0).max(100))
+					.transform((val) => {
+						if (!val) return [];
+						return Object.entries(val).map(([name, confidence]) => ({
+							name,
+							confidence: confidence as ConfidenceValue,
+						}));
+					})
+					.nullish(),
+				ProtectDuration: z
+					.number()
+					.optional()
+					.transform((val) => {
+						if (val === undefined || val === null) return "5m0s";
+						const minutes = Math.floor(val / 60000000000);
+						const seconds = Math.floor((val % 60000000000) / 1000000000);
+						return `${minutes}m${seconds}s`;
+					}),
+			})
+			.partial()
+			.optional(),
+		thermalMotion: z
+			.object({
+				DynamicThreshold: z.boolean(),
+				TempThreshMin: z.number(),
+				TempThreshMax: z.number(),
+				TempThresh: z.number(),
+				DeltaThresh: z.number(),
+				CountThresh: z.number(),
+				FrameCompareGap: z.number(),
+				UseOneDiffOnly: z.boolean(),
+				TriggerFrames: z.number(),
+				WarmerOnly: z.boolean(),
+				EdgePixels: z.number(),
+				Verbose: z.boolean(),
+				RunClassifier: z.boolean(),
+				TrackingEvents: z.boolean(),
+				DoTracking: z.boolean(),
+				BluetoothBeacons: z.boolean(),
+			})
+			.partial()
+			.optional(),
 	});
 
 	const configValueSchema = z
@@ -3300,29 +3411,48 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				.object({
 					Enable: z.boolean(),
 					controlEnabled: z.boolean(),
-					"comms-out": z.enum(["uart", "simple"]),
-					"trap-enabled-by-default": z.enum([
-						"activateOnTarget",
-						"deactivateOnProtected",
-					]),
-					"trap-species": z
-						.array(
-							z.object({
-								name: z.string(),
-								confidence: z.number().int().min(0).max(100),
-							}),
-						)
-						.optional(),
-					"trap-duration": z.string().optional(),
-					"protect-species": z
-						.array(
-							z.object({
-								name: z.string(),
-								confidence: z.number().int().min(0).max(100),
-							}),
-						)
-						.optional(),
-					"protect-duration": z.string().optional(),
+					CommsOut: z.enum(["uart", "simple", ""]),
+					TrapEnabledByDefault: z.boolean(),
+					TrapSpecies: z
+						.record(z.string(), z.number().int().min(0).max(100))
+						.transform((val) => {
+							// Convert to array of objects for easier handling
+							return Object.entries(val).map(([name, confidence]) => ({
+								name,
+								confidence: confidence as ConfidenceValue,
+							}));
+						})
+						.nullish(),
+					TrapDuration: z
+						.number()
+						.optional()
+						.transform((val) => {
+							// Convert nanoseconds to string format "XmYs"
+							if (val === undefined || val === null) return "5m0s";
+							const minutes = Math.floor(val / 60000000000);
+							const seconds = Math.floor((val % 60000000000) / 1000000000);
+							return `${minutes}m${seconds}s`;
+						}),
+					ProtectSpecies: z
+						.record(z.string(), z.number().int().min(0).max(100))
+						.transform((val) => {
+							// Convert to array of objects for easier handling
+							return Object.entries(val).map(([name, confidence]) => ({
+								name,
+								confidence: confidence as ConfidenceValue,
+							}));
+						})
+						.nullish(),
+					ProtectDuration: z
+						.number()
+						.optional()
+						.transform((val) => {
+							// Convert nanoseconds to string format "XmYs"
+							if (val === undefined || val === null) return "5m0s";
+							const minutes = Math.floor(val / 60000000000);
+							const seconds = Math.floor((val % 60000000000) / 1000000000);
+							return `${minutes}m${seconds}s`;
+						}),
 				})
 				.partial(),
 		})
@@ -3340,6 +3470,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const { url } = device;
 			const res = await DevicePlugin.getDeviceConfig({ url });
 			if (!res.success) return null;
+
 			const config = configSchema.parse(JSON.parse(res.data));
 			return config;
 		} catch (error) {

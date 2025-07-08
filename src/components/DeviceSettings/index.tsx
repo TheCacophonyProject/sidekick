@@ -54,7 +54,7 @@ export default function DeviceSettingsModal() {
 
 		setIsTabSwitching(true);
 		console.log("Setting Nav Params", nav);
-		setParams({ tab: nav, deviceSettings: params.deviceSettings });
+		setParams({ tab: nav, deviceSettings: params.deviceSettings, page: null });
 
 		// Reset the switching state after a small delay
 		setTimeout(() => setIsTabSwitching(false), 300);
@@ -66,7 +66,7 @@ export default function DeviceSettingsModal() {
 			return "text-base";
 		}
 		if (numItems === 5) {
-			return "text-sm";
+			return "text-xs sm:text-sm";
 		}
 		if (numItems >= 6) {
 			return "text-xs";
@@ -86,7 +86,7 @@ export default function DeviceSettingsModal() {
 
 	const clearParams = () => {
 		console.log("Clearing Params");
-		setParams({ deviceSettings: null, tab: null });
+		setParams({ deviceSettings: null, tab: null, page: null });
 	};
 
 	const savedRecs = createMemo(() =>
@@ -155,9 +155,8 @@ export default function DeviceSettingsModal() {
 									}
 								>
 									<button
-										class={`${
-											disabledDownload() ? "text-slate-300" : "text-blue-500"
-										} p-2`}
+										class={`${disabledDownload() ? "text-slate-300" : "text-blue-500"
+											} p-2`}
 										disabled={disabledDownload()}
 										onClick={() => context.saveItems(id())}
 									>
@@ -169,7 +168,7 @@ export default function DeviceSettingsModal() {
 								</button>
 							</div>
 						</header>
-						<nav class={`flex w-full justify-between ${textSizeClass()}`}>
+						<nav class={`flex w-full justify-between overflow-x-auto ${textSizeClass()}`}>
 							<For each={navItems()}>
 								{(nav) => (
 									<button

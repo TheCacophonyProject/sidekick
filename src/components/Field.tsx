@@ -256,7 +256,7 @@ const FieldWrapper: Component<
 > = (props) => {
 	return (
 		<div class="flex rounded-lg border">
-			<div class="min-w-24 items-center justify-start border-r bg-gray-50 px-4 py-2">
+			<div class="flex min-w-24 items-center justify-start border-r bg-gray-50 px-4 py-2">
 				<div class="text-xs font-light text-gray-700">
 					<Show
 						when={typeof props.title === "string" && props.title}
@@ -303,14 +303,12 @@ const FieldWrapper: Component<
 									aria-checked={toggleProps.checked}
 									onClick={() => toggleProps.onChange(!toggleProps.checked)}
 									disabled={toggleProps.disabled}
-									class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-										toggleProps.checked ? "bg-green-500" : "bg-gray-300"
-									} ${toggleProps.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+									class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${toggleProps.checked ? "bg-green-500" : "bg-gray-300"
+										} ${toggleProps.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
 								>
 									<span
-										class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											toggleProps.checked ? "translate-x-6" : "translate-x-1"
-										}`}
+										class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${toggleProps.checked ? "translate-x-6" : "translate-x-1"
+											}`}
 									/>
 								</button>
 								<Show when={toggleProps.message}>
