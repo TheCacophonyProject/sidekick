@@ -78,15 +78,24 @@ export const isWithinRange = (
 ) => {
 	const [lat, lng] = prevLoc;
 	const [latitude, longitude] = newLoc;
+	
+	// Check for invalid coordinates (0,0) which indicates cleared/unset location
+	if ((lat === 0 && lng === 0) || (latitude === 0 && longitude === 0)) {
+		return false; // Always consider out of range if either location is (0,0)
+	}
+	
 	// If accuracy is <= 0 or NaN, substitute a safe default (100m)
 	const safeAccuracy =
 		!accuracy || accuracy <= 0 || Number.isNaN(accuracy) ? 100 : accuracy;
+	
+	// Use more conservative accuracy multiplier (1 instead of 2) to avoid missing updates
+	// when GPS accuracy is poor
 	return isWithinRadius(
 		lat,
 		lng,
 		latitude,
 		longitude,
-		range + safeAccuracy * 2,
+		range + safeAccuracy,
 	);
 };
 
@@ -183,11 +192,10 @@ export function useLocationStorage() {
 				}
 			}
 		}
-		const user = await userContext.getUser();
 		return (
 			await Promise.all(
 				locations.map(async (location) => {
-					if (!user || location.isProd !== user?.prod) return location;
+					// Skip sync only if there's no user AND no pending updates
 					if (!shouldUpload()) return location; // Check if upload was cancelled
 					if (location.needsCreation) {
 						const res = await createLocation(
@@ -203,7 +211,12 @@ export function useLocationStorage() {
 						// Check before syncing
 						let name = location.updateName;
 						// Make sure the name is unique
-						while (locations.some((loc) => loc.name === name && loc.groupName === location.groupName)) {
+						while (
+							locations.some(
+								(loc) =>
+									loc.name === name && loc.groupName === location.groupName,
+							)
+						) {
 							name = `${location.updateName}(${Math.floor(
 								Math.random() * 100,
 							)})`;

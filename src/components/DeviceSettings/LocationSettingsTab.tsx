@@ -330,7 +330,7 @@ export function LocationSettingsTab(props: SettingProps) {
 							const file = await Filesystem.writeFile({
 								path: fileName,
 								data: base64Data,
-								directory: Directory.Data,
+								directory: Directory.Documents,
 							});
 
 							const objectUrl = URL.createObjectURL(blob);
@@ -461,13 +461,14 @@ export function LocationSettingsTab(props: SettingProps) {
 
 	onMount(async () => {
 		await context.refetchDeviceLocToUpdate();
-	});
-	onCleanup(async () => {
-		console.log("Cleaning up LocationSettingsTab");
-		// make sure to save any unsaved changes
-		if (hasChangesToUpload() || hasPendingChanges()) {
-			await saveLocationSettings();
-		}
+		
+		onCleanup(async () => {
+			console.log("Cleaning up LocationSettingsTab");
+			// make sure to save any unsaved changes
+			if (hasChangesToUpload() || hasPendingChanges()) {
+				await saveLocationSettings();
+			}
+		});
 	});
 
 	return (
@@ -565,14 +566,31 @@ export function LocationSettingsTab(props: SettingProps) {
 				<Switch>
 					<Match when={updateLocation() === "needsUpdate"}>
 						<div class="flex w-full flex-col items-center">
+							<div class="mb-3 w-full rounded-lg bg-yellow-50 border border-yellow-300 p-3">
+								<div class="flex items-start space-x-2">
+									<FiMapPin size={20} class="text-yellow-600 mt-0.5 flex-shrink-0" />
+									<div class="flex-1">
+										<p class="text-sm font-medium text-yellow-800">Location Update Required</p>
+										<p class="text-xs text-yellow-700 mt-1">
+											<Show
+												when={locCoords()?.latitude === 0 && locCoords()?.longitude === 0}
+												fallback="The device has moved from its last known location."
+											>
+												Device location is not set. Please update to current location.
+											</Show>
+										</p>
+									</div>
+								</div>
+							</div>
 							<button
 								class="
-				  my-2 flex items-center space-x-2 self-center 
+				  flex items-center space-x-2 self-center 
 				  rounded-md bg-blue-500 
 				  px-3 py-2 
 				  text-xs 
 				  text-white disabled:cursor-not-allowed
 				  disabled:opacity-50 sm:text-sm
+				  hover:bg-blue-600 transition-colors
 				"
 								onClick={async () => {
 									try {

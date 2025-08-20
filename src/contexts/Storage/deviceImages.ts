@@ -144,7 +144,7 @@ export function useDeviceImagesStorage() {
 					"No location for device to tag with reference",
 				)
 			) {
-				if (location && location.lat && location.lng) {
+				if (location?.lat && location.lng) {
 					res = await CapacitorHttp.post({
 						url: `${url}/api/v1/devices/${deviceId}/reference-image?type=${type}`,
 						method: "POST",
@@ -175,9 +175,7 @@ export function useDeviceImagesStorage() {
 				// Check if this is a device access issue
 				const errorData = res.data as { messages?: string[]; message?: string };
 				const errorMessage =
-					errorData.message ||
-					(errorData.messages && errorData.messages.join(", ")) ||
-					"";
+					errorData.message || errorData.messages?.join(", ") || "";
 
 				if (
 					errorMessage.includes("Could not find a device") ||

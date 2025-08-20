@@ -1745,13 +1745,40 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			});
 
 			if (res.data) {
-				const location = locationSchema.safeParse(JSON.parse(res.data));
+				let parsedData: unknown;
+				try {
+					parsedData = JSON.parse(res.data);
+				} catch (e) {
+					log.logError({
+						message: "Invalid JSON response from device location API",
+						error: e instanceof Error ? e : new Error(String(e)),
+					});
+					return {
+						success: false,
+						message: "Invalid location data format",
+					};
+				}
+				
+				const location = locationSchema.safeParse(parsedData);
 				if (!location.success) {
+					log.logWarning({
+						message: "Invalid location data from device",
+						details: `Device: ${device}, Error: ${location.error.message}`,
+					});
 					return {
 						success: false,
 						message: location.error.message,
 					};
 				}
+				
+				// Validate that coordinates are not (0,0) which indicates unset/cleared location
+				if (location.data.latitude === 0 && location.data.longitude === 0) {
+					log.logWarning({
+						message: "Device location is cleared (0,0)",
+						details: `Device: ${device}`,
+					});
+				}
+				
 				const payload: LocationUpdatePayload = {
 					deviceId: device,
 					location: {
@@ -1768,7 +1795,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			}
 			return {
 				success: false,
-				message: "Could not get location",
+				message: "No location data returned from device",
 			};
 		} catch (error) {
 			log.logError({
@@ -1849,6 +1876,15 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	);
 
 	const [locationDisabled, setLocationDisabled] = createSignal(false);
+	
+	// Debounce the location update check to prevent race conditions
+	const debouncedLocationCheck = debounce(
+		async ([deviceList, perm, currentlySettingLocations]: [readonly Device[], string | undefined, Set<string>]) => {
+			return checkDevicesNeedingLocationUpdate(deviceList, perm, currentlySettingLocations);
+		},
+		500 // Wait 500ms after last change before checking
+	);
+	
 	const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 		createResource(
 			() => {
@@ -1860,68 +1896,93 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				] as const;
 			},
 			async ([deviceList, perm, currentlySettingLocations]) => {
-				try {
-					const devicesToFilter = deviceList.filter(
-						({ isConnected }) => isConnected,
-					);
-					if (!devicesToFilter || devicesToFilter.length === 0 || !perm)
-						return [];
-					if (perm === "denied") return [];
-					const pos = await Geolocation.getCurrentPosition({
-						enableHighAccuracy: true,
-					}).catch((e) => {
-						console.log("Error", e);
-						if (e instanceof Error && e.message === "location disabled") {
-							setLocationDisabled(true);
-						}
-						return null;
-					});
-					if (!pos) return [];
-					setLocationDisabled(false);
-
-					const devicesToUpdate: string[] = [];
-					for (const device of devicesToFilter) {
-						if (!device.isConnected) continue;
-						// Skip if location is currently being set for this device
-						if (currentlySettingLocations.has(device.id)) {
-							continue;
-						}
-						const locationRes = await getLocationCoords(device.id);
-						if (!locationRes.success) continue;
-						const loc = locationRes.data;
-						const newLoc: [number, number] = [
-							pos.coords.latitude,
-							pos.coords.longitude,
-						];
-
-						const withinRange = isWithinRange(
-							[loc.latitude, loc.longitude],
-							newLoc,
-							UPDATE_DISTANCE_THRESHOLD_METERS,
-						);
-						if (!withinRange) {
-							devicesToUpdate.push(device.id);
-						}
-					}
-					return devicesToUpdate;
-				} catch (error) {
-					if (error instanceof Error) {
-						log.logWarning({
-							message:
-								"Could not update device locations. Check location permissions and try again.",
-							action: <GoToPermissions />,
-						});
-					} else if (typeof error === "string") {
-						log.logWarning({
-							message: "Could not update device locations",
-							details: error,
-						});
-					}
-
-					return [];
+				// Use debounced check if location is being set, otherwise check immediately
+				if (currentlySettingLocations.size > 0) {
+					return await debouncedLocationCheck([deviceList, perm, currentlySettingLocations]);
 				}
+				return await checkDevicesNeedingLocationUpdate(deviceList, perm, currentlySettingLocations);
 			},
 		);
+	
+	const checkDevicesNeedingLocationUpdate = async (
+		deviceList: readonly Device[],
+		perm: string | undefined,
+		currentlySettingLocations: Set<string>
+	) => {
+		try {
+			const devicesToFilter = deviceList.filter(
+				({ isConnected }) => isConnected,
+			);
+			if (!devicesToFilter || devicesToFilter.length === 0 || !perm)
+				return [];
+			if (perm === "denied") return [];
+			const pos = await Geolocation.getCurrentPosition({
+				enableHighAccuracy: true,
+			}).catch((e) => {
+				console.log("Error", e);
+				if (e instanceof Error && e.message === "location disabled") {
+					setLocationDisabled(true);
+				}
+				return null;
+			});
+			if (!pos) return [];
+			setLocationDisabled(false);
+
+			const devicesToUpdate: string[] = [];
+			for (const device of devicesToFilter) {
+				if (!device.isConnected) continue;
+				// Skip if location is currently being set for this device
+				if (currentlySettingLocations.has(device.id)) {
+					continue;
+				}
+				const locationRes = await getLocationCoords(device.id);
+				if (!locationRes.success) {
+					// If we can't get location data, assume it needs update
+					devicesToUpdate.push(device.id);
+					continue;
+				}
+				const loc = locationRes.data;
+				const newLoc: [number, number] = [
+					pos.coords.latitude,
+					pos.coords.longitude,
+				];
+
+				// Check if device location is cleared/invalid (0,0)
+				const isLocationCleared = loc.latitude === 0 && loc.longitude === 0;
+				
+				// Always prompt for update if location is (0,0)
+				if (isLocationCleared) {
+					devicesToUpdate.push(device.id);
+					continue;
+				}
+
+				const withinRange = isWithinRange(
+					[loc.latitude, loc.longitude],
+					newLoc,
+					UPDATE_DISTANCE_THRESHOLD_METERS,
+				);
+				if (!withinRange) {
+					devicesToUpdate.push(device.id);
+				}
+			}
+			return devicesToUpdate;
+		} catch (error) {
+			if (error instanceof Error) {
+				log.logWarning({
+					message:
+						"Could not update device locations. Check location permissions and try again.",
+					action: <GoToPermissions />,
+				});
+			} else if (typeof error === "string") {
+				log.logWarning({
+					message: "Could not update device locations",
+					details: error,
+				});
+			}
+
+			return [];
+		}
+	};
 
 	type DeviceLocationStatus =
 		| "loading"
