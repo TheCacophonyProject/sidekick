@@ -32,7 +32,7 @@ import { DurationInput } from "~/components/UI/DurationInput";
 
 type SettingProps = { deviceId: DeviceId };
 
-type AiMode = "off" | "stream" | "trigger";
+type AiMode = "off" | "stream" | "trigger" | "cellium";
 
 // The TargetSelectorModal (renamed from SpeciesSelectorModal) remains mostly unchanged
 const TargetSelectorModal = (props: {
@@ -86,8 +86,7 @@ const TargetSelectorModal = (props: {
 											onClick={() => toggleTarget(target)}
 											class="rounded-md p-3 text-center text-sm transition"
 											classList={{
-												"bg-green-500 text-white shadow-sm":
-													isSelected(target),
+												"bg-green-500 text-white shadow-sm": isSelected(target),
 												"bg-gray-200 text-gray-800 hover:bg-gray-300":
 													!isSelected(target),
 											}}
@@ -127,12 +126,19 @@ const ModeSelector = (props: {
 		{
 			value: "stream",
 			label: "Stream",
-			description: "Sends continuous data stream (UART serial) with all AI detections and confidence scores via auxiliary port",
+			description:
+				"Sends continuous data stream (UART serial) with all AI detections and confidence scores via auxiliary port",
 		},
 		{
 			value: "trigger",
 			label: "Trigger",
-			description: "Outputs digital signal via auxiliary port based on target detection rules",
+			description:
+				"Outputs digital signal via auxiliary port based on target detection rules",
+		},
+		{
+			value: "cellium",
+			label: "Cellium",
+			description: "Sends stream of AI detections to Cellium for processing",
 		},
 	];
 
@@ -143,21 +149,22 @@ const ModeSelector = (props: {
 				<div
 					class="absolute h-full rounded-md bg-white shadow-sm transition-all duration-300 ease-out"
 					style={{
-						width: "33.333%",
+						width: "25%",
 						transform: `translateX(${modes.findIndex((m) => m.value === props.value) * 100}%)`,
 					}}
 				/>
 
 				{/* Mode buttons */}
-				<div class="relative flex w-full">
+				<div class="relative grid w-full grid-cols-4 items-center">
 					<For each={modes}>
 						{(mode) => (
 							<button
 								onClick={() => props.onChange(mode.value)}
-								class="relative z-10 flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-200"
+								class="relative z-10 flex-1 rounded-md py-2 text-sm font-medium transition-colors duration-200"
 								classList={{
 									"text-gray-900": props.value === mode.value,
-									"text-gray-600 hover:text-gray-800": props.value !== mode.value,
+									"text-gray-600 hover:text-gray-800":
+										props.value !== mode.value,
 								}}
 							>
 								{mode.label}
@@ -212,25 +219,38 @@ export function DeviceControlTab(props: SettingProps) {
 	// Compute the current mode based on config
 	const currentMode = (): AiMode => {
 		if (!config.aiEnabled) return "off";
-		return config.operatingMode === "uart" ? "stream" : "trigger";
+		if (config.operatingMode === "uart") return "stream";
+		if (config.operatingMode === "at-esl") return "cellium";
+		return "trigger";
 	};
 
 	// Helper function to apply defaults when enabling AI for the first time
-	const applyDefaultsIfNeeded = (mode: AiMode, currentConfig: AiControlConfig) => {
+	const applyDefaultsIfNeeded = (
+		mode: AiMode,
+		currentConfig: AiControlConfig,
+	) => {
 		// Only apply defaults when switching from off to on, and if the config appears to be empty/default
 		const isFirstTimeEnable = !originalConfig()?.aiEnabled && mode !== "off";
 		const hasEmptyConfig =
 			currentConfig.targetSpecies.length === 0 &&
 			currentConfig.protectedSpecies.length === 0 &&
-			(currentConfig.activationDuration === "1m0s" || currentConfig.activationDuration === "0m0s") &&
-			(currentConfig.deactivationDuration === "5m0s" || currentConfig.deactivationDuration === "0m0s");
+			(currentConfig.activationDuration === "1m0s" ||
+				currentConfig.activationDuration === "0m0s") &&
+			(currentConfig.deactivationDuration === "5m0s" ||
+				currentConfig.deactivationDuration === "0m0s");
 
 		const defaults = currentConfig.defaults;
+		const operatingMode =
+			mode === "stream"
+				? ("uart" as const)
+				: mode === "cellium"
+					? ("at-esl" as const)
+					: ("simple" as const);
 		if (isFirstTimeEnable && hasEmptyConfig && defaults) {
 			return {
 				...currentConfig,
 				aiEnabled: true,
-				operatingMode: mode === "stream" ? ("uart" as const) : ("simple" as const),
+				operatingMode,
 				targetSpecies: defaults.targetSpecies,
 				activationDuration: defaults.activationDuration,
 				protectedSpecies: defaults.protectedSpecies,
@@ -241,7 +261,7 @@ export function DeviceControlTab(props: SettingProps) {
 		return {
 			...currentConfig,
 			aiEnabled: mode !== "off",
-			operatingMode: mode === "stream" ? ("uart" as const) : ("simple" as const),
+			operatingMode,
 		};
 	};
 
@@ -254,21 +274,41 @@ export function DeviceControlTab(props: SettingProps) {
 				const newConfig = applyDefaultsIfNeeded(mode, config);
 				// Apply all the changes from the helper function
 				setConfig("aiEnabled", newConfig.aiEnabled);
-				setConfig("operatingMode", newConfig.operatingMode as "simple" | "uart");
-				if (newConfig.targetSpecies && newConfig.targetSpecies !== config.targetSpecies) {
+				setConfig("operatingMode", newConfig.operatingMode);
+				if (
+					newConfig.targetSpecies &&
+					newConfig.targetSpecies !== config.targetSpecies
+				) {
 					setConfig("targetSpecies", newConfig.targetSpecies);
 				}
-				if (newConfig.activationDuration && newConfig.activationDuration !== config.activationDuration) {
+				if (
+					newConfig.activationDuration &&
+					newConfig.activationDuration !== config.activationDuration
+				) {
 					setConfig("activationDuration", newConfig.activationDuration);
 				}
-				if (newConfig.protectedSpecies && newConfig.protectedSpecies !== config.protectedSpecies) {
+				if (
+					newConfig.protectedSpecies &&
+					newConfig.protectedSpecies !== config.protectedSpecies
+				) {
 					setConfig("protectedSpecies", newConfig.protectedSpecies);
 				}
-				if (newConfig.deactivationDuration && newConfig.deactivationDuration !== config.deactivationDuration) {
+				if (
+					newConfig.deactivationDuration &&
+					newConfig.deactivationDuration !== config.deactivationDuration
+				) {
 					setConfig("deactivationDuration", newConfig.deactivationDuration);
 				}
-				if (newConfig.triggerLogic && newConfig.triggerLogic !== config.triggerLogic) {
-					setConfig("triggerLogic", newConfig.triggerLogic as "activateOnTarget" | "deactivateOnProtected");
+				if (
+					newConfig.triggerLogic &&
+					newConfig.triggerLogic !== config.triggerLogic
+				) {
+					setConfig(
+						"triggerLogic",
+						newConfig.triggerLogic as
+							| "activateOnTarget"
+							| "deactivateOnProtected",
+					);
 				}
 			}
 		});
@@ -391,10 +431,7 @@ export function DeviceControlTab(props: SettingProps) {
 				<div class="relative">
 					<div class="rounded-lg border border-gray-200 bg-white shadow-sm px-4 py-4">
 						<div class="space-y-4">
-							<ModeSelector
-								value={currentMode()}
-								onChange={handleModeChange}
-							/>
+							<ModeSelector value={currentMode()} onChange={handleModeChange} />
 						</div>
 					</div>
 
@@ -405,8 +442,8 @@ export function DeviceControlTab(props: SettingProps) {
 									Target Detection Settings
 								</h3>
 								<p class="mt-1 text-sm text-gray-600">
-									Signal ON (high voltage) when targets are detected and OFF (low voltage)
-									when protected targets are found.
+									Signal ON (high voltage) when targets are detected and OFF
+									(low voltage) when protected targets are found.
 								</p>
 							</div>
 
@@ -433,12 +470,21 @@ export function DeviceControlTab(props: SettingProps) {
 														max="100"
 														value={config.targetSpecies[i].confidence}
 														onChange={(e) => {
-															const newConfidence = Number.parseInt(e.currentTarget.value) || 0;
-															const clampedConfidence = Math.max(0, Math.min(100, newConfidence));
+															const newConfidence =
+																Number.parseInt(e.currentTarget.value) || 0;
+															const clampedConfidence = Math.max(
+																0,
+																Math.min(100, newConfidence),
+															);
 															setConfig("targetSpecies", (targets) =>
 																targets.map((target, idx) =>
-																	idx === i ? { ...target, confidence: clampedConfidence } : target
-																)
+																	idx === i
+																		? {
+																				...target,
+																				confidence: clampedConfidence,
+																			}
+																		: target,
+																),
 															);
 														}}
 														class="w-14 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-center"
@@ -503,12 +549,21 @@ export function DeviceControlTab(props: SettingProps) {
 														max="100"
 														value={config.protectedSpecies[i].confidence}
 														onChange={(e) => {
-															const newConfidence = Number.parseInt(e.currentTarget.value) || 0;
-															const clampedConfidence = Math.max(0, Math.min(100, newConfidence));
+															const newConfidence =
+																Number.parseInt(e.currentTarget.value) || 0;
+															const clampedConfidence = Math.max(
+																0,
+																Math.min(100, newConfidence),
+															);
 															setConfig("protectedSpecies", (targets) =>
 																targets.map((target, idx) =>
-																	idx === i ? { ...target, confidence: clampedConfidence } : target
-																)
+																	idx === i
+																		? {
+																				...target,
+																				confidence: clampedConfidence,
+																			}
+																		: target,
+																),
 															);
 														}}
 														class="w-14 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-center"

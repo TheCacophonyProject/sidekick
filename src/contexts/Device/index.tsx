@@ -155,7 +155,7 @@ export type RecordingName = string;
 // AI Control types
 export type AiControlConfig = {
 	aiEnabled: boolean;
-	operatingMode: "simple" | "uart";
+	operatingMode: "simple" | "uart" | "at-esl";
 	triggerLogic: "activateOnTarget" | "deactivateOnProtected";
 	targetSpecies: { name: string; confidence: ConfidenceValue }[];
 	activationDuration: string;
@@ -572,13 +572,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			if (!device) throw new Error("Failed to connect to device");
 
-			const [batteryData, hasAudio, hasLongRecording] = await Promise.all(
-				[
-					getBattery(device.url).catch(() => undefined),
-					hasAudioCapabilities(device.url).catch(() => false),
-					checkLongRecordingSupport(device.url).catch(() => false),
-				],
-			);
+			const [batteryData, hasAudio, hasLongRecording] = await Promise.all([
+				getBattery(device.url).catch(() => undefined),
+				hasAudioCapabilities(device.url).catch(() => false),
+				checkLongRecordingSupport(device.url).catch(() => false),
+			]);
 
 			return {
 				...device,
@@ -1996,7 +1994,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh current WiFi status
 				CapacitorHttp.get({
@@ -2015,7 +2013,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh modem data
 				CapacitorHttp.get({
@@ -2029,7 +2027,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					.then((modem) =>
 						modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }),
 					)
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh WiFi internet connectivity
 				CapacitorHttp.get({
@@ -2050,7 +2048,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						});
 					})
-					.catch(() => { }),
+					.catch(() => {}),
 
 				// Fresh modem internet connectivity
 				CapacitorHttp.get({
@@ -2067,7 +2065,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							timestamp: Date.now(),
 						}),
 					)
-					.catch(() => { }),
+					.catch(() => {}),
 			]);
 		} catch (error) {
 			console.error("Error in background network refresh:", error);
@@ -2107,14 +2105,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
 			const processedNetworks = networks
 				? networks
-					.filter((network) => network.SSID)
-					.reduce((acc, curr) => {
-						const found = acc.find((a) => a.SSID === curr.SSID);
-						if (!found) {
-							acc.push(curr);
-						}
-						return acc;
-					}, [] as WifiNetwork[])
+						.filter((network) => network.SSID)
+						.reduce((acc, curr) => {
+							const found = acc.find((a) => a.SSID === curr.SSID);
+							if (!found) {
+								acc.push(curr);
+							}
+							return acc;
+						}, [] as WifiNetwork[])
 				: [];
 			availableWifiNetworksCache.set(deviceId, {
 				networks: processedNetworks,
@@ -2292,20 +2290,26 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			mainBattery: z.string(),
 			mainBatteryLow: z.string(),
 			rtcBattery: z.string(),
+			batteryPercentage: z.string().optional(), // New field from management interface
 		})
-		.transform((data) => ({
-			time: new Date(data.time),
-			voltage: Number(data.mainBattery.replace(/\s/g, "")),
-			mainBattery: Number(
-				interpolateVoltageToPercentage(
-					Number(data.mainBattery.replace(/\s/g, "")),
-					LimeVoltage,
-					LimePercent,
-				),
-			).toFixed(0),
-			mainBatteryLow: Number(data.mainBatteryLow),
-			rtcBattery: Number(data.rtcBattery),
-		}));
+		.transform((data) => {
+			const voltage = Number(data.mainBattery.replace(/\s/g, ""));
+
+			// Use batteryPercentage from management interface if available, otherwise calculate from voltage
+			const mainBattery = data.batteryPercentage
+				? Number(data.batteryPercentage).toFixed(0)
+				: Number(
+						interpolateVoltageToPercentage(voltage, LimeVoltage, LimePercent),
+					).toFixed(0);
+
+			return {
+				time: new Date(data.time),
+				voltage,
+				mainBattery,
+				mainBatteryLow: Number(data.mainBatteryLow),
+				rtcBattery: Number(data.rtcBattery),
+			};
+		});
 
 	const getBattery = async (url: URL) => {
 		try {
@@ -3057,7 +3061,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			if (!configRes) return null;
 			const thermalConfig = configRes.values.thermalMotion ?? {};
 			const commsConfig = configRes.values.comms ?? {};
-			
+
 			// Get defaults from device config
 			const commsDefaults = configRes.defaults.comms ?? {};
 			const thermalDefaults = configRes.defaults.thermalMotion ?? {};
