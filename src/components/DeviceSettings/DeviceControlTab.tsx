@@ -32,7 +32,7 @@ import { DurationInput } from "~/components/UI/DurationInput";
 
 type SettingProps = { deviceId: DeviceId };
 
-type AiMode = "off" | "stream" | "trigger" | "cellium";
+type AiMode = "off" | "stream" | "trigger" | "celium";
 
 // The TargetSelectorModal (renamed from SpeciesSelectorModal) remains mostly unchanged
 const TargetSelectorModal = (props: {
@@ -136,9 +136,9 @@ const ModeSelector = (props: {
 				"Outputs digital signal via auxiliary port based on target detection rules",
 		},
 		{
-			value: "cellium",
-			label: "Cellium",
-			description: "Sends stream of AI detections to Cellium for processing",
+			value: "celium",
+			label: "celium",
+			description: "Sends stream of AI detections to celium for processing",
 		},
 	];
 
@@ -220,7 +220,7 @@ export function DeviceControlTab(props: SettingProps) {
 	const currentMode = (): AiMode => {
 		if (!config.aiEnabled) return "off";
 		if (config.operatingMode === "uart") return "stream";
-		if (config.operatingMode === "at-esl") return "cellium";
+		if (config.operatingMode === "at-esl") return "celium";
 		return "trigger";
 	};
 
@@ -243,7 +243,7 @@ export function DeviceControlTab(props: SettingProps) {
 		const operatingMode =
 			mode === "stream"
 				? ("uart" as const)
-				: mode === "cellium"
+				: mode === "celium"
 					? ("at-esl" as const)
 					: ("simple" as const);
 		if (isFirstTimeEnable && hasEmptyConfig && defaults) {
