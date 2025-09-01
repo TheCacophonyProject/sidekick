@@ -137,8 +137,8 @@ const ModeSelector = (props: {
 		},
 		{
 			value: "celium",
-			label: "celium",
-			description: "Sends stream of AI detections to celium for processing",
+			label: "Celium",
+			description: "Sends stream of AI detections to Celium for processing",
 		},
 	];
 

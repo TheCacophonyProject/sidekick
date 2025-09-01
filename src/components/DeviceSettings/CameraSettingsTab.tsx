@@ -373,8 +373,8 @@ export function CameraSettingsTab(props: SettingProps) {
 			setShowCustom(false);
 			const defaults = config()?.defaults;
 			if (!defaults) return;
-			const on = defaults.windows?.PowerOn ?? "-30min";
-			const off = defaults.windows?.PowerOff ?? "+30min";
+            const on = defaults.windows?.PowerOn ?? "-30m";
+            const off = defaults.windows?.PowerOff ?? "+30m";
 			const res = await context.setRecordingWindow(id(), on, off);
 			refetch();
 		} catch (error) {
@@ -687,4 +687,3 @@ export function CameraSettingsTab(props: SettingProps) {
 		</section>
 	);
 }
-
