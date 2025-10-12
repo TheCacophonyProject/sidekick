@@ -3426,8 +3426,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			.object({
 				StartRecording: z.string(),
 				StopRecording: z.string(),
-				PowerOn: z.string(),
-				PowerOff: z.string(),
 			})
 			.partial(),
 		// Some devices return this section as "thermalRecorder" (camelCase)
@@ -3521,8 +3519,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			windows: z.object({
 				StartRecording: z.string(),
 				StopRecording: z.string(),
-				PowerOn: z.string(),
-				PowerOff: z.string(),
 			}),
 			thermalRecorder: z
 				.object({
