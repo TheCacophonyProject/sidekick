@@ -71,7 +71,6 @@ jobs:
         with:
           ruby-version: "3.2"
           bundler-cache: true
-          working-directory: sidekick
 
       - name: Publish Android bundle
         uses: maierj/fastlane-action@v3.1.0
