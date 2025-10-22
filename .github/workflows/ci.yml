@@ -83,3 +83,4 @@ jobs:
         env:
           ANDROID_KEYSTORE_PROPERTIES_PATH: ${{ github.workspace }}/sidekick/keystore.properties
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/sidekick/android-keystore.jks
+          GOOGLE_PLAY_TRACK: closed
