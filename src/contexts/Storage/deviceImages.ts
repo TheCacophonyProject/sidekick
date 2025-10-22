@@ -67,6 +67,126 @@ export function useDeviceImagesStorage() {
 
 	const hasItemsToUpload = () => itemsToUpload().length > 0;
 
+	const FILESYSTEM_DIRECTORY_MAP: Record<string, Directory> = {
+		Documents: Directory.Documents,
+		Library: Directory.Library,
+		Caches: Directory.Cache,
+	};
+	const CAPACITOR_FILE_PREFIX = "/_capacitor_file_/";
+
+	type FilesystemReadOptions = Parameters<typeof Filesystem.readFile>[0];
+
+	const resolveAbsoluteFilesystemPath = (filePath: string): string | null => {
+		try {
+			if (filePath.startsWith("file://") || filePath.startsWith("capacitor://")) {
+				const url = new URL(filePath);
+				const decodedPath = decodeURIComponent(url.pathname);
+				if (decodedPath.startsWith(CAPACITOR_FILE_PREFIX)) {
+					const trimmed = decodedPath.slice(CAPACITOR_FILE_PREFIX.length);
+					return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+				}
+				return decodedPath;
+			}
+		} catch {
+			// Ignore URL parsing errors
+		}
+
+		if (filePath.startsWith("/")) {
+			return filePath;
+		}
+
+		return null;
+	};
+
+	const deriveDirectoryReadOption = (
+		absolutePath: string | null,
+	): FilesystemReadOptions | null => {
+		if (!absolutePath) return null;
+
+		const match = absolutePath.match(/\/(Documents|Library|Caches)\/(.+)/);
+		if (!match) return null;
+
+		const [, folder, rest] = match;
+		const directory =
+			FILESYSTEM_DIRECTORY_MAP[folder as keyof typeof FILESYSTEM_DIRECTORY_MAP];
+		if (!directory || !rest) return null;
+
+		return {
+			directory,
+			path: rest.replace(/^\/+/, ""),
+		};
+	};
+
+	const buildFilesystemReadAttempts = (
+		filePath: string,
+	): FilesystemReadOptions[] => {
+		const attempts = new Map<string, FilesystemReadOptions>();
+		const register = (option: FilesystemReadOptions | null) => {
+			if (!option || !option.path) return;
+			const key = `${option.directory ?? "none"}::${option.path}`;
+			if (!attempts.has(key)) {
+				attempts.set(key, option);
+			}
+		};
+
+		register({ path: filePath });
+
+		const absolutePath = resolveAbsoluteFilesystemPath(filePath);
+		if (absolutePath) {
+			register({ path: absolutePath });
+			if (!absolutePath.startsWith("file://")) {
+				const withScheme = absolutePath.startsWith("/")
+					? `file://${absolutePath}`
+					: `file://${absolutePath}`;
+				register({ path: withScheme });
+			}
+			register(deriveDirectoryReadOption(absolutePath));
+		}
+
+		if (filePath.startsWith("cropped_")) {
+			register({ directory: Directory.Documents, path: filePath });
+		}
+
+		return Array.from(attempts.values());
+	};
+
+	const isFileMissingError = (error: unknown) => {
+		if (!error || typeof error !== "object") return false;
+
+		const message =
+			typeof (error as { message?: unknown }).message === "string"
+				? ((error as { message?: string }).message as string)
+				: typeof (error as { error?: { message?: unknown } }).error?.message ===
+				  "string"
+				? ((error as { error?: { message?: string } }).error?.message as string)
+				: typeof (error as { errorMessage?: unknown }).errorMessage === "string"
+				? ((error as { errorMessage?: string }).errorMessage as string)
+				: "";
+
+		if (!message) return false;
+		const normalized = message.toLowerCase();
+		return (
+			normalized.includes("file does not exist") ||
+			normalized.includes("no such file") ||
+			normalized.includes("couldn't be opened")
+		);
+	};
+
+	const readLocalFile = async (filePath: string) => {
+		const attempts = buildFilesystemReadAttempts(filePath);
+		let lastError: unknown;
+		for (const options of attempts) {
+			try {
+				return await Filesystem.readFile(options);
+			} catch (error) {
+				lastError = error;
+			}
+		}
+
+		if (lastError) throw lastError;
+		throw new Error(`Unable to read file at ${filePath}`);
+	};
+
 	function base64ToArrayBuffer(base64: string): ArrayBuffer {
 		// atob() decodes a base64-encoded string into a binary string
 		const binaryString = window.atob(base64);
@@ -121,9 +241,7 @@ export function useDeviceImagesStorage() {
 				data: updateData,
 			});
 			console.log("Set Location Res", setLocationRes);
-			const fileContents = await Filesystem.readFile({
-				path: filePath, // Use local file path instead of URL
-			});
+			const fileContents = await readLocalFile(filePath);
 
 			const base64Data = fileContents.data;
 
@@ -364,11 +482,9 @@ export function useDeviceImagesStorage() {
 					const { filePath, deviceId, isProd } = photo;
 					let fileContents;
 					try {
-						fileContents = await Filesystem.readFile({
-							path: filePath, // Use local file path instead of URL
-						});
+						fileContents = await readLocalFile(filePath);
 					} catch (e: any) {
-						if (e.message === "File does not exist.") {
+						if (isFileMissingError(e)) {
 							log.logError({
 								message: `File missing for pending upload, deleting record: ${filePath}`,
 								error: e,
@@ -376,7 +492,7 @@ export function useDeviceImagesStorage() {
 							await deleteDeviceReferenceImage(db)(deviceId, isProd, filePath);
 							continue; // Skip to the next operation
 						}
-						throw e; // Re-throw other errors
+						throw e;
 					}
 
 					if (photo.lat && photo.lng) {
@@ -400,7 +516,7 @@ export function useDeviceImagesStorage() {
 
 					const base64Data = fileContents.data;
 					const res = await CapacitorHttp.post({
-						url: `${url}/api/v1/devices/${deviceId}/reference-image?type=pov`,
+						url: `${url}/api/v1/devices/${deviceId}/reference-image?type=${photo.type}`,
 						method: "POST",
 						headers: {
 							Authorization: user.token,
@@ -770,11 +886,9 @@ export function useDeviceImagesStorage() {
 					) {
 						let fileContents;
 						try {
-							fileContents = await Filesystem.readFile({
-								path: filePath, // Use local file path instead of URL
-							});
-						} catch (e: any) {
-							if (e.message === "File does not exist.") {
+							fileContents = await readLocalFile(filePath);
+						} catch (e) {
+							if (isFileMissingError(e)) {
 								log.logError({
 									message: `File missing for pending sync, deleting record: ${filePath}`,
 									error: e,

@@ -1,40 +1,236 @@
-# fastlane/Fastfile
+# frozen_string_literal: true
+
+require 'base64'
+require 'fileutils'
+require 'tmpdir'
 
 default_platform(:android)
 
-platform :android do
-  desc "Build and upload the app to Google Play Alpha track"
-  lane :alpha do
-    # Load keystore properties from ~/.android/
-    keystore_properties = {}
-    keystore_path = File.expand_path("~/.android/keystore.properties")
-    UI.user_error!("Couldn't find keystore.properties file at #{keystore_path}") unless File.exist?(keystore_path)
-    File.open(keystore_path) do |file|
-      file.each_line do |line|
-        key, value = line.strip.split('=')
-        keystore_properties[key] = value
-      end
+APP_IDENTIFIER = 'nz.org.cacophony.cacophony-sidekick'
+IOS_TEAM_ID = ENV.fetch('APPLE_TEAM_ID', '36D3PXTZ4A')
+
+def decode_base64_file(env_key, filename)
+  raw = ENV[env_key]
+  return nil if raw.nil? || raw.strip.empty?
+
+  decoded =
+    begin
+      Base64.strict_decode64(raw.strip)
+    rescue ArgumentError
+      raw
     end
 
-    # Configure signing
+  path = File.join(Dir.mktmpdir, filename)
+  File.binwrite(path, decoded)
+  path
+end
+
+def load_android_signing
+  properties_path = ENV.fetch('ANDROID_KEYSTORE_PROPERTIES_PATH', File.expand_path('~/.android/keystore.properties'))
+  UI.user_error!("Missing keystore.properties at #{properties_path}") unless File.exist?(properties_path)
+
+  properties = {}
+  File.foreach(properties_path) do |line|
+    line = line.strip
+    next if line.empty? || line.start_with?('#')
+
+    key, value = line.split('=', 2)
+    properties[key] = value
+  end
+
+  %w[storePassword keyAlias keyPassword].each do |required|
+    UI.user_error!("Missing #{required} entry in #{properties_path}") unless properties.key?(required)
+  end
+
+  keystore_path = ENV.fetch('ANDROID_KEYSTORE_PATH', File.expand_path('~/.android/android-keystore.jks'))
+  UI.user_error!("Missing Android keystore at #{keystore_path}") unless File.exist?(keystore_path)
+
+  {
+    properties: properties,
+    keystore_path: keystore_path
+  }
+end
+
+def ensure_ios_keychain
+  keychain_name = ENV.fetch('IOS_KEYCHAIN_NAME', 'sidekick-fastlane.keychain-db')
+  keychain_password = ENV.fetch('IOS_KEYCHAIN_PASSWORD')
+
+  keychain_path = File.expand_path("~/Library/Keychains/#{keychain_name}")
+  FileUtils.rm_f(keychain_path)
+
+  begin
+    delete_keychain(name: keychain_name)
+  rescue StandardError
+    UI.message("No existing keychain named #{keychain_name} to delete")
+  end
+
+  create_keychain(
+    name: keychain_name,
+    password: keychain_password,
+    default_keychain: true,
+    unlock: true,
+    timeout: 3600
+  )
+
+  certificate_path = decode_base64_file('IOS_CERT_P12_BASE64', 'distribution.p12')
+  UI.user_error!('IOS_CERT_P12_BASE64 secret is missing') unless certificate_path
+
+  import_certificate(
+    certificate_path: certificate_path,
+    certificate_password: ENV.fetch('IOS_CERT_PASSWORD'),
+    keychain_path: keychain_path,
+    keychain_password: keychain_password,
+    log_output: true
+  )
+
+  profile_path = decode_base64_file('IOS_PROVISIONING_PROFILE_BASE64', 'app.mobileprovision')
+  UI.user_error!('IOS_PROVISIONING_PROFILE_BASE64 secret is missing') unless profile_path
+
+  install_provisioning_profile(path: profile_path)
+
+  {
+    keychain_name: keychain_name,
+    keychain_path: keychain_path,
+    provisioning_name: ENV.fetch('IOS_PROVISIONING_PROFILE_NAME'),
+    profile_path: profile_path
+  }
+end
+
+def cleanup_ios_keychain(keychain_info)
+  return if keychain_info.nil?
+
+  FileUtils.rm_f(keychain_info[:profile_path]) if keychain_info[:profile_path]
+  delete_keychain(name: keychain_info[:keychain_name])
+rescue StandardError => e
+  UI.important("Keychain cleanup failed: #{e.message}")
+end
+
+def google_play_credentials(lane_options)
+  lane_options ||= {}
+  json_key_data = ENV['GOOGLE_PLAY_JSON_KEY']
+  return { json_key_data: json_key_data } if json_key_data && !json_key_data.strip.empty?
+
+  json_key_file =
+    lane_options[:json_key_file] ||
+    ENV['GOOGLE_PLAY_JSON_KEY_FILE'] ||
+    File.expand_path('api.json', __dir__)
+
+  UI.user_error!("Missing Google Play service account key file at #{json_key_file}") unless File.exist?(json_key_file)
+
+  { json_key: json_key_file }
+end
+
+def configure_app_store_connect
+  key_file = ENV['APP_STORE_CONNECT_API_KEY_FILE']
+  if key_file && File.exist?(key_file)
+    app_store_connect_api_key(
+      key_id: ENV.fetch('APP_STORE_CONNECT_API_KEY_ID'),
+      issuer_id: ENV.fetch('APP_STORE_CONNECT_API_KEY_ISSUER_ID'),
+      key_filepath: key_file,
+      in_house: false
+    )
+  else
+    api_key_raw = ENV.fetch('APP_STORE_CONNECT_API_KEY')
+    api_key_content =
+      begin
+        Base64.strict_decode64(api_key_raw)
+      rescue ArgumentError
+        api_key_raw
+      end
+    app_store_connect_api_key(
+      key_id: ENV.fetch('APP_STORE_CONNECT_API_KEY_ID'),
+      issuer_id: ENV.fetch('APP_STORE_CONNECT_API_KEY_ISSUER_ID'),
+      key_content: api_key_content,
+      is_key_content_base64: false,
+      in_house: false
+    )
+  end
+end
+
+platform :android do
+  desc 'Build and upload the Android release bundle to Google Play'
+  lane :release do |lane_options|
+    signing = load_android_signing
+
+    gradle_task = lane_options[:gradle_task] || 'bundle'
+    build_type = lane_options[:build_type] || 'Release'
+    product_flavor = lane_options[:flavor]
+
     gradle(
-      task: "assemble", 
-      build_type: "Release",
-      project_dir: ".", # Specify the relative path to your Android project
-      gradle_path: "./gradlew", # Specify the path to your gradlew script
+      task: gradle_task,
+      build_type: build_type,
+      flavor: product_flavor,
+      project_dir: '.',
+      gradle_path: './gradlew',
       properties: {
-        "android.injected.signing.store.file" => File.expand_path("~/.android/android-keystore.jks"),
-        "android.injected.signing.store.password" => keystore_properties["storePassword"],
-        "android.injected.signing.key.alias" => keystore_properties["keyAlias"],
-        "android.injected.signing.key.password" => keystore_properties["keyPassword"]
+        'android.injected.signing.store.file' => signing[:keystore_path],
+        'android.injected.signing.store.password' => signing[:properties]['storePassword'],
+        'android.injected.signing.key.alias' => signing[:properties]['keyAlias'],
+        'android.injected.signing.key.password' => signing[:properties]['keyPassword']
       }
     )
 
-    # Upload to Google Play
+    bundle_dir = build_type.downcase
+    bundle_dir = "#{product_flavor}/#{bundle_dir}" if product_flavor
+    default_aab = File.join('app', 'build', 'outputs', 'bundle', bundle_dir, 'app.aab')
+    fallback_aab = File.join('app', 'build', 'outputs', 'bundle', bundle_dir, 'app-release.aab')
+
+    aab_path = lane_options[:aab_path] || (File.exist?(default_aab) ? default_aab : fallback_aab)
+    UI.user_error!("Unable to locate built bundle at #{aab_path}") unless File.exist?(aab_path)
+
+    credentials = google_play_credentials(lane_options)
+
     upload_to_play_store(
-      track: 'alpha',
-      apk: 'app/build/outputs/apk/release/app-release.apk',  # Updated to point to the APK
-      json_key: ENV['GOOGLE_PLAY_JSON_KEY']
+      track: lane_options[:track] || ENV.fetch('GOOGLE_PLAY_TRACK', 'internal'),
+      release_status: lane_options[:release_status] || ENV.fetch('GOOGLE_PLAY_RELEASE_STATUS', 'completed'),
+      aab: aab_path,
+      **credentials,
+      skip_upload_metadata: lane_options.fetch(:skip_upload_metadata, true),
+      skip_upload_changelogs: lane_options.fetch(:skip_upload_changelogs, true),
+      validate_only: lane_options.fetch(:validate_only, false)
     )
+  end
+end
+
+platform :ios do
+  desc 'Build and distribute the iOS app to TestFlight'
+  lane :testflight do |lane_options|
+    keychain_info = ensure_ios_keychain
+    api_key = configure_app_store_connect
+
+    setup_ci
+
+    sh('cd App && pod install --repo-update --clean-install')
+
+    ipa_path = build_app(
+      workspace: 'App/App.xcworkspace',
+      scheme: lane_options[:scheme] || 'App',
+      configuration: lane_options[:configuration] || 'Release',
+      clean: true,
+      output_directory: lane_options[:output_directory] || 'App/build',
+      output_name: lane_options[:output_name] || 'Sidekick.ipa',
+      export_method: lane_options[:export_method] || 'app-store',
+      export_options: {
+        provisioningProfiles: {
+          APP_IDENTIFIER => keychain_info[:provisioning_name]
+        },
+        signingStyle: 'manual',
+        teamID: IOS_TEAM_ID,
+        compileBitcode: false,
+        manageAppVersionAndBuildNumber: false
+      }
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true,
+      distribute_external: lane_options.fetch(:distribute_external, true),
+      groups: lane_options[:groups],
+      changelog: lane_options[:changelog],
+      uses_non_exempt_encryption: lane_options.fetch(:uses_non_exempt_encryption, false)
+    )
+  ensure
+    cleanup_ios_keychain(keychain_info)
   end
 end
