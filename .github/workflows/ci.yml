@@ -47,7 +47,7 @@ jobs:
         run: |
           openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
             -d -in signing.tar.enc -out signing.tar \
-            -pass pass:"$SIGNING_PASS"
+            -pass pass:"$SIGNING_KEY_PASSWORD"
           tar xf signing.tar
           rm signing.tar
 
