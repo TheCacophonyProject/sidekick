@@ -47,16 +47,15 @@ jobs:
           openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
             -d -in signing.tar.enc -out signing.tar \
             -pass pass:"$SIGNING_KEY_PASSWORD"
-          tar xf signing.tar -C sidekick
+          tar xf signing.tar
           rm signing.tar
 
       - name: Install Android signing assets
-        working-directory: sidekick
         run: |
-          cp keystore.properties ./keystore.properties
-          cp android-keystore.jks ./android-keystore.jks
-          mkdir -p fastlane && cp api.json fastlane/api.json
-          rm -f keystore.properties android-keystore.jks
+          cp keystore.properties sidekick/keystore.properties
+          cp android-keystore.jks sidekick/android-keystore.jks
+          mkdir -p sidekick/fastlane && cp api.json sidekick/fastlane/api.json
+          rm -f keystore.properties android-keystore.jks api.json
 
 
       - name: Install Android SDK packages
