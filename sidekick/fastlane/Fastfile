@@ -148,11 +148,11 @@ def configure_app_store_connect
 end
 
 platform :android do
-  desc 'Build and upload the Android release bundle to Google Play'
+  desc 'Build and upload the Android release APK to Google Play'
   lane :release do |lane_options|
     signing = load_android_signing
 
-    gradle_task = lane_options[:gradle_task] || 'bundle'
+    gradle_task = lane_options[:gradle_task] || 'assemble'
     build_type = lane_options[:build_type] || 'Release'
     product_flavor = lane_options[:flavor]
 
@@ -170,20 +170,25 @@ platform :android do
       }
     )
 
-    bundle_dir = build_type.downcase
-    bundle_dir = "#{product_flavor}/#{bundle_dir}" if product_flavor
-    default_aab = File.join('app', 'build', 'outputs', 'bundle', bundle_dir, 'app.aab')
-    fallback_aab = File.join('app', 'build', 'outputs', 'bundle', bundle_dir, 'app-release.aab')
-
-    aab_path = lane_options[:aab_path] || (File.exist?(default_aab) ? default_aab : fallback_aab)
-    UI.user_error!("Unable to locate built bundle at #{aab_path}") unless File.exist?(aab_path)
+    artifact_scope = build_type.downcase
+    artifact_scope = File.join(product_flavor, artifact_scope) if product_flavor
+    apk_candidates = [
+      lane_options[:apk_path],
+      File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app.apk'),
+      File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release.apk'),
+      File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release-signed.apk'),
+      File.join('app', 'build', 'outputs', 'apk', build_type.downcase, 'app-release.apk')
+    ].compact
+    apk_path = apk_candidates.find { |candidate| File.exist?(candidate) }
+    UI.user_error!("Unable to locate built APK. Checked: #{apk_candidates.join(', ')}") unless apk_path
+    apk_path = File.expand_path(apk_path)
 
     credentials = google_play_credentials(lane_options)
 
     upload_to_play_store(
       track: lane_options[:track] || ENV.fetch('GOOGLE_PLAY_TRACK', 'internal'),
       release_status: lane_options[:release_status] || ENV.fetch('GOOGLE_PLAY_RELEASE_STATUS', 'completed'),
-      aab: aab_path,
+      apk: apk_path,
       **credentials,
       skip_upload_metadata: lane_options.fetch(:skip_upload_metadata, true),
       skip_upload_changelogs: lane_options.fetch(:skip_upload_changelogs, true),
