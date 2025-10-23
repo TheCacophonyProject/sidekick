@@ -172,16 +172,24 @@ platform :android do
 
     artifact_scope = build_type.downcase
     artifact_scope = File.join(product_flavor, artifact_scope) if product_flavor
-    apk_candidates = [
-      lane_options[:apk_path],
-      File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app.apk'),
-      File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release.apk'),
-      File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release-signed.apk'),
-      File.join('app', 'build', 'outputs', 'apk', build_type.downcase, 'app-release.apk')
-    ].compact
-    apk_path = apk_candidates.find { |candidate| File.exist?(candidate) }
+    lane_context_paths = Array(Actions.lane_context[:GRADLE_ALL_APK_OUTPUT_PATHS])
+    lane_context_paths << Actions.lane_context[:GRADLE_APK_OUTPUT_PATH]
+    apk_candidates = (
+      [lane_options[:apk_path]] +
+      lane_context_paths +
+      [
+        File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app.apk'),
+        File.join('app', 'build', 'outputs', 'apk', artifact_scope, "app-#{artifact_scope}.apk"),
+        File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release.apk'),
+        File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release-signed.apk'),
+        File.join('app', 'build', 'outputs', 'apk', artifact_scope, 'app-release-unsigned.apk'),
+        (product_flavor ? File.join('app', 'build', 'outputs', 'apk', product_flavor, build_type.downcase, "app-#{product_flavor}-#{build_type.downcase}.apk") : nil),
+        File.join('app', 'build', 'outputs', 'apk', build_type.downcase, 'app-release.apk'),
+        File.join('app', 'build', 'outputs', 'apk', build_type.downcase, 'app-release-unsigned.apk')
+      ]
+    ).compact.uniq
+    apk_path = apk_candidates.map { |candidate| File.expand_path(candidate) }.find { |candidate| File.exist?(candidate) }
     UI.user_error!("Unable to locate built APK. Checked: #{apk_candidates.join(', ')}") unless apk_path
-    apk_path = File.expand_path(apk_path)
 
     credentials = google_play_credentials(lane_options)
 
