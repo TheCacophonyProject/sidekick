@@ -236,6 +236,20 @@ platform :ios do
 
     setup_ci
 
+    version_name = (lane_options[:version_name] || ENV['IOS_VERSION_NAME']).to_s.strip
+    build_number = (lane_options[:build_number] || ENV['IOS_BUILD_NUMBER']).to_s.strip
+    xcodeproj_path = lane_options[:xcodeproj] || 'App/App.xcodeproj'
+
+    increment_version_number(
+      version_number: version_name,
+      xcodeproj: xcodeproj_path
+    ) unless version_name.empty?
+
+    increment_build_number(
+      build_number: build_number,
+      xcodeproj: xcodeproj_path
+    ) unless build_number.empty?
+
     sh('cd App && pod install --repo-update --clean-install')
 
     ipa_path = build_app(
