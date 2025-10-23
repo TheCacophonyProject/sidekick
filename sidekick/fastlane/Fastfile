@@ -25,6 +25,23 @@ def decode_base64_file(env_key, filename)
   path
 end
 
+def resolve_signing_file(path_env_key, default_filename, encoded_env_key)
+  path_value = ENV[path_env_key]
+  path_value = path_value.strip if path_value
+  if path_value && !path_value.empty?
+    resolved = File.expand_path(path_value)
+    UI.user_error!("Missing signing file at #{resolved}") unless File.exist?(resolved)
+    return resolved
+  end
+
+  default_path = File.expand_path(default_filename, __dir__)
+  return default_path if File.exist?(default_path)
+
+  return nil if encoded_env_key.nil?
+
+  decode_base64_file(encoded_env_key, default_filename)
+end
+
 def load_android_signing
   properties_path = ENV.fetch('ANDROID_KEYSTORE_PROPERTIES_PATH', File.expand_path('~/.android/keystore.properties'))
   UI.user_error!("Missing keystore.properties at #{properties_path}") unless File.exist?(properties_path)
@@ -72,8 +89,8 @@ def ensure_ios_keychain
     timeout: 3600
   )
 
-  certificate_path = decode_base64_file('IOS_CERT_P12_BASE64', 'distribution.p12')
-  UI.user_error!('IOS_CERT_P12_BASE64 secret is missing') unless certificate_path
+  certificate_path = resolve_signing_file('IOS_CERT_PATH', 'distribution.p12', 'IOS_CERT_P12_BASE64')
+  UI.user_error!('Provide IOS_CERT_PATH or IOS_CERT_P12_BASE64') unless certificate_path
 
   import_certificate(
     certificate_path: certificate_path,
@@ -83,8 +100,8 @@ def ensure_ios_keychain
     log_output: true
   )
 
-  profile_path = decode_base64_file('IOS_PROVISIONING_PROFILE_BASE64', 'app.mobileprovision')
-  UI.user_error!('IOS_PROVISIONING_PROFILE_BASE64 secret is missing') unless profile_path
+  profile_path = resolve_signing_file('IOS_PROVISIONING_PROFILE_PATH', 'app.mobileprovision', 'IOS_PROVISIONING_PROFILE_BASE64')
+  UI.user_error!('Provide IOS_PROVISIONING_PROFILE_PATH or IOS_PROVISIONING_PROFILE_BASE64') unless profile_path
 
   install_provisioning_profile(path: profile_path)
 
