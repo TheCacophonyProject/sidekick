@@ -156,7 +156,7 @@ platform :android do
     build_type = lane_options[:build_type] || 'Release'
     product_flavor = lane_options[:flavor]
 
-    gradle(
+    gradle_properties = {
       task: gradle_task,
       build_type: build_type,
       flavor: product_flavor,
@@ -168,7 +168,13 @@ platform :android do
         'android.injected.signing.key.alias' => signing[:properties]['keyAlias'],
         'android.injected.signing.key.password' => signing[:properties]['keyPassword']
       }
-    )
+    }
+    version_name = (lane_options[:version_name] || ENV['CI_VERSION_NAME']).to_s.strip
+    version_code = (lane_options[:version_code] || ENV['CI_VERSION_CODE']).to_s.strip
+    gradle_properties[:properties]['CI_VERSION_NAME'] = version_name unless version_name.empty?
+    gradle_properties[:properties]['CI_VERSION_CODE'] = version_code unless version_code.empty?
+
+    gradle(**gradle_properties)
 
     artifact_scope = build_type.downcase
     artifact_scope = File.join(product_flavor, artifact_scope) if product_flavor

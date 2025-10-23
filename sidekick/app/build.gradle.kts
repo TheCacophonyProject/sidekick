@@ -1,5 +1,6 @@
-import java.util.Properties
 import java.io.FileInputStream
+import java.util.Properties
+import org.gradle.api.Project
 
 plugins {
     id("com.android.application")
@@ -15,9 +16,19 @@ if (performSigning) {
 }
 val sdk = 35
 val minSdkVersion = 23
-val majorVersion = 3
-val minorVersion = 17
-val patchVersion = 2
+val fallbackMajor = 3
+val fallbackMinor = 17
+val fallbackPatch = 2
+val fallbackVersionName = "$fallbackMajor.$fallbackMinor.$fallbackPatch"
+val fallbackVersionCode =
+    minSdkVersion * 10000000 + fallbackMajor * 10000 + fallbackMinor * 100 + fallbackPatch
+
+fun Project.optionalProperty(name: String): String? =
+    (findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+
+val ciVersionName = optionalProperty("CI_VERSION_NAME") ?: System.getenv("CI_VERSION_NAME")
+val ciVersionCodeString = optionalProperty("CI_VERSION_CODE") ?: System.getenv("CI_VERSION_CODE")
+val ciVersionCode = ciVersionCodeString?.toIntOrNull()
 android {
     buildToolsVersion = "35.0.0"
     namespace = "nz.org.cacophony.sidekick"
@@ -36,9 +47,8 @@ android {
         applicationId = "nz.org.cacophony.sidekick"
         minSdk = minSdkVersion
         targetSdk = sdk
-        versionCode =
-            minSdkVersion * 10000000 + majorVersion * 10000 + minorVersion * 100 + patchVersion
-        versionName = "$majorVersion.$minorVersion.$patchVersion"
+        versionCode = ciVersionCode ?: fallbackVersionCode
+        versionName = ciVersionName ?: fallbackVersionName
     }
     buildFeatures {
         compose = true
