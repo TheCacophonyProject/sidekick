@@ -5,6 +5,7 @@ require 'fileutils'
 require 'tmpdir'
 require 'bundler'
 require 'shellwords'
+require 'fastlane_core/provisioning_profile'
 
 default_platform(:android)
 
@@ -105,13 +106,17 @@ def ensure_ios_keychain
   profile_path = resolve_signing_file('IOS_PROVISIONING_PROFILE_PATH', 'app.mobileprovision', 'IOS_PROVISIONING_PROFILE_BASE64')
   UI.user_error!('Provide IOS_PROVISIONING_PROFILE_PATH or IOS_PROVISIONING_PROFILE_BASE64') unless profile_path
 
-  install_provisioning_profile(path: profile_path)
+  installed_profile_path = install_provisioning_profile(path: profile_path)
+  profile_uuid = FastlaneCore::ProvisioningProfile.uuid(profile_path)
+  profile_name = FastlaneCore::ProvisioningProfile.name(profile_path)
 
   {
     keychain_name: keychain_name,
     keychain_path: keychain_path,
-    provisioning_name: ENV.fetch('IOS_PROVISIONING_PROFILE_NAME'),
-    profile_path: profile_path
+    provisioning_name: ENV.fetch('IOS_PROVISIONING_PROFILE_NAME', profile_name),
+    profile_path: installed_profile_path,
+    profile_uuid: profile_uuid,
+    certificate_path: certificate_path
   }
 end
 
@@ -257,6 +262,14 @@ platform :ios do
     Bundler.with_unbundled_env do
       sh("cd #{Shellwords.escape(app_dir)} && pod install --repo-update --clean-install")
     end
+
+    update_project_provisioning(
+      xcodeproj: xcodeproj_path,
+      profile: keychain_info[:profile_path],
+      target_filter: lane_options[:target_filter] || 'App',
+      build_configuration: lane_options[:configuration] || 'Release',
+      code_signing_identity: lane_options[:code_signing_identity] || 'Apple Distribution'
+    )
 
     ipa_path = build_app(
       workspace: workspace_path,
