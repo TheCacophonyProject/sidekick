@@ -171,7 +171,7 @@ jobs:
           fi
 
           openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
-            -d -in ios-signing.tar.enc -out ios-signing.tar \
+            -d -in ios-auth.tar.enc -out ios-signing.tar \
             -pass pass:"$SIGNING_KEY_PASSWORD"
 
           tar xf ios-signing.tar
