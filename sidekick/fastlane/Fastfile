@@ -236,8 +236,6 @@ platform :ios do
     keychain_info = ensure_ios_keychain
     api_key = configure_app_store_connect
 
-    setup_ci
-
     app_dir = lane_options[:app_directory] || File.expand_path('../App', __dir__)
     UI.user_error!("iOS app directory not found at #{app_dir}") unless Dir.exist?(app_dir)
 
