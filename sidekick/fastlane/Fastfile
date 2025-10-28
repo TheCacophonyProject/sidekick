@@ -3,6 +3,7 @@
 require 'base64'
 require 'fileutils'
 require 'tmpdir'
+require 'bundler'
 require 'shellwords'
 
 default_platform(:android)
@@ -255,7 +256,9 @@ platform :ios do
       xcodeproj: xcodeproj_path
     ) unless build_number.empty?
 
-    sh("cd #{Shellwords.escape(app_dir)} && pod install --repo-update --clean-install")
+    Bundler.with_unbundled_env do
+      sh("cd #{Shellwords.escape(app_dir)} && pod install --repo-update --clean-install")
+    end
 
     ipa_path = build_app(
       workspace: workspace_path,
