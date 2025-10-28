@@ -157,10 +157,6 @@ jobs:
       - name: Sync Capacitor projects
         run: bun run sync
 
-      - name: Ensure CocoaPods is installed
-        run: |
-          which pod || sudo gem install cocoapods
-
       - name: Decrypt iOS signing bundle
         env:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
@@ -214,6 +210,9 @@ jobs:
         with:
           ruby-version: "3.2"
           bundler-cache: true
+
+      - name: Install CocoaPods
+        run: gem install cocoapods --no-document
 
       - name: Publish to TestFlight
         uses: maierj/fastlane-action@v3.1.0
