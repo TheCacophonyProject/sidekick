@@ -3,6 +3,7 @@
 require 'base64'
 require 'fileutils'
 require 'tmpdir'
+require 'shellwords'
 
 default_platform(:android)
 
@@ -236,9 +237,13 @@ platform :ios do
 
     setup_ci
 
+    app_dir = lane_options[:app_directory] || File.expand_path('../App', __dir__)
+    UI.user_error!("iOS app directory not found at #{app_dir}") unless Dir.exist?(app_dir)
+
     version_name = (lane_options[:version_name] || ENV['IOS_VERSION_NAME']).to_s.strip
     build_number = (lane_options[:build_number] || ENV['IOS_BUILD_NUMBER']).to_s.strip
-    xcodeproj_path = lane_options[:xcodeproj] || 'App/App.xcodeproj'
+    xcodeproj_path = lane_options[:xcodeproj] || File.join(app_dir, 'App.xcodeproj')
+    workspace_path = lane_options[:workspace] || File.join(app_dir, 'App.xcworkspace')
 
     increment_version_number(
       version_number: version_name,
@@ -250,14 +255,14 @@ platform :ios do
       xcodeproj: xcodeproj_path
     ) unless build_number.empty?
 
-    sh('cd App && pod install --repo-update --clean-install')
+    sh("cd #{Shellwords.escape(app_dir)} && pod install --repo-update --clean-install")
 
     ipa_path = build_app(
-      workspace: 'App/App.xcworkspace',
+      workspace: workspace_path,
       scheme: lane_options[:scheme] || 'App',
       configuration: lane_options[:configuration] || 'Release',
       clean: true,
-      output_directory: lane_options[:output_directory] || 'App/build',
+      output_directory: lane_options[:output_directory] || File.join(app_dir, 'build'),
       output_name: lane_options[:output_name] || 'Sidekick.ipa',
       export_method: lane_options[:export_method] || 'app-store',
       export_options: {
