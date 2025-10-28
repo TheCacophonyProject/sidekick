@@ -157,12 +157,6 @@ jobs:
       - name: Sync Capacitor projects
         run: bun run sync
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
-
       - name: Ensure CocoaPods is installed
         run: |
           which pod || sudo gem install cocoapods
