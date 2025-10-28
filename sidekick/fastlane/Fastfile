@@ -131,6 +131,16 @@ end
 
 def apply_manual_signing(xcodeproj_path:, target_name:, configuration:, profile_uuid:, profile_name:, code_sign_identity:)
   project = Xcodeproj::Project.open(xcodeproj_path)
+
+  project.build_configuration_list.build_configurations.each do |build_configuration|
+    next unless build_configuration.name == configuration
+
+    build_configuration.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+    build_configuration.build_settings['CODE_SIGN_IDENTITY'] = code_sign_identity
+    build_configuration.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = code_sign_identity
+    build_configuration.build_settings['DEVELOPMENT_TEAM'] = ENV.fetch('APPLE_TEAM_ID', IOS_TEAM_ID)
+  end
+
   project.targets.each do |target|
     next unless target.name == target_name || target.respond_to?(:product_type) && target.product_type.to_s.include?(target_name)
 
