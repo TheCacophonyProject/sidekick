@@ -6,6 +6,7 @@ require 'tmpdir'
 require 'bundler'
 require 'shellwords'
 require 'fastlane_core/provisioning_profile'
+require 'xcodeproj'
 
 default_platform(:android)
 
@@ -115,8 +116,7 @@ def ensure_ios_keychain
     keychain_path: keychain_path,
     provisioning_name: ENV.fetch('IOS_PROVISIONING_PROFILE_NAME', profile_name),
     profile_path: installed_profile_path,
-    profile_uuid: profile_uuid,
-    certificate_path: certificate_path
+    profile_uuid: profile_uuid
   }
 end
 
@@ -127,6 +127,26 @@ def cleanup_ios_keychain(keychain_info)
   delete_keychain(name: keychain_info[:keychain_name])
 rescue StandardError => e
   UI.important("Keychain cleanup failed: #{e.message}")
+end
+
+def apply_manual_signing(xcodeproj_path:, target_name:, configuration:, profile_uuid:, profile_name:, code_sign_identity:)
+  project = Xcodeproj::Project.open(xcodeproj_path)
+  project.targets.each do |target|
+    next unless target.name == target_name || target.respond_to?(:product_type) && target.product_type.to_s.include?(target_name)
+
+    target.build_configuration_list.build_configurations.each do |build_configuration|
+      next unless build_configuration.name == configuration
+
+      build_configuration.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+      build_configuration.build_settings['PROVISIONING_PROFILE'] = profile_uuid
+      build_configuration.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile_name
+      build_configuration.build_settings['CODE_SIGN_IDENTITY'] = code_sign_identity
+      build_configuration.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = code_sign_identity
+      build_configuration.build_settings['DEVELOPMENT_TEAM'] = ENV.fetch('APPLE_TEAM_ID', IOS_TEAM_ID)
+    end
+  end
+
+  project.save
 end
 
 def google_play_credentials(lane_options)
@@ -263,12 +283,13 @@ platform :ios do
       sh("cd #{Shellwords.escape(app_dir)} && pod install --repo-update --clean-install")
     end
 
-    update_project_provisioning(
-      xcodeproj: xcodeproj_path,
-      profile: keychain_info[:profile_path],
-      target_filter: lane_options[:target_filter] || 'App',
-      build_configuration: lane_options[:configuration] || 'Release',
-      code_signing_identity: lane_options[:code_signing_identity] || 'Apple Distribution'
+    apply_manual_signing(
+      xcodeproj_path: xcodeproj_path,
+      target_name: lane_options[:target_filter] || 'App',
+      configuration: lane_options[:configuration] || 'Release',
+      profile_uuid: keychain_info[:profile_uuid],
+      profile_name: keychain_info[:provisioning_name],
+      code_sign_identity: lane_options[:code_signing_identity] || 'Apple Distribution'
     )
 
     ipa_path = build_app(
