@@ -209,6 +209,12 @@ jobs:
             echo "APP_STORE_CONNECT_API_KEY_FILE=$PWD/sidekick/fastlane/AuthKey.p8"
           } >> "$GITHUB_ENV"
 
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+
       - name: Publish to TestFlight
         uses: maierj/fastlane-action@v3.1.0
         with:
