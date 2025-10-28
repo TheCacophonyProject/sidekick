@@ -1,17 +1,14 @@
 #import "SentryClient+Private.h"
-#import "SentryCrashWrapper.h"
 #import "SentryDependencyContainer.h"
-#import "SentryDispatchQueueWrapper.h"
-#import "SentryEnvelope.h"
 #import "SentryEnvelopeItemHeader.h"
-#import "SentryEnvelopeItemType.h"
 #import "SentryEvent+Private.h"
 #import "SentryFileManager.h"
 #import "SentryHub+Private.h"
 #import "SentryInstallation.h"
+#import "SentryIntegrationProtocol.h"
+#import "SentryInternalDefines.h"
 #import "SentryLevelMapper.h"
-#import "SentryLog.h"
-#import "SentryNSTimerFactory.h"
+#import "SentryLogC.h"
 #import "SentryOptions+Private.h"
 #import "SentryPerformanceTracker.h"
 #import "SentryProfilingConditionals.h"
@@ -21,7 +18,6 @@
 #import "SentrySamplingContext.h"
 #import "SentryScope+Private.h"
 #import "SentrySerialization.h"
-#import "SentrySession+Private.h"
 #import "SentrySwift.h"
 #import "SentryTraceOrigin.h"
 #import "SentryTracer.h"
@@ -36,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SentryHub ()
 
-@property (nullable, nonatomic, strong) SentryClient *client;
+@property (nullable, atomic, strong) SentryClient *client;
 @property (nullable, nonatomic, strong) SentryScope *scope;
 @property (nonatomic) SentryDispatchQueueWrapper *dispatchQueue;
 @property (nonatomic, strong) SentryCrashWrapper *crashWrapper;
@@ -79,7 +75,7 @@ NS_ASSUME_NONNULL_BEGIN
         _errorsBeforeSession = 0;
 
         if (_scope) {
-            [_crashWrapper enrichScope:_scope];
+            [_crashWrapper enrichScope:SENTRY_UNWRAP_NULLABLE(SentryScope, _scope)];
         }
     }
 
@@ -90,7 +86,7 @@ NS_ASSUME_NONNULL_BEGIN
 {
     SentrySession *lastSession = nil;
     SentryScope *scope = self.scope;
-    SentryOptions *options = [_client options];
+    SentryOptions *options = [self.client options];
     if (options == nil) {
         SENTRY_LOG_ERROR(@"Options of the client are nil. Not starting a session.");
         return;
@@ -158,17 +154,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)storeCurrentSession:(SentrySession *)session
 {
-    [[_client fileManager] storeCurrentSession:session];
+    [[self.client fileManager] storeCurrentSession:session];
 }
 
 - (void)deleteCurrentSession
 {
-    [[_client fileManager] deleteCurrentSession];
+    [[self.client fileManager] deleteCurrentSession];
 }
 
 - (void)closeCachedSessionWithTimestamp:(nullable NSDate *)timestamp
 {
-    SentryFileManager *fileManager = [_client fileManager];
+    SentryFileManager *fileManager = [self.client fileManager];
     SentrySession *session = [fileManager readCurrentSession];
     if (session == nil) {
         SENTRY_LOG_DEBUG(@"No cached session to close.");
@@ -177,7 +173,7 @@ NS_ASSUME_NONNULL_BEGIN
     SENTRY_LOG_DEBUG(@"A cached session was found.");
 
     // Make sure there's a client bound.
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client == nil) {
         SENTRY_LOG_DEBUG(@"No client bound.");
         return;
@@ -194,7 +190,7 @@ NS_ASSUME_NONNULL_BEGIN
             [session endSessionAbnormalWithTimestamp:timestamp];
         } else {
             SENTRY_LOG_DEBUG(@"Closing cached session as exited.");
-            [session endSessionExitedWithTimestamp:timestamp];
+            [session endSessionExitedWithTimestamp:SENTRY_UNWRAP_NULLABLE(NSDate, timestamp)];
         }
         [self deleteCurrentSession];
         [client captureSession:session];
@@ -204,7 +200,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)captureSession:(nullable SentrySession *)session
 {
     if (session != nil) {
-        SentryClient *client = _client;
+        SentryClient *client = self.client;
 
         if (client.options.diagnosticLevel == kSentryLevelDebug) {
             SENTRY_LOG_DEBUG(
@@ -228,9 +224,9 @@ NS_ASSUME_NONNULL_BEGIN
     return sessionCopy;
 }
 
-- (void)captureCrashEvent:(SentryEvent *)event
+- (void)captureFatalEvent:(SentryEvent *)event
 {
-    [self captureCrashEvent:event withScope:self.scope];
+    [self captureFatalEvent:event withScope:self.scope];
 }
 
 /**
@@ -239,11 +235,11 @@ NS_ASSUME_NONNULL_BEGIN
  * currently no way to know which one belongs to the crashed session, so we send the session with
  * the first crash event we receive.
  */
-- (void)captureCrashEvent:(SentryEvent *)event withScope:(SentryScope *)scope
+- (void)captureFatalEvent:(SentryEvent *)event withScope:(SentryScope *)scope
 {
     event.isFatalEvent = YES;
 
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client == nil) {
         return;
     }
@@ -255,10 +251,10 @@ NS_ASSUME_NONNULL_BEGIN
     // users didn't start a manual session yet, and there is a previous crash on disk. In this case,
     // we just send the crash event.
     if (crashedSession != nil) {
-        [client captureCrashEvent:event withSession:crashedSession withScope:scope];
+        [client captureFatalEvent:event withSession:crashedSession withScope:scope];
         [fileManager deleteCrashedSession];
     } else {
-        [client captureCrashEvent:event withScope:scope];
+        [client captureFatalEvent:event withScope:scope];
     }
 }
 
@@ -285,14 +281,14 @@ NS_ASSUME_NONNULL_BEGIN
     // users didn't start a manual session yet, and there is a previous fatal app hang on disk. In
     // this case, we just send the fatal app hang event.
     if (abnormalSession == nil) {
-        [client captureCrashEvent:event withScope:self.scope];
+        [client captureFatalEvent:event withScope:self.scope];
         return;
     }
 
     // Users won't see the anr_foreground mechanism in the UI. The Sentry UI will present release
     // health and session statistics as app hangs.
     abnormalSession.abnormalMechanism = @"anr_foreground";
-    [client captureCrashEvent:event withSession:abnormalSession withScope:self.scope];
+    [client captureFatalEvent:event withSession:abnormalSession withScope:self.scope];
     [fileManager deleteAbnormalSession];
 }
 
@@ -337,7 +333,7 @@ NS_ASSUME_NONNULL_BEGIN
         return;
     }
 
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         [client saveCrashTransaction:transaction withScope:self.scope];
     }
@@ -357,7 +353,7 @@ NS_ASSUME_NONNULL_BEGIN
                   withScope:(SentryScope *)scope
     additionalEnvelopeItems:(NSArray<SentryEnvelopeItem *> *)additionalEnvelopeItems
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         return [client captureEvent:event
                           withScope:scope
@@ -370,10 +366,10 @@ NS_ASSUME_NONNULL_BEGIN
            replayRecording:(SentryReplayRecording *)replayRecording
                      video:(NSURL *)videoURL
 {
-    [_client captureReplayEvent:replayEvent
-                replayRecording:replayRecording
-                          video:videoURL
-                      withScope:self.scope];
+    [self.client captureReplayEvent:replayEvent
+                    replayRecording:replayRecording
+                              video:videoURL
+                          withScope:self.scope];
 }
 
 - (id<SentrySpan>)startTransactionWithName:(NSString *)name operation:(NSString *)operation
@@ -464,13 +460,13 @@ NS_ASSUME_NONNULL_BEGIN
                                        sampleRate:tracesSamplerDecision.sampleRate
                                        sampleRand:tracesSamplerDecision.sampleRand];
 
-#if SENTRY_TARGET_PROFILING_SUPPORTED
+#if SENTRY_TARGET_PROFILING_SUPPORTED && !SDK_V9
     if (![self.client.options isContinuousProfilingEnabled]) {
         SentrySamplerDecision *profilesSamplerDecision = sentry_sampleTraceProfile(
             samplingContext, tracesSamplerDecision, self.client.options);
         configuration.profilesSamplerDecision = profilesSamplerDecision;
     }
-#endif // SENTRY_TARGET_PROFILING_SUPPORTED"
+#endif // SENTRY_TARGET_PROFILING_SUPPORTED && !SDK_V9
 
     SentryTracer *tracer = [[SentryTracer alloc] initWithTransactionContext:transactionContext
                                                                         hub:self
@@ -489,7 +485,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (SentryId *)captureMessage:(NSString *)message withScope:(SentryScope *)scope
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         return [client captureMessage:message withScope:scope];
     }
@@ -504,7 +500,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (SentryId *)captureError:(NSError *)error withScope:(SentryScope *)scope
 {
     SentrySession *currentSession = _session;
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         if (currentSession != nil) {
             return [client captureError:error
@@ -526,7 +522,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (SentryId *)captureException:(NSException *)exception withScope:(SentryScope *)scope
 {
     SentrySession *currentSession = _session;
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         if (currentSession != nil) {
             return [client captureException:exception
@@ -540,19 +536,34 @@ NS_ASSUME_NONNULL_BEGIN
     return SentryId.empty;
 }
 
+#if !SDK_V9
 - (void)captureUserFeedback:(SentryUserFeedback *)userFeedback
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         [client captureUserFeedback:userFeedback];
     }
 }
+#endif // !SDK_V9
 
 - (void)captureFeedback:(SentryFeedback *)feedback
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         [client captureFeedback:feedback withScope:self.scope];
+    }
+}
+
+- (void)captureSerializedFeedback:(NSDictionary *)serializedFeedback
+                      withEventId:(NSString *)feedbackEventId
+                      attachments:(NSArray<SentryAttachment *> *)feedbackAttachments
+{
+    SentryClient *client = self.client;
+    if (client != nil) {
+        [client captureSerializedFeedback:serializedFeedback
+                              withEventId:feedbackEventId
+                              attachments:feedbackAttachments
+                                    scope:self.scope];
     }
 }
 
@@ -562,20 +573,21 @@ NS_ASSUME_NONNULL_BEGIN
     if (options.maxBreadcrumbs < 1) {
         return;
     }
+    SentryBreadcrumb *_Nullable nullableCrumb = crumb;
     SentryBeforeBreadcrumbCallback callback = [options beforeBreadcrumb];
     if (callback != nil) {
-        crumb = callback(crumb);
+        nullableCrumb = callback(crumb);
     }
-    if (crumb == nil) {
+    if (nullableCrumb == nil) {
         SENTRY_LOG_DEBUG(@"Discarded Breadcrumb in `beforeBreadcrumb`");
         return;
     }
-    [self.scope addBreadcrumb:crumb];
+    [self.scope addBreadcrumb:SENTRY_UNWRAP_NULLABLE(SentryBreadcrumb, nullableCrumb)];
 }
 
 - (nullable SentryClient *)getClient
 {
-    return _client;
+    return self.client;
 }
 
 - (void)bindClient:(nullable SentryClient *)client
@@ -587,16 +599,16 @@ NS_ASSUME_NONNULL_BEGIN
 {
     @synchronized(self) {
         if (_scope == nil) {
-            SentryClient *client = _client;
+            SentryClient *client = self.client;
             if (client != nil) {
                 _scope = [[SentryScope alloc] initWithMaxBreadcrumbs:client.options.maxBreadcrumbs];
             } else {
                 _scope = [[SentryScope alloc] init];
             }
 
-            [_crashWrapper enrichScope:_scope];
+            [_crashWrapper enrichScope:SENTRY_UNWRAP_NULLABLE(SentryScope, _scope)];
         }
-        return _scope;
+        return SENTRY_UNWRAP_NULLABLE(SentryScope, _scope);
     }
 }
 
@@ -695,7 +707,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)storeEnvelope:(SentryEnvelope *)envelope
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client == nil) {
         return;
     }
@@ -707,7 +719,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)captureEnvelope:(SentryEnvelope *)envelope
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client == nil) {
         return;
     }
@@ -732,7 +744,7 @@ NS_ASSUME_NONNULL_BEGIN
                 [currentSession
                     endSessionCrashedWithTimestamp:[SentryDependencyContainer.sharedInstance
                                                            .dateProvider date]];
-                if (_client.options.diagnosticLevel == kSentryLevelDebug) {
+                if (self.client.options.diagnosticLevel == kSentryLevelDebug) {
                     SENTRY_LOG_DEBUG(@"Ending session with status: %@",
                         [self createSessionDebugString:currentSession]);
                 }
@@ -757,13 +769,15 @@ NS_ASSUME_NONNULL_BEGIN
                                     wasHandled:(BOOL *)handled;
 {
     for (SentryEnvelopeItem *item in items) {
-        if ([item.header.type isEqualToString:SentryEnvelopeItemTypeEvent]) {
+        if ([item.header.type isEqualToString:SentryEnvelopeItemTypes.event]) {
             // If there is no level the default is error
-            NSDictionary *eventJson =
+            NSDictionary *_Nullable nullableEventJson =
                 [SentrySerialization deserializeDictionaryFromJsonData:item.data];
-            if (eventJson == nil) {
+            if (nullableEventJson == nil) {
                 return NO;
             }
+            NSDictionary *_Nonnull eventJson
+                = SENTRY_UNWRAP_NULLABLE(NSDictionary, nullableEventJson);
 
             SentryLevel level = sentryLevelForString(eventJson[@"level"]);
             if (level >= kSentryLevelError) {
@@ -792,7 +806,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)reportFullyDisplayed
 {
 #if SENTRY_HAS_UIKIT
-    [SentryUIViewControllerPerformanceTracker.shared reportFullyDisplayed];
+    [[SentryDependencyContainer.sharedInstance uiViewControllerPerformanceTracker]
+        reportFullyDisplayed];
 #endif // SENTRY_HAS_UIKIT
 }
 
@@ -810,7 +825,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)flush:(NSTimeInterval)timeout
 {
-    SentryClient *client = _client;
+    SentryClient *client = self.client;
     if (client != nil) {
         [client flush:timeout];
     }
@@ -818,7 +833,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)close
 {
-    [_client close];
+    [self.client close];
     SENTRY_LOG_DEBUG(@"Closed the Hub.");
 }
 
@@ -836,10 +851,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Protected
 
-- (NSMutableArray<NSString *> *)trimmedInstalledIntegrationNames
+- (NSArray<NSString *> *)trimmedInstalledIntegrationNames
 {
     NSMutableArray<NSString *> *integrations = [NSMutableArray<NSString *> array];
-    for (NSString *integration in SentrySDK.currentHub.installedIntegrationNames) {
+    for (NSString *integration in SentrySDKInternal.currentHub.installedIntegrationNames) {
         // Every integration starts with "Sentry" and ends with "Integration". To keep the
         // payload of the event small we remove both.
         NSString *withoutSentry = [integration stringByReplacingOccurrencesOfString:@"Sentry"

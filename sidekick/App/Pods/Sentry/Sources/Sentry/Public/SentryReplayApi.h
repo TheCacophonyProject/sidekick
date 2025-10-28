@@ -1,7 +1,9 @@
-#if __has_include(<Sentry/SentryDefines.h>)
+#if __has_include(<Sentry/Sentry.h>)
 #    import <Sentry/SentryDefines.h>
-#else
+#elif __has_include(<SentryWithoutUIKit/Sentry.h>)
 #    import <SentryWithoutUIKit/SentryDefines.h>
+#else
+#    import <SentryDefines.h>
 #endif
 
 #if SENTRY_TARGET_REPLAY_SUPPORTED
@@ -50,6 +52,8 @@ NS_ASSUME_NONNULL_BEGIN
  * This will only work if the debbuger is attached and it will
  * cause some slow frames.
  *
+ * @note This method must be called from the main thread.
+ *
  * @warning This is an experimental feature and may still have bugs.
  * Do not use this is production.
  */
@@ -65,6 +69,8 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @param opacity The opacity of the overlay.
  *
+ * @note This method must be called from the main thread.
+ *
  * @warning This is an experimental feature and may still have bugs.
  * Do not use this is production.
  */
@@ -72,6 +78,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * Removes the overlay that shows replay masking.
+ *
+ * @note This method must be called from the main thread.
  *
  * @warning This is an experimental feature and may still have bugs.
  * Do not use this is production.

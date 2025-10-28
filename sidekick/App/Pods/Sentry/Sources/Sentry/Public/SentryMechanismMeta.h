@@ -1,10 +1,13 @@
 #import <Foundation/Foundation.h>
 #if __has_include(<Sentry/Sentry.h>)
 #    import <Sentry/SentryDefines.h>
-#    import <Sentry/SentrySerializable.h>
-#else
+#elif __has_include(<SentryWithoutUIKit/Sentry.h>)
 #    import <SentryWithoutUIKit/SentryDefines.h>
-#    import <SentryWithoutUIKit/SentrySerializable.h>
+#else
+#    import <SentryDefines.h>
+#endif
+#if !SDK_V9
+#    import SENTRY_HEADER(SentrySerializable)
 #endif
 
 @class SentryNSError;
@@ -17,7 +20,10 @@ NS_ASSUME_NONNULL_BEGIN
  * @see https://develop.sentry.dev/sdk/event-payloads/exception/#meta-information.
  */
 NS_SWIFT_NAME(MechanismMeta)
-@interface SentryMechanismMeta : NSObject <SentrySerializable>
+@interface SentryMechanismMeta : NSObject
+#if !SDK_V9
+                                 <SentrySerializable>
+#endif
 
 - (instancetype)init;
 

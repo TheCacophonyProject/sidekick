@@ -18,6 +18,7 @@
 @class SentryUser;
 @class SentryEnvelope;
 @class SentryId;
+@class SentrySpanId;
 @class SentrySessionReplayIntegration;
 @class UIView;
 
@@ -55,6 +56,7 @@ typedef void (^SentryOnAppStartMeasurementAvailable)(
  */
 + (nullable SentryEnvelope *)envelopeWithData:(NSData *)data;
 
+#if !SDK_V9
 /**
  * Returns the current list of debug images. Be aware that the @c SentryDebugMeta is actually
  * describing a debug image.
@@ -72,6 +74,7 @@ typedef void (^SentryOnAppStartMeasurementAvailable)(
  * crash, each image's data section crash info is also included.
  */
 + (NSArray<SentryDebugMeta *> *)getDebugImagesCrashed:(BOOL)isCrash;
+#endif // !SDK_V9
 
 /**
  * Override SDK information.
@@ -102,6 +105,11 @@ typedef void (^SentryOnAppStartMeasurementAvailable)(
  * Retrieves extra context
  */
 + (NSDictionary *)getExtraContext;
+
+/**
+ * Allows Hybrids SDKs to thread-safe set the current trace.
+ */
++ (void)setTrace:(SentryId *)traceId spanId:(SentrySpanId *)spanId;
 
 #if SENTRY_TARGET_PROFILING_SUPPORTED
 /**
@@ -180,7 +188,7 @@ typedef void (^SentryOnAppStartMeasurementAvailable)(
 /**
  * Allow Hybrids SDKs to set the current Screen.
  */
-+ (void)setCurrentScreen:(NSString *)screenName;
++ (void)setCurrentScreen:(NSString *_Nullable)screenName;
 
 #endif // SENTRY_UIKIT_AVAILABLE
 
