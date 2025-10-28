@@ -21,9 +21,7 @@
     "Capacitor/Capacitor/PrivacyInfo.xcprivacy"
   ],
   "dependencies": {
-    "CapacitorCordova": [
-
-    ]
+    "CapacitorCordova": []
   },
   "swift_versions": "5.1",
   "swift_version": "5.1"

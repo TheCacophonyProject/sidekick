@@ -112,25 +112,25 @@ EXTERNAL SOURCES:
     :path: "../shared"
 
 SPEC CHECKSUMS:
-  Capacitor: 106e7a4205f4618d582b886a975657c61179138d
-  CapacitorApp: d63334c052278caf5d81585d80b21905c6f93f39
-  CapacitorBrowser: 081852cf532acf77b9d2953f3a88fe5b9711fb06
-  CapacitorCamera: eb8687d8687fed853598ec9460d94bcd5e16babe
-  CapacitorClipboard: b98aead5dc7ec595547fc2c5d75bacd2ae3338bc
-  CapacitorCommunityKeepAwake: 00dfd8fa3cca0df003c9a3e2cd7bee678aeec68b
-  CapacitorCommunitySqlite: 6501e7349acf998346acf24ef757861bb3f6fc2b
+  Capacitor: 03bc7cbdde6a629a8b910a9d7d78c3cc7ed09ea7
+  CapacitorApp: febecbb9582cb353aed037e18ec765141f880fe9
+  CapacitorBrowser: 6299776d496e968505464884d565992faa20444a
+  CapacitorCamera: 6e73f1fc6c629a672658705a02409b60854bc0f1
+  CapacitorClipboard: 70bfdb42b877b320a6e511ab94fa7a6a55d57ecb
+  CapacitorCommunityKeepAwake: ae762ce29b53147d28cfcaae5273cd1db0c38fc4
+  CapacitorCommunitySqlite: b11e556cf5d149f9e0b6fbbb47959a6cd718c3d0
   CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
-  CapacitorDialog: 9b934329026b2b0ffa56939bb06df3c67541a2ab
-  CapacitorFilesystem: 307f97c27a265edf8396a1c9c235592fd8572fe3
-  CapacitorGeolocation: 8f8ac02ceaeb203a4762f8dc4ff5119e3f7fa50a
-  CapacitorIosAutofillSavePassword: 6e7c37a13e6970bd31141371abb9e64eae882698
-  CapacitorLocalNotifications: 4ea60b9347eac60b37cb4daaf62d12060bb00972
-  CapacitorNativeSettings: 03d126571fc0e12f89ffeb1516788bf371b528bc
-  CapacitorNetwork: 07ec4c69c1bb696f41c23e00d31bda1bbb221bba
-  CapacitorPreferences: cbf154e5e5519b7f5ab33817a334dda1e98387f9
+  CapacitorDialog: 0e09f242f6c3f5e82e4dc76b20f2a056be57a579
+  CapacitorFilesystem: e6261c410436f54908c11f94336c5b58286b1db0
+  CapacitorGeolocation: c0755715aaadf5c86dc0053e1127b368444c914b
+  CapacitorIosAutofillSavePassword: 60b1afd83532bfa85ab1c3f1341ce5ac397e3d30
+  CapacitorLocalNotifications: c2212755b33d2513b8bb325096ce3a64d4039ae3
+  CapacitorNativeSettings: bef37b3c7e2184da7416a3f162c71de19fd27593
+  CapacitorNetwork: 15cb4385f0913a8ceb5e9a4d7af1ec554bdb8de8
+  CapacitorPreferences: 6c98117d4d7508034a4af9db64d6b26fc75d7b94
   IONGeolocationLib: 81f33f88d025846946de2cf63b0c7628e7c6bc9d
   Sentry: 1ca8405451040482877dcd344dfa3ef80b646631
-  SentryCapacitor: b364f83da8e94699cc1c40b9e2c0473bef631306
+  SentryCapacitor: 5555ac5b8c2cf3fbdac6973e7d1d62c9b7d5277b
   shared: 655a369eaa8d440bae00b6d7208194db21051145
   SQLCipher: ba9d0076041ed767c5bd3d3f77098318d04a403c
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c

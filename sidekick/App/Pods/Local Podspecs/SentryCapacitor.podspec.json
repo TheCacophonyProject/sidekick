@@ -14,9 +14,7 @@
     "Sentry/HybridSDK": [
       "8.48.0"
     ],
-    "Capacitor": [
-
-    ]
+    "Capacitor": []
   },
   "platforms": {
     "ios": "14.0"

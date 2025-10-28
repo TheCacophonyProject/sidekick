@@ -14,9 +14,7 @@
     "ios": "14.0"
   },
   "dependencies": {
-    "Capacitor": [
-
-    ],
+    "Capacitor": [],
     "IONGeolocationLib": [
       "~> 1.0"
     ]
