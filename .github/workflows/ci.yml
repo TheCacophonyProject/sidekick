@@ -209,16 +209,15 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
-          bundler-cache: true
 
       - name: Install CocoaPods
         run: gem install cocoapods --no-document
 
+      - name: Install Fastlane
+        run: gem install fastlane --no-document
+
       - name: Publish to TestFlight
-        uses: maierj/fastlane-action@v3.1.0
-        with:
-          lane: "ios testflight"
-          subdirectory: sidekick
+        working-directory: sidekick
         env:
           # Keychain and signing
           IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
@@ -226,3 +225,4 @@ jobs:
           # App Store Connect API key metadata (key file provided by decrypted bundle)
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+        run: fastlane ios testflight
