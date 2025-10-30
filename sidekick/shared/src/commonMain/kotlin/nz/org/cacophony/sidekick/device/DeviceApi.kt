@@ -16,6 +16,8 @@ import okio.Path
 import okio.buffer
 import okio.use
 
+private const val DOWNLOAD_BUFFER_SIZE = 8 * 1024
+
 @Serializable
 data class DeviceInfo (
     val serverURL: String,
@@ -138,7 +140,7 @@ class DeviceApi(override val client: HttpClient, val device: Device): Api {
                         }
 
                         var totalBytes = 0L
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
                         FileSystem.SYSTEM.sink(targetFile).buffer().use { sink ->
                             while (true) {
                                 val read = channel.readAvailable(buffer, 0, buffer.size)

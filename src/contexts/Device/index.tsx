@@ -1315,14 +1315,16 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		config: string,
 	): Promise<{ success: boolean; status?: number; data?: string }> => {
 		try {
+			// Build query string manually so reserved characters (e.g. '+') stay intact.
+			const query = new URLSearchParams({
+				section,
+				config,
+			}).toString();
+
 			const res = await CapacitorHttp.post({
-				url: `${url}/api/config`,
+				url: `${url}/api/config?${query}`,
 				headers: {
 					...headers,
-				},
-				params: {
-					section,
-					config,
 				},
 				webFetchExtra: { credentials: "include" },
 				connectTimeout: 5000,
@@ -3611,6 +3613,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				warn: false,
 			});
 			const config = configSchema.parse(JSON.parse(res.data));
+      console.log("Config", config)
 			return config;
 		} catch (error) {
 			console.error("Get Config Error", error);
@@ -3637,8 +3640,6 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const { url } = device;
 			// Send via HTTP using the shared config endpoint
 			const payload = {
-				"power-on": on,
-				"power-off": off,
 				"start-recording": on,
 				"stop-recording": off,
 			};
@@ -3655,6 +3656,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 					warn: false,
 				});
 			}
+      console.log("Post Recording Window", res)
 			return res.success;
 		} catch (error) {
 			return null;
