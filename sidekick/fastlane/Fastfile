@@ -327,7 +327,7 @@ platform :ios do
       api_key: api_key,
       ipa: ipa_path,
       skip_waiting_for_build_processing: true,
-      distribute_external: lane_options.fetch(:distribute_external, true),
+      distribute_external: lane_options.fetch(:distribute_external, false),
       groups: lane_options[:groups],
       changelog: lane_options[:changelog],
       uses_non_exempt_encryption: lane_options.fetch(:uses_non_exempt_encryption, false)
