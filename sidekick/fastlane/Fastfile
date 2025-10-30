@@ -114,7 +114,9 @@ def ensure_ios_keychain
   {
     keychain_name: keychain_name,
     keychain_path: keychain_path,
-    provisioning_name: ENV.fetch('IOS_PROVISIONING_PROFILE_NAME', profile_name),
+    provisioning_name: (ENV['IOS_PROVISIONING_PROFILE_NAME'] && !ENV['IOS_PROVISIONING_PROFILE_NAME'].strip.empty?) ?
+                       ENV['IOS_PROVISIONING_PROFILE_NAME'].strip :
+                       profile_name,
     profile_path: installed_profile_path,
     profile_uuid: profile_uuid
   }
