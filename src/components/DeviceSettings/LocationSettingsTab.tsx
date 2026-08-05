@@ -20,7 +20,7 @@ import {
 } from "solid-icons/fa";
 import { FiCloud, FiCloudOff, FiMapPin } from "solid-icons/fi";
 import { ImCross } from "solid-icons/im";
-import { TbCameraPlus } from "solid-icons/tb";
+import { TbOutlineCameraPlus } from "solid-icons/tb";
 import {
 	AndroidSettings,
 	IOSSettings,
@@ -649,7 +649,7 @@ export function LocationSettingsTab(props: SettingProps) {
 												>
 													<Show
 														when={isSyncing()}
-														fallback={<TbCameraPlus size={24} />}
+														fallback={<TbOutlineCameraPlus size={24} />}
 													>
 														<FaSolidSpinner size={24} class="animate-spin" />
 													</Show>
@@ -677,7 +677,7 @@ export function LocationSettingsTab(props: SettingProps) {
 										>
 											<Show
 												when={isSyncing()}
-												fallback={<TbCameraPlus size={36} />}
+												fallback={<TbOutlineCameraPlus size={36} />}
 											>
 												<FaSolidSpinner size={36} class="animate-spin" />
 											</Show>
