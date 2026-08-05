@@ -3,6 +3,9 @@ name: Android CI/CD
 
 on:
   push:
+
+    branches:
+      - update-sdk
     tags:
       - "v*.*.*" # Triggers only on tag pushes matching the pattern
 
