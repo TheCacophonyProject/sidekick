@@ -10,7 +10,7 @@ jobs:
   deploy:
     name: Build and Deploy to Google Play
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    # if: startsWith(github.ref, 'refs/tags/')
     env:
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       LANG: en_US.UTF-8
