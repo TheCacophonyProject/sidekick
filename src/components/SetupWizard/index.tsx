@@ -32,7 +32,7 @@ import { useUserContext } from "~/contexts/User";
 import { Dialog } from "@capacitor/dialog";
 import FieldWrapper from "../Field";
 import { AiOutlineInfoCircle } from "solid-icons/ai";
-import { TbPlugConnectedX } from "solid-icons/tb";
+import { TbOutlinePlugConnectedX } from "solid-icons/tb";
 import { getSteps } from "../Manual";
 export type ColorType = "blue" | "green" | "yellow" | "gray" | "red";
 export type DeviceType = "DOC AI Cam / Bird Monitor" | "Classic";
@@ -1104,7 +1104,7 @@ function SetupWizard(): JSX.Element {
 								/>
 								<div class="flex w-full flex-col items-center">
 									<div class="px-4 text-neutral-700 sm:px-8">
-										<TbPlugConnectedX size={64} class="sm:h-20 sm:w-20" />
+										<TbOutlinePlugConnectedX size={64} class="sm:h-20 sm:w-20" />
 									</div>
 									<p class="text-center text-base font-bold text-gray-600 sm:text-lg">
 										Device "{device().name}" Disconnected
