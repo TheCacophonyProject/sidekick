@@ -13,13 +13,13 @@ val performSigning = keystorePropertiesFile.exists()
 if (performSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
-val sdk = 35
+val sdk = 36
 val minSdkVersion = 23
 val majorVersion = 3
 val minorVersion = 15
 val patchVersion = 1
 android {
-    buildToolsVersion = "35.0.0"
+    buildToolsVersion = "36.0.0"
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
     if (performSigning) {

@@ -11,8 +11,8 @@ buildscript {
 }
 plugins {
     //trick: for the same plugin versions in all sub-modules
-    id("com.android.application").version("8.7.2").apply(false)
-    id("com.android.library").version("8.7.2").apply(false)
+    id("com.android.application").version("8.9.2").apply(false)
+    id("com.android.library").version("8.9.2").apply(false)
     id("org.jetbrains.kotlin.plugin.serialization").version("1.9.25")
     kotlin("android").version("1.9.25").apply(false)
     kotlin("multiplatform").version("1.9.25").apply(false)
