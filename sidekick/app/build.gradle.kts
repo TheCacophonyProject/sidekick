@@ -14,10 +14,10 @@ val performSigning = keystorePropertiesFile.exists()
 if (performSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
-val sdk = 35
+val sdk = 36
 val minSdkVersion = 23
 val fallbackMajor = 3
-val fallbackMinor = 17
+val fallbackMinor = 19
 val fallbackPatch = 2
 val fallbackVersionName = "$fallbackMajor.$fallbackMinor.$fallbackPatch"
 val fallbackVersionCode =
@@ -30,7 +30,7 @@ val ciVersionName = optionalProperty("CI_VERSION_NAME") ?: System.getenv("CI_VER
 val ciVersionCodeString = optionalProperty("CI_VERSION_CODE") ?: System.getenv("CI_VERSION_CODE")
 val ciVersionCode = ciVersionCodeString?.toIntOrNull()
 android {
-    buildToolsVersion = "35.0.0"
+    buildToolsVersion = "36.0.0"
     namespace = "nz.org.cacophony.sidekick"
     compileSdk = sdk
     if (performSigning) {

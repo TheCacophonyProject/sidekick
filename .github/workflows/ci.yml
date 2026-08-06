@@ -10,7 +10,7 @@ jobs:
   android:
     name: Android Release
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    # if: startsWith(github.ref, 'refs/tags/')
     env:
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
@@ -62,14 +62,16 @@ jobs:
 
       - name: Decrypt Android signing bundle
         env:
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD_2 }}
         run: |
-          openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
-            -d -in signing.tar.enc -out signing.tar \
-            -pass pass:"$SIGNING_KEY_PASSWORD"
-          tar xf signing.tar
+          # --batch and --pinentry-mode loopback fix the "ioctl" terminal issue
+          gpg --quiet --batch --yes --pinentry-mode loopback \
+            --passphrase "$SIGNING_KEY_PASSWORD" \
+            --output signing.tar signing.tar.enc
+          
+          tar xvf signing.tar
           rm signing.tar
-
+        working-directory: sidekick
       - name: Install Android signing assets
         run: |
           cp keystore.properties sidekick/keystore.properties

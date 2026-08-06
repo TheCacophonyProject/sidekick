@@ -12,7 +12,7 @@ import {
 import { FiDownload } from "solid-icons/fi";
 import { ImCog, ImSearch } from "solid-icons/im";
 import { RiDeviceRouterFill, RiArrowsArrowRightSLine } from "solid-icons/ri";
-import { TbCurrentLocation, TbPlugConnectedX } from "solid-icons/tb";
+import { TbOutlineCurrentLocation, TbOutlinePlugConnectedX } from "solid-icons/tb";
 import {
 	For,
 	Match,
@@ -186,7 +186,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 					when={props.isConnected}
 					fallback={
 						<div class="px-8 text-neutral-700">
-							<TbPlugConnectedX size={32} />
+							<TbOutlinePlugConnectedX size={32} />
 						</div>
 					}
 				>
@@ -254,7 +254,7 @@ function DeviceDetails(props: DeviceDetailsProps) {
 								</Match>
 								<Match when={updateLocState() === "needsUpdate"}>
 									<div class="text-yellow-400">
-										<TbCurrentLocation size={28} />
+										<TbOutlineCurrentLocation size={28} />
 									</div>
 								</Match>
 							</Switch>

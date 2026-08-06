@@ -97,7 +97,7 @@ kotlin {
 
 android {
     namespace = "nz.org.cacophony.sidekick.shared"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         minSdk = 23
     }

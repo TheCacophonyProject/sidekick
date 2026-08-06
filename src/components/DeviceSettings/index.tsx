@@ -3,7 +3,7 @@ import { BsCameraVideoFill } from "solid-icons/bs";
 import { FaSolidStop } from "solid-icons/fa";
 import { FiDownload } from "solid-icons/fi";
 import { ImCross } from "solid-icons/im";
-import { TbPlugConnectedX } from "solid-icons/tb";
+import { TbOutlinePlugConnectedX } from "solid-icons/tb";
 import {
 	For,
 	Match,
@@ -131,7 +131,7 @@ export default function DeviceSettingsModal() {
 									when={!isConnected()}
 									fallback={<BsCameraVideoFill size={32} />}
 								>
-									<TbPlugConnectedX size={32} />
+									<TbOutlinePlugConnectedX size={32} />
 								</Show>
 								<div class="flex flex-col">
 									<h1 class="pl-2 text-sm md:text-lg font-medium text-slate-600">
