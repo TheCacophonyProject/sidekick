@@ -63,13 +63,14 @@ jobs:
         env:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD_2 }}
         run: |
-          # --batch and --yes prevent the runner from freezing waiting for input
-          gpg --quiet --batch --yes --decrypt --passphrase "$SIGNING_KEY_PASSWORD" \
+          # --batch and --pinentry-mode loopback fix the "ioctl" terminal issue
+          gpg --quiet --batch --yes --pinentry-mode loopback \
+            --passphrase "$SIGNING_KEY_PASSWORD" \
             --output signing.tar signing.tar.enc
           
-          # Extract the file GPG just spit out
           tar xvf signing.tar
         working-directory: sidekick
+
 
 
       - name: Verify Decryption
