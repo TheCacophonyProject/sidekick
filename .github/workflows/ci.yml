@@ -63,9 +63,12 @@ jobs:
         env:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD_2 }}
         run: |
-          gpg --passphrase "$SIGNING_KEY_PASSWORD" --decrypt signing.tar.enc
+          # --batch and --yes prevent the runner from freezing waiting for input
+          gpg --quiet --batch --yes --decrypt --passphrase "$SIGNING_KEY_PASSWORD" \
+            --output signing.tar signing.tar.enc
+          
+          # Extract the file GPG just spit out
           tar xvf signing.tar
-
         working-directory: sidekick
 
 
