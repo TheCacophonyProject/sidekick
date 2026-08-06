@@ -4,7 +4,7 @@ name: Mobile Release
 on:
   push:
     branches:
-      - update-sdk
+      - update-sdk2
     tags:
       - "v*.*.*"
   release:
