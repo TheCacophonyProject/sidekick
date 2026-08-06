@@ -3,17 +3,18 @@ name: Mobile Release
 
 on:
   push:
-
     branches:
       - update-sdk
     tags:
       - "v*.*.*"
+  release:
+    types: [published]
 
 jobs:
   android:
     name: Android Release
     runs-on: ubuntu-latest
-    # if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/')
     env:
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
