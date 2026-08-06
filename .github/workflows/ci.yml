@@ -82,6 +82,3 @@ jobs:
           ANDROID_KEYSTORE_PROPERTIES_PATH: ${{ github.workspace }}/sidekick/keystore.properties
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/sidekick/android-keystore.jks
           GOOGLE_PLAY_TRACK: alpha
-          CI_VERSION_NAME: ${{ steps.version.outputs.version_name }}
-          CI_VERSION_CODE: ${{ steps.version.outputs.version_code }}
-
