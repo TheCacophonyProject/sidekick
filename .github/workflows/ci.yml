@@ -63,7 +63,7 @@ jobs:
         env:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD_2 }}
         run: |
-          printf "%s" "$SIGNING_KEY_PASSWORD" | openssl enc -aes-256-cbc -md sha256 -pbkdf2 -iter 100000 -d -in signing.tar.enc -out signing.tar -pass stdin
+          gpg --passphrase "$SIGNING_KEY_PASSWORD" --decrypt signing.tar.enc
           tar xvf signing.tar
 
         working-directory: sidekick
