@@ -3,6 +3,8 @@ name: Mobile Release
 
 on:
   push:
+    branches:
+      run-ci
     tags:
       - "v*.*.*"
 
