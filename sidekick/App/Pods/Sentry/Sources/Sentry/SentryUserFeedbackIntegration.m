@@ -1,8 +1,8 @@
 #import "SentryUserFeedbackIntegration.h"
 #import "SentryDependencyContainer.h"
+#import "SentryInternalDefines.h"
 #import "SentryOptions+Private.h"
 #import "SentrySDK+Private.h"
-#import "SentryScreenshot.h"
 #import "SentrySwift.h"
 
 #if TARGET_OS_IOS && SENTRY_HAS_UIKIT
@@ -20,11 +20,26 @@
         return NO;
     }
 
+    // The screenshot source is coupled to the options, but due to the dependency container being
+    // tightly to the options anyways, it was decided to not pass it to the container.
+    SentryScreenshotSource *screenshotSource
+        = SentryDependencyContainer.sharedInstance.screenshotSource;
     _driver = [[SentryUserFeedbackIntegrationDriver alloc]
-        initWithConfiguration:options.userFeedbackConfiguration
+        initWithConfiguration:SENTRY_UNWRAP_NULLABLE(SentryUserFeedbackConfiguration,
+                                  options.userFeedbackConfiguration)
                      delegate:self
-           screenshotProvider:SentryDependencyContainer.sharedInstance.screenshot];
+             screenshotSource:screenshotSource];
     return YES;
+}
+
+- (void)showWidget
+{
+    [_driver showWidget];
+}
+
+- (void)hideWidget
+{
+    [_driver hideWidget];
 }
 
 // MARK: SentryUserFeedbackIntegrationDriverDelegate

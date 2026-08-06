@@ -1,22 +1,20 @@
 {
   "name": "CapacitorCommunityKeepAwake",
-  "version": "5.0.1",
+  "version": "7.1.0",
   "summary": "Prevent your screen from getting some sleep!",
   "license": "MIT",
   "homepage": "git+https://github.com/capacitor-community/keep-awake.git",
   "authors": "Kevin Boosten <kboosten@icloud.com>",
   "source": {
     "git": "git+https://github.com/capacitor-community/keep-awake.git",
-    "tag": "5.0.1"
+    "tag": "7.1.0"
   },
-  "source_files": "ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}",
+  "source_files": "ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}",
   "platforms": {
-    "ios": "13.0"
+    "ios": "14.0"
   },
   "dependencies": {
-    "Capacitor": [
-
-    ]
+    "Capacitor": []
   },
   "swift_versions": "5.1",
   "swift_version": "5.1"

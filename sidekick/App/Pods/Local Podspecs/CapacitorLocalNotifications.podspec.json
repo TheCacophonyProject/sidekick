@@ -1,13 +1,13 @@
 {
   "name": "CapacitorLocalNotifications",
-  "version": "7.0.1",
+  "version": "7.0.3",
   "summary": "The Local Notifications API provides a way to schedule device notifications locally (i.e. without a server sending push notifications).",
   "license": "MIT",
   "homepage": "https://capacitorjs.com",
   "authors": "Ionic <hi@ionicframework.com>",
   "source": {
     "git": "https://github.com/ionic-team/capacitor-plugins.git",
-    "tag": "@capacitor/local-notifications@7.0.1"
+    "tag": "@capacitor/local-notifications@7.0.3"
   },
   "source_files": [
     "ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}",
@@ -17,9 +17,7 @@
     "ios": "14.0"
   },
   "dependencies": {
-    "Capacitor": [
-
-    ]
+    "Capacitor": []
   },
   "swift_versions": "5.1",
   "swift_version": "5.1"

@@ -64,6 +64,10 @@ class DevicePlugin : Plugin() {
 
     // Add a flag to track if monitoring has been initialized
     private var isMonitoringInitialized = false
+    
+    // Track if we've ever attempted or been connected to bushnet in this session
+    private var hasAttemptedBushnetConnection = false
+    private var wasConnectedToBushnet = false
 
     /**
      * Plugin initialization
@@ -228,16 +232,24 @@ class DevicePlugin : Plugin() {
             // Create network callback to monitor connectivity changes
             val networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    checkAndNotifyAPConnectionState(connectivityManager, network, true)
+                    // Only check if we care about bushnet connections or this might be bushnet
+                    if (hasAttemptedBushnetConnection || wasConnectedToBushnet) {
+                        checkAndNotifyAPConnectionState(connectivityManager, network, false)
+                    }
                 }
                 
                 override fun onLost(network: Network) {
-                    // This might be any network, so we need to check if we're still connected to our AP
-                    checkAndNotifyAPConnectionState(connectivityManager, null, false)
+                    // Only check if we were connected to bushnet or have attempted connection
+                    if (wasConnectedToBushnet || hasAttemptedBushnetConnection) {
+                        checkAndNotifyAPConnectionState(connectivityManager, null, false)
+                    }
                 }
                 
                 override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
-                    checkAndNotifyAPConnectionState(connectivityManager, network, true)
+                    // Only check capability changes if we're interested in bushnet
+                    if (hasAttemptedBushnetConnection || wasConnectedToBushnet) {
+                        checkAndNotifyAPConnectionState(connectivityManager, network, false)
+                    }
                 }
             }
             
@@ -251,7 +263,8 @@ class DevicePlugin : Plugin() {
             isMonitoringActive = true
             
             // Do an initial check of the connection state
-            checkAndNotifyAPConnectionState(connectivityManager, null, false)
+            // Use true for forcedCheck to ensure we get the initial state, but our logic will handle it appropriately
+            checkAndNotifyAPConnectionState(connectivityManager, null, true)
             
             Log.d(TAG, "Started AP connection monitoring")
         } catch (e: Exception) {
@@ -285,30 +298,53 @@ class DevicePlugin : Plugin() {
         coroutineScope.launch(Dispatchers.Main) {
             val isConnected = isConnectedToTargetAP(connectivityManager, network)
             
+            // Track connection state for session management
+            if (isConnected && !wasConnectedToBushnet) {
+                wasConnectedToBushnet = true
+            }
+            
             // Only notify if the state has changed
             if (isConnected != lastKnownAPState || forcedCheck) {
+                val previousState = lastKnownAPState
                 lastKnownAPState = isConnected
                 
-                // Don't automatically send DISCONNECTED on startup as it would disable the button
-                // Only send state changes after an explicit connection attempt or when forcedCheck is true
-                val stateObj = JSObject().apply {
-                    // During initial check, if disconnected, send "default" instead of "DISCONNECTED"
-                    put("state", if (isConnected) "CONNECTED" else 
-                        if (!forcedCheck && !isMonitoringInitialized) "default" else "DISCONNECTED")
+                // Determine if we should report this state change
+                val shouldReport = when {
+                    // Always report connections to bushnet
+                    isConnected -> true
+                    
+                    // Report disconnection only if:
+                    // 1. This is a forced check (explicit user action)
+                    // 2. We were previously connected to bushnet in this session
+                    // 3. We have attempted connection and monitoring is initialized
+                    !isConnected -> forcedCheck || wasConnectedToBushnet || (hasAttemptedBushnetConnection && isMonitoringInitialized)
+                    
+                    else -> false
                 }
-                notifyListeners("onAPConnectionStateChanged", stateObj)
                 
-                if (isConnected) {
-                    val result = JSObject().apply {
-                        put("status", "connected")
+                if (shouldReport) {
+                    val stateObj = JSObject().apply {
+                        // During initial check, if disconnected and never attempted connection, send "default"
+                        put("state", when {
+                            isConnected -> "CONNECTED"
+                            !forcedCheck && !isMonitoringInitialized && !hasAttemptedBushnetConnection -> "default"
+                            else -> "DISCONNECTED"
+                        })
                     }
-                    notifyListeners("onAPConnected", result)
-                } else if (forcedCheck || isMonitoringInitialized) {
-                    // Only notify disconnected after initial check
-                    val result = JSObject().apply {
-                        put("status", "disconnected") 
+                    notifyListeners("onAPConnectionStateChanged", stateObj)
+                    
+                    if (isConnected) {
+                        val result = JSObject().apply {
+                            put("status", "connected")
+                        }
+                        notifyListeners("onAPConnected", result)
+                    } else if (shouldReport && (forcedCheck || isMonitoringInitialized || wasConnectedToBushnet)) {
+                        // Only notify disconnected if we should report this change
+                        val result = JSObject().apply {
+                            put("status", "disconnected") 
+                        }
+                        notifyListeners("onAPDisconnected", result)
                     }
-                    notifyListeners("onAPDisconnected", result)
                 }
                 
                 isMonitoringInitialized = true
@@ -413,6 +449,9 @@ class DevicePlugin : Plugin() {
     @PluginMethod(returnType = PluginMethod.RETURN_PROMISE)
     fun connectToDeviceAP(call: PluginCall) {
         Log.d(TAG, "Connecting to device AP")
+
+        // Mark that we've attempted a bushnet connection
+        hasAttemptedBushnetConnection = true
 
         coroutineScope.launch(Dispatchers.Main) {
             try {
@@ -529,13 +568,12 @@ class DevicePlugin : Plugin() {
             
             // Update our last known state while we're at it
             if (connected != lastKnownAPState) {
-                lastKnownAPState = connected
+                // Mark that we've explicitly checked bushnet connection
+                hasAttemptedBushnetConnection = true
                 
-                // Trigger a state change notification
-                val stateObj = JSObject().apply {
-                    put("state", if (connected) "CONNECTED" else "DISCONNECTED") 
-                }
-                notifyListeners("onAPConnectionStateChanged", stateObj)
+                // Use our improved state change logic
+                val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                checkAndNotifyAPConnectionState(connectivityManager, null, true)
             }
             
             result.put("connected", connected)

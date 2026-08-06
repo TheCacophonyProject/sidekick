@@ -1,5 +1,6 @@
 #import "SentryNSDataSwizzling.h"
-#import "SentryLog.h"
+#import "SentryLogC.h"
+#import "SentrySwift.h"
 #import "SentrySwizzle.h"
 #import "SentryTraceOrigin.h"
 #import <objc/runtime.h>

@@ -10,7 +10,6 @@
 #endif
 #endif
 
-#import "Plugin.h"
 
 FOUNDATION_EXPORT double SentryCapacitorVersionNumber;
 FOUNDATION_EXPORT const unsigned char SentryCapacitorVersionString[];

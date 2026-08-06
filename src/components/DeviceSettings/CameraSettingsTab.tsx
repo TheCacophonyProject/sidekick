@@ -1,6 +1,6 @@
-import type { AudioMode, DeviceId } from "~/contexts/Device";
+import type { DeviceId } from "~/contexts/Device";
 import { useDevice } from "~/contexts/Device";
-import type { Frame, Region, Track } from "~/contexts/Device/Camera";
+import type { Frame } from "~/contexts/Device/Camera";
 import {
 	Show,
 	Switch,
@@ -9,26 +9,26 @@ import {
 	createMemo,
 	createResource,
 	createSignal,
-	on,
 	onCleanup,
 	onMount,
 } from "solid-js";
-import {
-	FaSolidCheck,
-	FaSolidVideo,
-	FaSolidSpinner,
-} from "solid-icons/fa";
+import { FaSolidCheck, FaSolidVideo, FaSolidSpinner } from "solid-icons/fa";
 import { ImCross } from "solid-icons/im";
 import { VsArrowSwap } from "solid-icons/vs";
-import FieldWrapper from "~/components/Field";
+import { FiSettings } from "solid-icons/fi";
+import { SubPageNavigation } from "~/components/UI/SubPageNavigation";
+import { SettingsListItem } from "~/components/UI/SettingsListItem";
+import { DeviceControlTab } from "./DeviceControlTab";
+import { useSearchParams } from "@solidjs/router";
 
 type CameraCanvas = HTMLCanvasElement | undefined;
-const colours = ["#ff0000", "#00ff00", "#ffff00", "#80ffff"];
 type SettingProps = { deviceId: DeviceId };
 
 export function CameraSettingsTab(props: SettingProps) {
 	const context = useDevice();
 	const device = () => context.devices.get(props.deviceId);
+	const [params, setParams] = useSearchParams();
+	const currentPage = () => params.page || "main";
 	const [audioStatus, { refetch: refetchAudioStatus }] = createResource(
 		props.deviceId,
 		async (id) => {
@@ -162,85 +162,6 @@ export function CameraSettingsTab(props: SettingProps) {
 		return [min, max];
 	}
 
-	function scalePixel(pixel: number, min: number, range: number): number {
-		return Math.min(255, ((pixel - min) / range) * 255.0);
-	}
-
-	function renderTracks(
-		context: CanvasRenderingContext2D,
-		tracks: Track[] | null,
-	) {
-		if (!tracks) return;
-		for (let index = 0; index < tracks.length; index++) {
-			const track = tracks[index];
-			const label = track.predictions?.[0]?.label || null;
-			drawRectWithText(
-				context,
-				track.positions[track.positions.length - 1],
-				label,
-				index,
-			);
-		}
-	}
-	function drawRectWithText(
-		context: CanvasRenderingContext2D,
-		region: Region,
-		what: string | null,
-		trackIndex: number,
-	): void {
-		const lineWidth = 1;
-		const outlineWidth = lineWidth + 4;
-		const halfOutlineWidth = outlineWidth / 2;
-
-		const x = Math.max(
-			halfOutlineWidth,
-			Math.round(region.x) - halfOutlineWidth,
-		);
-		const y = Math.max(
-			halfOutlineWidth,
-			Math.round(region.y) - halfOutlineWidth,
-		);
-		const width = Math.round(
-			Math.min(context.canvas.width - region.x, Math.round(region.width)),
-		);
-		const height = Math.round(
-			Math.min(context.canvas.height - region.y, Math.round(region.height)),
-		);
-		context.lineJoin = "round";
-		context.lineWidth = outlineWidth;
-		context.strokeStyle = "rgba(0, 0, 0,  0.5)";
-		context.beginPath();
-		context.strokeRect(x, y, width, height);
-		context.strokeStyle = colours[trackIndex % colours.length];
-		context.lineWidth = lineWidth;
-		context.beginPath();
-		context.strokeRect(x, y, width, height);
-		// If exporting, show all the best guess animal tags, if not unknown
-		if (what !== null) {
-			const text = what;
-			const textHeight = 9;
-			const textWidth = context.measureText(text).width;
-			const marginX = 2;
-			const marginTop = 2;
-			let textX =
-				Math.min(context.canvas.width, region.x) - (textWidth + marginX);
-			let textY = region.y + region.height + textHeight + marginTop;
-			// Make sure the text doesn't get clipped off if the box is near the frame edges
-			if (textY + textHeight > context.canvas.height) {
-				textY = region.y - textHeight;
-			}
-			if (textX < 0) {
-				textX = region.x + marginX;
-			}
-			context.font = "13px sans-serif";
-			context.lineWidth = 4;
-			context.strokeStyle = "rgba(0, 0, 0, 0.5)";
-			context.strokeText(text, textX, textY);
-			context.fillStyle = "white";
-			context.fillText(text, textX, textY);
-		}
-	}
-
 	const camera = createMemo(() => context.getDeviceCamera(id()));
 	const [isRecieving, setIsRecieving] = createSignal(false);
 
@@ -322,18 +243,10 @@ export function CameraSettingsTab(props: SettingProps) {
 		const windows = config()?.values.windows;
 		const windowsDefault = config()?.defaults.windows;
 		if (!windows || !windowsDefault) return false;
-		if (
-			!windows.PowerOn &&
-			!windows.PowerOff &&
-			!windows.StartRecording &&
-			!windows.StopRecording
-		)
-			return true;
+		if (!windows.StartRecording && !windows.StopRecording) return true;
 		if (
 			windows.StartRecording === windowsDefault.StartRecording &&
-			windows.StopRecording === windowsDefault.StopRecording &&
-			windows.PowerOn === windowsDefault.PowerOn &&
-			windows.PowerOff === windowsDefault.PowerOff
+			windows.StopRecording === windowsDefault.StopRecording
 		) {
 			return true;
 		}
@@ -345,7 +258,8 @@ export function CameraSettingsTab(props: SettingProps) {
 		const stop = "12:00";
 		const windows = config()?.values.windows;
 		if (!windows) return false;
-		if (windows.PowerOn === start && windows.PowerOff === stop) return true;
+		if (windows.StartRecording === start && windows.StopRecording === stop)
+			return true;
 		return false;
 	};
 
@@ -358,7 +272,7 @@ export function CameraSettingsTab(props: SettingProps) {
 			setShowCustom(false);
 			const on = "12:00";
 			const off = "12:00";
-			const res = await context.setRecordingWindow(id(), on, off);
+			await context.setRecordingWindow(id(), on, off);
 			refetch();
 		} catch (error) {
 			console.error("Set 24 Hour Error: ", error);
@@ -370,9 +284,9 @@ export function CameraSettingsTab(props: SettingProps) {
 			setShowCustom(false);
 			const defaults = config()?.defaults;
 			if (!defaults) return;
-			const on = defaults.windows?.PowerOn ?? "-30min";
-			const off = defaults.windows?.PowerOff ?? "+30min";
-			const res = await context.setRecordingWindow(id(), on, off);
+			const on = defaults.windows?.StartRecording ?? "-30m";
+			const off = defaults.windows?.StopRecording ?? "+30m";
+			await context.setRecordingWindow(id(), on, off);
 			refetch();
 		} catch (error) {
 			console.error(error);
@@ -389,8 +303,8 @@ export function CameraSettingsTab(props: SettingProps) {
 		if (config.loading || config.error || !conf?.values.windows) return;
 		if (isCustom()) {
 			setShowCustom(true);
-			setLowerTime(timeToPercent(conf.values.windows.PowerOn));
-			setUpperTime(timeToPercent(conf.values.windows.PowerOff));
+			setLowerTime(timeToPercent(conf.values.windows.StartRecording));
+			setUpperTime(timeToPercent(conf.values.windows.StopRecording));
 		}
 	});
 	const percentToTime = (percent: number): string => {
@@ -436,9 +350,9 @@ export function CameraSettingsTab(props: SettingProps) {
 		const conf = config();
 		if (config.loading || config.error || !conf?.values?.windows) return true;
 
-		if (lowerTime() !== timeToPercent(conf.values.windows.PowerOn))
+		if (lowerTime() !== timeToPercent(conf.values.windows.StartRecording))
 			return false;
-		if (upperTime() !== timeToPercent(conf.values.windows.PowerOff))
+		if (upperTime() !== timeToPercent(conf.values.windows.StopRecording))
 			return false;
 		return true;
 	};
@@ -460,8 +374,19 @@ export function CameraSettingsTab(props: SettingProps) {
 		console.log("Audio Mode: ", audioMode());
 	});
 
-	return (
-		<section>
+	const navigateToPage = (page: string) => {
+		setParams({ ...params, page });
+	};
+
+	const navigateBack = () => {
+		setParams({ ...params, page: undefined });
+	};
+
+	// Check if device is TC2 to show Device Control option
+	const showDeviceControl = () => device()?.type === "tc2";
+
+	const MainCameraSettings = () => (
+		<>
 			<Switch>
 				<Match when={audioMode() === "AudioOnly"}>
 					<p class="w-full p-8 text-center text-2xl text-neutral-600">
@@ -646,6 +571,33 @@ export function CameraSettingsTab(props: SettingProps) {
 					</div>
 				</Show>
 			</div>
+			<Show when={showDeviceControl()}>
+				<div class="mt-4 px-4">
+					<SettingsListItem
+						title="On-Device Processing"
+						description="Configure AI and device control"
+						icon={<FiSettings size={20} />}
+						onClick={() => navigateToPage("device-control")}
+					/>
+				</div>
+			</Show>
+		</>
+	);
+
+	return (
+		<section class="pb-2">
+			<Switch>
+				<Match when={currentPage() === "main"}>
+					<MainCameraSettings />
+				</Match>
+				<Match when={currentPage() === "device-control"}>
+					<SubPageNavigation
+						title="On-Device Processing"
+						onBack={navigateBack}
+					/>
+					<DeviceControlTab deviceId={props.deviceId} />
+				</Match>
+			</Switch>
 		</section>
 	);
 }

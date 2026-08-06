@@ -21,10 +21,12 @@ FOUNDATION_EXPORT const unsigned char SentryVersionString[];
 #    import <SentryWithoutUIKit/SentryError.h>
 #    import <SentryWithoutUIKit/SentryEvent.h>
 #    import <SentryWithoutUIKit/SentryException.h>
+#    import <SentryWithoutUIKit/SentryFeedbackAPI.h>
 #    import <SentryWithoutUIKit/SentryFrame.h>
 #    import <SentryWithoutUIKit/SentryGeo.h>
 #    import <SentryWithoutUIKit/SentryHttpStatusCodeRange.h>
 #    import <SentryWithoutUIKit/SentryHub.h>
+#    import <SentryWithoutUIKit/SentryIntegrationProtocol.h>
 #    import <SentryWithoutUIKit/SentryMeasurementUnit.h>
 #    import <SentryWithoutUIKit/SentryMechanism.h>
 #    import <SentryWithoutUIKit/SentryMechanismMeta.h>
@@ -33,7 +35,6 @@ FOUNDATION_EXPORT const unsigned char SentryVersionString[];
 #    import <SentryWithoutUIKit/SentryOptions.h>
 #    import <SentryWithoutUIKit/SentryReplayApi.h>
 #    import <SentryWithoutUIKit/SentryRequest.h>
-#    import <SentryWithoutUIKit/SentrySDK.h>
 #    import <SentryWithoutUIKit/SentrySampleDecision.h>
 #    import <SentryWithoutUIKit/SentrySamplingContext.h>
 #    import <SentryWithoutUIKit/SentryScope.h>
@@ -48,5 +49,4 @@ FOUNDATION_EXPORT const unsigned char SentryVersionString[];
 #    import <SentryWithoutUIKit/SentryTraceHeader.h>
 #    import <SentryWithoutUIKit/SentryTransactionContext.h>
 #    import <SentryWithoutUIKit/SentryUser.h>
-#    import <SentryWithoutUIKit/SentryUserFeedback.h>
 #endif // __has_include(<SentryWithoutUIKit/Sentry.h>)

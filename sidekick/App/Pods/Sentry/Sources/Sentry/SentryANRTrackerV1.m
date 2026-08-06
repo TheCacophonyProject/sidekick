@@ -1,10 +1,7 @@
 #import "SentryANRTrackerV1.h"
-#import "SentryCrashWrapper.h"
 #import "SentryDependencyContainer.h"
-#import "SentryDispatchQueueWrapper.h"
-#import "SentryLog.h"
+#import "SentryLogC.h"
 #import "SentrySwift.h"
-#import "SentryThreadWrapper.h"
 #import <stdatomic.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -16,7 +13,7 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
     kSentryANRTrackerStopping
 };
 
-@interface SentryANRTrackerV1 ()
+@interface SentryANRTrackerV1 () <SentryANRTracker>
 
 @property (nonatomic, strong) SentryCrashWrapper *crashWrapper;
 @property (nonatomic, strong) SentryDispatchQueueWrapper *dispatchQueueWrapper;
@@ -48,6 +45,11 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
     return self;
 }
 
+- (id<SentryANRTracker>)asProtocol
+{
+    return self;
+}
+
 - (void)detectANRs
 {
     NSUUID *threadID = [NSUUID UUID];
@@ -65,7 +67,7 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
     }
 
     __block atomic_int ticksSinceUiUpdate = 0;
-    __block BOOL reported = NO;
+    __block atomic_bool reported = false;
 
     NSInteger reportThreshold = 5;
     NSTimeInterval sleepInterval = self.timeoutInterval / reportThreshold;
@@ -88,7 +90,8 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
         [self.dispatchQueueWrapper dispatchAsyncOnMainQueue:^{
             atomic_store_explicit(&ticksSinceUiUpdate, 0, memory_order_relaxed);
 
-            if (reported) {
+            bool isReported = atomic_load_explicit(&reported, memory_order_relaxed);
+            if (isReported) {
                 SENTRY_LOG_WARN(@"ANR stopped.");
 
                 // The ANR stopped, don't block the main thread with calling ANRStopped listeners.
@@ -99,7 +102,7 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
                 [self.dispatchQueueWrapper dispatchAsyncWithBlock:^{ [self ANRStopped]; }];
             }
 
-            reported = NO;
+            atomic_store_explicit(&reported, false, memory_order_relaxed);
         }];
 
         [self.threadWrapper sleepForTimeInterval:sleepInterval];
@@ -116,9 +119,12 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
             continue;
         }
 
-        if (atomic_load_explicit(&ticksSinceUiUpdate, memory_order_relaxed) >= reportThreshold
-            && !reported) {
-            reported = YES;
+        bool isReported = atomic_load_explicit(&reported, memory_order_relaxed);
+        int currentTicks = atomic_load_explicit(&ticksSinceUiUpdate, memory_order_relaxed);
+
+        if (currentTicks >= reportThreshold && !isReported) {
+
+            atomic_store_explicit(&reported, true, memory_order_relaxed);
 
             if (![self.crashWrapper isApplicationInForeground]) {
                 SENTRY_LOG_DEBUG(@"Ignoring ANR because the app is in the background");

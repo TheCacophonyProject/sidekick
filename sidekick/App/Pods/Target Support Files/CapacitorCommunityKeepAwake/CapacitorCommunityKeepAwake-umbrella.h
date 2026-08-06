@@ -10,7 +10,6 @@
 #endif
 #endif
 
-#import "KeepAwakePlugin.h"
 
 FOUNDATION_EXPORT double CapacitorCommunityKeepAwakeVersionNumber;
 FOUNDATION_EXPORT const unsigned char CapacitorCommunityKeepAwakeVersionString[];

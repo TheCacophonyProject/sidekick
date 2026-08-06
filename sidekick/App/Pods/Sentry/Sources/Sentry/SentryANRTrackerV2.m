@@ -2,13 +2,10 @@
 
 #if SENTRY_HAS_UIKIT
 
-#    import "SentryCrashWrapper.h"
 #    import "SentryDependencyContainer.h"
-#    import "SentryDispatchQueueWrapper.h"
 #    import "SentryFramesTracker.h"
-#    import "SentryLog.h"
+#    import "SentryLogC.h"
 #    import "SentrySwift.h"
-#    import "SentryThreadWrapper.h"
 #    import "SentryTime.h"
 #    import <stdatomic.h>
 
@@ -21,7 +18,7 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
     kSentryANRTrackerStopping
 };
 
-@interface SentryANRTrackerV2 ()
+@interface SentryANRTrackerV2 () <SentryANRTracker>
 
 @property (nonatomic, strong) SentryCrashWrapper *crashWrapper;
 @property (nonatomic, strong) SentryDispatchQueueWrapper *dispatchQueueWrapper;
@@ -53,6 +50,11 @@ typedef NS_ENUM(NSInteger, SentryANRTrackerState) {
         threadLock = [[NSObject alloc] init];
         state = kSentryANRTrackerNotRunning;
     }
+    return self;
+}
+
+- (id<SentryANRTracker>)asProtocol
+{
     return self;
 }
 

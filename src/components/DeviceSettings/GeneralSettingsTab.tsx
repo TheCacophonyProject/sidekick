@@ -1,9 +1,7 @@
 import { A, useSearchParams } from "@solidjs/router";
 import { Dialog as Prompt } from "@capacitor/dialog";
 import { AiOutlineInfoCircle } from "solid-icons/ai";
-import {
-	RiArrowsArrowRightSLine,
-} from "solid-icons/ri";
+import { RiArrowsArrowRightSLine } from "solid-icons/ri";
 import {
 	Match,
 	Show,
@@ -58,7 +56,11 @@ export function GroupSelect(props: SettingProps) {
 			log.logEvent("group_change", { name: v });
 			const [currId, success] = await context.changeGroup(id(), v, token);
 			if (params.deviceSettings) {
-				setSearchParams({ deviceSettings: currId, tab: params.tab });
+				setSearchParams({
+					deviceSettings: currId,
+					tab: params.tab,
+					page: null,
+				});
 			}
 			if (params.setupDevice) {
 				setSearchParams({ setupDevice: currId, step: params.step });
@@ -221,20 +223,22 @@ export function GeneralSettingsTab(props: SettingProps) {
 
 	const [lowPowerMode, setLowPowerMode] = createSignal<boolean | null>(null);
 
-	onMount(async () => {
-		try {
-			const res = await context.getDeviceConfig(deviceIdState());
-			if (res) {
-				setLowPowerMode(
-					res.values.thermalRecorder?.UseLowPowerMode ??
-					res.defaults["thermal-recorder"]?.UseLowPowerMode ??
-					null,
-				);
+		onMount(async () => {
+			try {
+				const res = await context.getDeviceConfig(deviceIdState());
+				console.log("DEVICE CONFIG", res);
+				if (res) {
+					setLowPowerMode(
+						res.values.thermalRecorder?.UseLowPowerMode ??
+							res.defaults["thermal-recorder"]?.UseLowPowerMode ??
+							res.defaults.thermalRecorder?.UseLowPowerMode ??
+							null,
+					);
+				}
+			} catch (error) {
+				console.error("Error loading device config:", error);
 			}
-		} catch (error) {
-			console.error("Error loading device config:", error);
-		}
-	});
+		});
 
 	onMount(async () => {
 		user.refetchGroups();
@@ -264,6 +268,7 @@ export function GeneralSettingsTab(props: SettingProps) {
 		try {
 			setLowPowerMode(v);
 			const res = await context.setLowPowerMode(deviceIdState(), v);
+			console.log("SET LOW POWER MODE RESULT", res);
 			if (res === null) {
 				console.error("Failed to set low power mode");
 			}
@@ -277,7 +282,6 @@ export function GeneralSettingsTab(props: SettingProps) {
 			<FieldWrapper type="text" value={name()} title="Name" />
 			<GroupSelect deviceId={id()} />
 			<FieldWrapper type="text" value={saltId()} title="ID" />
-
 			<Show when={lowPowerMode() !== null}>
 				<FieldWrapper type="custom" title={"Power Mode"}>
 					<div class="flex w-full items-center gap-x-2 bg-gray-100 px-1">
@@ -338,8 +342,9 @@ export function GeneralSettingsTab(props: SettingProps) {
 							<div
 								class="transition-width m-1 h-4 rounded-full bg-blue-500 duration-500"
 								style={{
-									width: `${context.getDeviceUpdating(id())?.UpdateProgressPercentage
-										}%`,
+									width: `${
+										context.getDeviceUpdating(id())?.UpdateProgressPercentage
+									}%`,
 								}}
 							/>
 							<span class="absolute left-1/2 top-1 -translate-x-1/2 transform text-xs text-white">

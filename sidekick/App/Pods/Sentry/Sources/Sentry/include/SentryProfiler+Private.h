@@ -10,7 +10,10 @@
 @class SentryId;
 @class SentryMetricProfiler;
 @class SentryOptions;
+@class SentryProfileConfiguration;
+@class SentryProfileOptions;
 @class SentryProfilerState;
+@class SentrySamplerDecision;
 @class SentryTransaction;
 
 #    if SENTRY_HAS_UIKIT
@@ -20,12 +23,27 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef struct {
+    BOOL shouldProfile;
+    /** Only needed for trace launch profiling or continuous profiling v2 with trace lifecycle;
+     * unused with continuous profiling. */
+    SentrySamplerDecision *_Nullable tracesDecision;
+    SentrySamplerDecision *_Nullable profilesDecision;
+} SentryLaunchProfileDecision;
 /**
  * Perform necessary profiler tasks that should take place when the SDK starts: configure the next
  * launch's profiling, stop tracer profiling if no automatic performance transaction is running,
  * start the continuous profiler if enabled and not profiling from launch.
  */
-SENTRY_EXTERN void sentry_manageTraceProfilerOnStartSDK(SentryOptions *options, SentryHub *hub);
+SENTRY_EXTERN void sentry_sdkInitProfilerTasks(SentryOptions *options, SentryHub *hub);
+
+SENTRY_EXTERN SentryProfileConfiguration *_Nullable sentry_profileConfiguration;
+
+SENTRY_EXTERN BOOL sentry_isLaunchProfileCorrelatedToTraces(void);
+
+SENTRY_EXTERN void sentry_reevaluateSessionSampleRate(void);
+
+SENTRY_EXTERN void sentry_configureContinuousProfiling(SentryOptions *options);
 
 /**
  * A wrapper around the low-level components used to gather sampled backtrace profiles.

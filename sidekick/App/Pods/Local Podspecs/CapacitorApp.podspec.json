@@ -1,13 +1,13 @@
 {
   "name": "CapacitorApp",
-  "version": "7.0.1",
+  "version": "7.1.0",
   "summary": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state.",
   "license": "MIT",
   "homepage": "https://capacitorjs.com",
   "authors": "Ionic <hi@ionicframework.com>",
   "source": {
     "git": "https://github.com/ionic-team/capacitor-plugins.git",
-    "tag": "@capacitor/app@7.0.1"
+    "tag": "@capacitor/app@7.1.0"
   },
   "source_files": [
     "ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}",
@@ -17,9 +17,7 @@
     "ios": "14.0"
   },
   "dependencies": {
-    "Capacitor": [
-
-    ]
+    "Capacitor": []
   },
   "swift_versions": "5.1",
   "swift_version": "5.1"
