@@ -1,12 +1,14 @@
 #import <Foundation/Foundation.h>
-
 #if __has_include(<Sentry/Sentry.h>)
 #    import <Sentry/SentryDefines.h>
-#    import <Sentry/SentrySerializable.h>
-#else
+#elif __has_include(<SentryWithoutUIKit/Sentry.h>)
 #    import <SentryWithoutUIKit/SentryDefines.h>
-#    import <SentryWithoutUIKit/SentrySerializable.h>
+#else
+#    import <SentryDefines.h>
 #endif
+#if !SDK_V9
+#    import SENTRY_HEADER(SentrySerializable)
+#endif // !SDK_V9
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -22,7 +24,10 @@ NS_ASSUME_NONNULL_BEGIN
 @class SentryUser;
 
 NS_SWIFT_NAME(Event)
-@interface SentryEvent : NSObject <SentrySerializable>
+@interface SentryEvent : NSObject
+#if !SDK_V9
+                         <SentrySerializable>
+#endif // !SDK_V9
 
 /**
  * This will be set by the initializer.
@@ -181,7 +186,7 @@ NS_SWIFT_NAME(Event)
 /**
  * Init an @c SentryEvent will set all needed fields by default.
  */
-- (instancetype)init;
+- (instancetype)init NS_DESIGNATED_INITIALIZER;
 
 /**
  * Init a @c SentryEvent with a @c SentryLevelError and set all needed fields by default.
@@ -193,26 +198,6 @@ NS_SWIFT_NAME(Event)
  * @param error The error of the event.
  */
 - (instancetype)initWithError:(NSError *)error;
-
-@end
-
-/**
- * Subclass of SentryEvent so we can add the Decodable implementation via a Swift extension. We need
- * this due to our mixed use of public Swift and ObjC classes. We could avoid this class by
- * converting SentryReplayEvent back to ObjC, but we rather accept this tradeoff as we want to
- * convert all public classes to Swift in the future. This class needs to be public as we can't add
- * the Decodable extension implementation to a class that is not public.
- *
- * @note: We can’t add the extension for Decodable directly on SentryEvent, because we get an error
- * in SentryReplayEvent: 'required' initializer 'init(from:)' must be provided by subclass of
- * 'Event' Once we add the initializer with required convenience public init(from decoder: any
- * Decoder) throws { fatalError("init(from:) has not been implemented")
- * }
- * we get the error initializer 'init(from:)' is declared in extension of 'Event' and cannot be
- * overridden. Therefore, we add the Decodable implementation not on the Event, but to a subclass of
- * the event.
- */
-@interface SentryEventDecodable : SentryEvent
 
 @end
 

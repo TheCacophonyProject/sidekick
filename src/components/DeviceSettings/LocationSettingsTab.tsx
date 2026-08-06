@@ -40,7 +40,10 @@ import type { Location } from "~/database/Entities/Location";
 type SettingProps = { deviceId: DeviceId };
 
 // Helper component for item upload status
-const ItemUploadStatus = (props: { status: "pending" | "uploaded" | "uploading" | "error", type: string }) => (
+const ItemUploadStatus = (props: {
+	status: "pending" | "uploaded" | "uploading" | "error";
+	type: string;
+}) => (
 	<div class="flex items-center space-x-1">
 		<Switch>
 			<Match when={props.status === "pending"}>
@@ -76,7 +79,7 @@ export function LocationSettingsTab(props: SettingProps) {
 	// Location state management
 	const [locationRes, { refetch: refetchLocation }] =
 		context.getLocationByDevice(id());
-	const location = createMemo(() => locationRes());
+	const location = () => locationRes.latest;
 	const [newName, setNewName] = createSignal("");
 	const [photoFileToUpload, setPhotoFileToUpload] = createSignal<{
 		url: string;
@@ -129,25 +132,39 @@ export function LocationSettingsTab(props: SettingProps) {
 	// Status helper functions
 	const getLocationStatus = () => {
 		const loc = location();
-		if (isSyncing() && (loc?.needsCreation || loc?.updateName || newName())) return "uploading";
+		if (isSyncing() && (loc?.needsCreation || loc?.updateName || newName()))
+			return "uploading";
 		if (loc?.needsCreation || loc?.updateName || newName()) return "pending";
 		return "uploaded";
 	};
 
 	const getPhotoStatus = () => {
-		if (isSyncing() && (photoFileToUpload() || currentPhoto()?.serverStatus === "pending-upload")) return "uploading";
-		if (photoFileToUpload() || currentPhoto()?.serverStatus === "pending-upload") return "pending";
+		if (
+			isSyncing() &&
+			(photoFileToUpload() || currentPhoto()?.serverStatus === "pending-upload")
+		)
+			return "uploading";
+		if (
+			photoFileToUpload() ||
+			currentPhoto()?.serverStatus === "pending-upload"
+		)
+			return "pending";
 		if (currentPhoto()?.serverStatus === "pending-deletion") return "pending";
 		return "uploaded";
 	};
 
-	// Mobile-friendly status messages  
+	// Mobile-friendly status messages
 	const getUploadStatusMessage = () => {
 		const items = [];
 		const loc = location();
 
-		if (loc?.needsCreation || loc?.updateName || newName()) items.push("location");
-		if (photoFileToUpload() || currentPhoto()?.serverStatus === "pending-upload") items.push("photo");
+		if (loc?.needsCreation || loc?.updateName || newName())
+			items.push("location");
+		if (
+			photoFileToUpload() ||
+			currentPhoto()?.serverStatus === "pending-upload"
+		)
+			items.push("photo");
 
 		if (items.length === 0) return null;
 
@@ -155,7 +172,8 @@ export function LocationSettingsTab(props: SettingProps) {
 		const isOnline = context.apState() !== "connected";
 
 		if (isSyncing()) return `Syncing ${itemsText}`;
-		if (isOnline) return `${itemsText.charAt(0).toUpperCase() + itemsText.slice(1)} ready`;
+		if (isOnline)
+			return `${itemsText.charAt(0).toUpperCase() + itemsText.slice(1)} ready`;
 		return "Changes will upload when next online.";
 	};
 
@@ -306,30 +324,20 @@ export function LocationSettingsTab(props: SettingProps) {
 								reject("Failed converting canvas to Blob.");
 								return;
 							}
-
-							// Convert Blob → base64, so we can save via Capacitor Filesystem
 							const base64Data = await blobToBase64(blob);
 							const fileName = `cropped_${Date.now()}.jpg`;
 
-							// Write the file to the device (using a temporary location)
-							await Filesystem.writeFile({
+							const file = await Filesystem.writeFile({
 								path: fileName,
 								data: base64Data,
-								directory: Directory.Cache, // or Directory.Data if you prefer
+								directory: Directory.Documents,
 							});
 
-							// Grab the URI so we can later upload
-							const fileUri = await Filesystem.getUri({
-								path: fileName,
-								directory: Directory.Cache,
-							});
-
-							// Create an object URL for quick previews in the app (optional)
 							const objectUrl = URL.createObjectURL(blob);
 
 							resolve({
-								url: objectUrl, // for immediate preview (e.g. <img src={url} />)
-								filePath: fileUri.uri, // the actual local URI of the cropped file
+								url: objectUrl,
+								filePath: file.uri,
 							});
 						},
 						"image/jpeg",
@@ -453,13 +461,14 @@ export function LocationSettingsTab(props: SettingProps) {
 
 	onMount(async () => {
 		await context.refetchDeviceLocToUpdate();
-	});
-	onCleanup(async () => {
-		console.log("Cleaning up LocationSettingsTab");
-		// make sure to save any unsaved changes
-		if (hasChangesToUpload() || hasPendingChanges()) {
-			await saveLocationSettings();
-		}
+		
+		onCleanup(async () => {
+			console.log("Cleaning up LocationSettingsTab");
+			// make sure to save any unsaved changes
+			if (hasChangesToUpload() || hasPendingChanges()) {
+				await saveLocationSettings();
+			}
+		});
 	});
 
 	return (
@@ -516,12 +525,19 @@ export function LocationSettingsTab(props: SettingProps) {
 				</div>
 
 				<Show when={hasChangesToUpload() || hasPendingChanges()}>
-					<div class={`mb-2 flex items-start space-x-2 rounded-lg border p-2 transition-all duration-300 ${context.apState() === "connected" ? 'border-blue-400 bg-blue-50' : 'border-orange-400 bg-orange-50'
-						}`}>
+					<div
+						class={`mb-2 flex items-start space-x-2 rounded-lg border p-2 transition-all duration-300 ${context.apState() === "connected"
+							? "border-blue-400 bg-blue-50"
+							: "border-orange-400 bg-orange-50"
+							}`}
+					>
 						<div class="flex-shrink-0 mt-0.5">
 							<Switch>
 								<Match when={isSyncing()}>
-									<FaSolidSpinner size={16} class="animate-spin text-blue-500" />
+									<FaSolidSpinner
+										size={16}
+										class="animate-spin text-blue-500"
+									/>
 								</Match>
 								<Match when={context.apState() === "connected"}>
 									<FiCloud size={16} class="text-blue-500" />
@@ -532,14 +548,16 @@ export function LocationSettingsTab(props: SettingProps) {
 							</Switch>
 						</div>
 						<div class="flex-1">
-							<p class={`text-sm ${context.apState() === "connected" ? 'text-blue-800' : 'text-orange-800'
-								}`}>
+							<p
+								class={`text-sm ${context.apState() === "connected"
+									? "text-blue-800"
+									: "text-orange-800"
+									}`}
+							>
 								{getUploadStatusMessage()}
 							</p>
 							<Show when={context.apState() !== "connected" && !isSyncing()}>
-								<p class="text-xs text-orange-600 mt-1">
-									Saved locally
-								</p>
+								<p class="text-xs text-orange-600 mt-1">Saved locally</p>
 							</Show>
 						</div>
 					</div>
@@ -548,14 +566,31 @@ export function LocationSettingsTab(props: SettingProps) {
 				<Switch>
 					<Match when={updateLocation() === "needsUpdate"}>
 						<div class="flex w-full flex-col items-center">
+							<div class="mb-3 w-full rounded-lg bg-yellow-50 border border-yellow-300 p-3">
+								<div class="flex items-start space-x-2">
+									<FiMapPin size={20} class="text-yellow-600 mt-0.5 flex-shrink-0" />
+									<div class="flex-1">
+										<p class="text-sm font-medium text-yellow-800">Location Update Required</p>
+										<p class="text-xs text-yellow-700 mt-1">
+											<Show
+												when={locCoords()?.latitude === 0 && locCoords()?.longitude === 0}
+												fallback="The device has moved from its last known location."
+											>
+												Device location is not set. Please update to current location.
+											</Show>
+										</p>
+									</div>
+								</div>
+							</div>
 							<button
 								class="
-				  my-2 flex items-center space-x-2 self-center 
+				  flex items-center space-x-2 self-center 
 				  rounded-md bg-blue-500 
 				  px-3 py-2 
 				  text-xs 
 				  text-white disabled:cursor-not-allowed
 				  disabled:opacity-50 sm:text-sm
+				  hover:bg-blue-600 transition-colors
 				"
 								onClick={async () => {
 									try {
@@ -589,7 +624,6 @@ export function LocationSettingsTab(props: SettingProps) {
 						</div>
 					</Match>
 					<Match when={updateLocation() === "current"}>
-
 						<div class="space-y-1">
 							<Show when={locCoords()}>
 								<FieldWrapper type="custom" title="Coordinates">
@@ -602,11 +636,14 @@ export function LocationSettingsTab(props: SettingProps) {
 								</FieldWrapper>
 							</Show>
 
-							<FieldWrapper type="custom" title={
-								<div class="flex items-center justify-between w-full">
-									<span>Name</span>
-								</div>
-							}>
+							<FieldWrapper
+								type="custom"
+								title={
+									<div class="flex items-center justify-between w-full">
+										<span>Name</span>
+									</div>
+								}
+							>
 								<input
 									type="text"
 									disabled={isSyncing()}
@@ -682,7 +719,9 @@ export function LocationSettingsTab(props: SettingProps) {
 												<FaSolidSpinner size={36} class="animate-spin" />
 											</Show>
 											<p class="text-xs text-gray-600 sm:text-sm">
-												{isSyncing() ? "Saving..." : "Add Camera Perspective Photo"}
+												{isSyncing()
+													? "Saving..."
+													: "Add Camera Perspective Photo"}
 											</p>
 										</button>
 									</Match>
@@ -695,3 +734,4 @@ export function LocationSettingsTab(props: SettingProps) {
 		</section>
 	);
 }
+

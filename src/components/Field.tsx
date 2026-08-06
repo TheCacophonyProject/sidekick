@@ -235,11 +235,19 @@ type FieldWrapperCustomProps = Omit<FieldWrapper, "value"> & {
 	type: "custom";
 	children: JSX.Element;
 };
+type FieldWrapperToggleProps = {
+	type: "toggle";
+	checked: boolean;
+	onChange: (value: boolean) => void;
+	disabled?: boolean;
+	message?: string;
+};
 
 type FieldWrapperProps =
 	| FieldWrapperTextProps
 	| FieldWrapperDropdownProps
-	| FieldWrapperCustomProps;
+	| FieldWrapperCustomProps
+	| FieldWrapperToggleProps;
 
 const FieldWrapper: Component<
 	FieldWrapperProps & {
@@ -248,7 +256,7 @@ const FieldWrapper: Component<
 > = (props) => {
 	return (
 		<div class="flex rounded-lg border">
-			<div class="min-w-24 items-center justify-start border-r bg-gray-50 px-4 py-2">
+			<div class="flex min-w-24 items-center justify-start border-r bg-gray-50 px-4 py-2">
 				<div class="text-xs font-light text-gray-700">
 					<Show
 						when={typeof props.title === "string" && props.title}
@@ -283,6 +291,34 @@ const FieldWrapper: Component<
 							message={val().message}
 						/>
 					)}
+				</Match>
+				<Match when={props.type === "toggle" && props}>
+					{(val) => {
+						const toggleProps = val() as FieldWrapperToggleProps;
+						return (
+							<div class="flex w-full items-center justify-between px-4 py-2">
+								<button
+									type="button"
+									role="switch"
+									aria-checked={toggleProps.checked}
+									onClick={() => toggleProps.onChange(!toggleProps.checked)}
+									disabled={toggleProps.disabled}
+									class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${toggleProps.checked ? "bg-green-500" : "bg-gray-300"
+										} ${toggleProps.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+								>
+									<span
+										class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${toggleProps.checked ? "translate-x-6" : "translate-x-1"
+											}`}
+									/>
+								</button>
+								<Show when={toggleProps.message}>
+									<span class="ml-2 text-xs text-gray-500">
+										{toggleProps.message}
+									</span>
+								</Show>
+							</div>
+						);
+					}}
 				</Match>
 				<Match when={props.type === "custom" && props}>
 					{(val) => val().children}

@@ -272,11 +272,7 @@ export default function DeviceCamera(host: string) {
     const heartbeatFiber = yield* _(Effect.fork(applyHeartbeat(connectedWS)));
 
     yield* _(
-      Effect.addFinalizer(() =>
-        Effect.sync(() => {
-          Effect.runSync(Fiber.interrupt(heartbeatFiber));
-        })
-      )
+      Effect.addFinalizer(() => Fiber.interrupt(heartbeatFiber))
     );
 
     yield* _(

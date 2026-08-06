@@ -1,15 +1,15 @@
-
 #if __has_include(<Sentry/Sentry.h>)
 #    import <Sentry/SentryDefines.h>
-#    import <Sentry/SentrySampleDecision.h>
-#    import <Sentry/SentrySerializable.h>
-#    import <Sentry/SentrySpanStatus.h>
-#else
+#elif __has_include(<SentryWithoutUIKit/Sentry.h>)
 #    import <SentryWithoutUIKit/SentryDefines.h>
-#    import <SentryWithoutUIKit/SentrySampleDecision.h>
-#    import <SentryWithoutUIKit/SentrySerializable.h>
-#    import <SentryWithoutUIKit/SentrySpanStatus.h>
+#else
+#    import <SentryDefines.h>
 #endif
+#import SENTRY_HEADER(SentrySampleDecision)
+#if !SDK_V9
+#    import SENTRY_HEADER(SentrySerializable)
+#endif
+#import SENTRY_HEADER(SentrySpanStatus)
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,7 +19,11 @@ NS_ASSUME_NONNULL_BEGIN
 static NSString const *SENTRY_TRACE_TYPE = @"trace";
 
 NS_SWIFT_NAME(SpanContext)
-@interface SentrySpanContext : NSObject <SentrySerializable>
+@interface SentrySpanContext : NSObject
+#if !SDK_V9
+                               <SentrySerializable>
+#endif
+
 SENTRY_NO_INIT
 
 /**

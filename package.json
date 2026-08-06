@@ -57,9 +57,9 @@
 		"@capacitor/preferences": "^7.0.1",
 		"@ionic-solidjs/core": "^1.2.2",
 		"@libsql/client": "^0.12.0",
-		"@sentry/capacitor": "^1.4.0",
-		"@sentry/solid": "8.55.0",
-		"@sentry/vite-plugin": "^3.3.1",
+		"@sentry/capacitor": "^2.4.0",
+		"@sentry/solid": "9.46.0",
+		"@sentry/vite-plugin": "^3.6.1",
 		"@solid-devtools/debugger": "^0.23.4",
 		"@solid-devtools/logger": "^0.8.4",
 		"@solid-devtools/overlay": "^0.30.1",
@@ -69,6 +69,7 @@
 		"@solid-primitives/set": "^0.4.12",
 		"@solidjs/meta": "^0.29.4",
 		"@solidjs/router": "^0.8.4",
+		"@tanstack/solid-form": "^1.12.3",
 		"capacitor-ios-autofill-save-password": "^5.0.0",
 		"capacitor-native-settings": "^7.0.1",
 		"drizzle-orm": "^0.33.0",
@@ -87,5 +88,6 @@
 	},
 	"engines": {
 		"node": ">=20"
-	}
+	},
+	"packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }

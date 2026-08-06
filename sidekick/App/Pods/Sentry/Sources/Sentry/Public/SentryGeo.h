@@ -1,10 +1,13 @@
 #import <Foundation/Foundation.h>
 #if __has_include(<Sentry/Sentry.h>)
 #    import <Sentry/SentryDefines.h>
-#    import <Sentry/SentrySerializable.h>
-#else
+#elif __has_include(<SentryWithoutUIKit/Sentry.h>)
 #    import <SentryWithoutUIKit/SentryDefines.h>
-#    import <SentryWithoutUIKit/SentrySerializable.h>
+#else
+#    import <SentryDefines.h>
+#endif
+#if !SDK_V9
+#    import SENTRY_HEADER(SentrySerializable)
 #endif
 
 NS_ASSUME_NONNULL_BEGIN
@@ -20,7 +23,12 @@ NS_ASSUME_NONNULL_BEGIN
 ///   }
 /// }
 NS_SWIFT_NAME(Geo)
-@interface SentryGeo : NSObject <SentrySerializable, NSCopying>
+@interface SentryGeo : NSObject
+#if !SDK_V9
+                       <SentrySerializable, NSCopying>
+#else
+                       <NSCopying>
+#endif
 
 /**
  * Optional: Human readable city name.

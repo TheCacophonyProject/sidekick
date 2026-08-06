@@ -1,4 +1,4 @@
-#import "SentryLog.h"
+#import "SentryLogC.h"
 #import <Foundation/Foundation.h>
 
 static NSString *const SentryDebugImageType = @"macho";
@@ -20,7 +20,8 @@ static NSString *const SentryPlatformName = @"cocoa";
 #define SENTRY_DEFAULT_PROFILES_SAMPLE_RATE @0
 
 /**
- * Abort in debug, and log a warning in production.
+ * Abort in debug, and log a warning in production. Meant to help customers while they work locally,
+ * but not crash their app in production if a condition inadvertently becomes true.
  */
 #define SENTRY_GRACEFUL_FATAL(...)                                                                 \
     SENTRY_LOG_WARN(__VA_ARGS__);                                                                  \
@@ -77,3 +78,23 @@ static NSString *const SentryPlatformName = @"cocoa";
 #define SPAN_DATA_BLOCKED_MAIN_THREAD @"blocked_main_thread"
 #define SPAN_DATA_THREAD_ID @"thread.id"
 #define SPAN_DATA_THREAD_NAME @"thread.name"
+
+/**
+ * `SENTRY_UNWRAP_NULLABLE` is used to unwrap a nullable pointer type to a non-nullable pointer type
+ *  It should be used after the pointer has been checked for nullability.
+ *
+ *  For example:
+ *  ```objc
+ *  id _Nullable nullablePointer = ...;
+ *  if (nullablePointer != nil) {
+ *      MyClass *_Nonnull nonNullPointer = SENTRY_UNWRAP_NULLABLE(MyClass, nullablePointer);
+ *  }
+ *  ```
+ *
+ *  We use this macro instead of directly casting to be able to find all usages of this
+ *  pattern in the codebase.
+ */
+#define SENTRY_UNWRAP_NULLABLE(type, nullable_var) (type *_Nonnull)(nullable_var)
+#define SENTRY_UNWRAP_NULLABLE_VALUE(type, nullable_var) (type _Nonnull)(nullable_var)
+#define SENTRY_UNWRAP_NULLABLE_DICT(key, value, nullable_var)                                      \
+    (NSDictionary<key, value> *_Nonnull)(nullable_var)

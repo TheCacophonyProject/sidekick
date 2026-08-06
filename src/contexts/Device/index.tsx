@@ -1,38 +1,40 @@
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import {
+	Capacitor, // Added Capacitor import
 	type HttpResponse,
 	type PluginListenerHandle,
 	registerPlugin,
-	Capacitor, // Added Capacitor import
 } from "@capacitor/core";
 import { CapacitorHttp } from "@capacitor/core";
 import { Filesystem } from "@capacitor/filesystem";
 import { Geolocation } from "@capacitor/geolocation";
+import { Network } from "@capacitor/network";
 import { createContextProvider } from "@solid-primitives/context";
 import { ReactiveMap } from "@solid-primitives/map";
 import { debounce, leading } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
+import { useSearchParams } from "@solidjs/router";
+import { Effect } from "effect";
 import {
 	batch,
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	on,
 	onCleanup,
 	onMount,
+	untrack,
 } from "solid-js";
 import { z } from "zod";
 import { GoToPermissions } from "~/components/GoToPermissions";
 import type { Location } from "~/database/Entities/Location";
 import type { Result, URL } from "..";
+import { useLogsContext } from "../LogsContext";
 import { useStorage } from "../Storage";
 import { isWithinRange } from "../Storage/location";
-import DeviceCamera from "./Camera";
-import { Effect } from "effect";
-import { useLogsContext } from "../LogsContext";
-import { useSearchParams } from "@solidjs/router";
 import { useUserContext } from "../User";
-import { Network } from "@capacitor/network";
+import DeviceCamera from "./Camera";
 // Use a fixed threshold for location update checks (in meters)
 const UPDATE_DISTANCE_THRESHOLD_METERS = 25;
 
@@ -101,12 +103,14 @@ export const tc2ModemSchema = z
 	.partial();
 export type Modem = z.infer<typeof tc2ModemSchema>;
 
-const AudioModeSchema = z.union([
-	z.literal("Disabled" as const),
-	z.literal("AudioOnly" as const),
-	z.literal("AudioOrThermal" as const),
-	z.literal("AudioAndThermal" as const),
-]);
+const AudioModeSchema = z
+	.union([
+		z.literal("Disabled" as const),
+		z.literal("AudioOnly" as const),
+		z.literal("AudioOrThermal" as const),
+		z.literal("AudioAndThermal" as const),
+	])
+	.nullish();
 
 const AudioStatusSchema = z.union([
 	z.literal(1).transform(() => "ready" as const),
@@ -136,12 +140,15 @@ const AudioStatusResSchema = z.object({
 	]),
 	status: AudioStatusSchema,
 });
-const AudioRecordingResSchema = z.object({
-	"audio-mode": AudioModeSchema,
-	"audio-seed": z
-		.union([z.string(), z.number()])
-		.transform((val) => val.toString()),
-});
+const AudioRecordingResSchema = z
+	.object({
+		"audio-mode": AudioModeSchema,
+		"audio-seed": z
+			.union([z.string(), z.number()])
+			.nullish()
+			.transform((val) => val?.toString()),
+	})
+	.partial();
 export type AudioMode = z.infer<typeof AudioModeSchema>;
 export type DeviceId = string;
 export type DeviceName = string;
@@ -149,6 +156,51 @@ export type DeviceHost = string;
 export type DeviceType = "pi" | "tc2";
 export type DeviceUrl = { url: string };
 export type RecordingName = string;
+
+// AI Control types
+export type AiControlConfig = {
+	aiEnabled: boolean;
+	operatingMode: "simple" | "uart" | "at-esl";
+	triggerLogic: "activateOnTarget" | "deactivateOnProtected";
+	targetSpecies: { name: string; confidence: ConfidenceValue }[];
+	activationDuration: string;
+	protectedSpecies: { name: string; confidence: ConfidenceValue }[];
+	deactivationDuration: string;
+	defaults?: {
+		targetSpecies: { name: string; confidence: ConfidenceValue }[];
+		activationDuration: string;
+		protectedSpecies: { name: string; confidence: ConfidenceValue }[];
+		deactivationDuration: string;
+		triggerLogic: "activateOnTarget" | "deactivateOnProtected";
+	};
+};
+
+// Available species list for the UI
+export const availableSpecies = [
+	"bird",
+	"cat",
+	"deer",
+	"dog",
+	"false-positive",
+	"hedgehog",
+	"human",
+	"kiwi",
+	"leporidae",
+	"mustelid",
+	"penguin",
+	"possum",
+	"rodent",
+	"sheep",
+	"vehicle",
+	"wallaby",
+];
+
+export const ConfidenceValueSchema = z
+	.number()
+	.min(0)
+	.max(1)
+	.transform((val) => Math.round(val * 100));
+export type ConfidenceValue = z.infer<typeof ConfidenceValueSchema>;
 
 export type DeviceDetails = {
 	id: DeviceId;
@@ -166,6 +218,7 @@ export type DeviceDetails = {
 	hasLongRecordingSupport?: boolean; // Add this flag
 	lastUpdated?: Date;
 	batteryPercentage?: string;
+	batteryVoltage?: number;
 };
 
 type DeviceCoords<T extends string | number> = {
@@ -299,6 +352,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const log = useLogsContext();
 	const user = useUserContext();
 
+	// Platform detection helper
+	const isIOS = () => Capacitor.getPlatform() === "ios";
+
 	const devices = new ReactiveMap<DeviceId, Device>();
 	const deviceRecordings = new ReactiveMap<DeviceId, RecordingName[] | null>();
 	const deviceEventKeys = new ReactiveMap<DeviceId, number[]>();
@@ -321,7 +377,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		DeviceId,
 		{ status: boolean; timestamp: number }
 	>();
-	const INTERNET_CACHE_DURATION_MS = 60 * 1000; // 1 minute
+	const INTERNET_CACHE_DURATION_MS = 10 * 1000; // 1 minute
 
 	const availableWifiNetworksCache = new ReactiveMap<
 		DeviceId,
@@ -367,10 +423,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	onMount(() => {
 		const interval = setInterval(async () => {
 			for (const device of devices.values()) {
-				await storage.syncWithServer(device.id, device.isProd);
+				if (apState() !== "connected") {
+					await storage.syncWithServer(device.id, device.isProd);
+				}
 				if (device.isConnected) {
 					await clearUploaded(device);
 					await refreshCheckAudioCapabilities(device);
+					await refreshBatteryData(device);
 				}
 			}
 		}, DEVICE_POLL_INTERVAL);
@@ -486,6 +545,22 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 	};
 
+	const refreshBatteryData = async (device: ConnectedDevice) => {
+		try {
+			const batteryData = await getBattery(device.url);
+			if (batteryData) {
+				device.batteryPercentage = batteryData.mainBattery;
+				device.batteryVoltage = batteryData.voltage;
+				devices.set(device.id, device);
+			}
+		} catch (error) {
+			log.logError({
+				message: "Error refreshing battery data",
+				error,
+			});
+		}
+	};
+
 	const endpointToDevice = async (
 		endpoint: string,
 		host: string,
@@ -502,19 +577,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 			if (!device) throw new Error("Failed to connect to device");
 
-			const [batteryPercentage, hasAudio, hasLongRecording] = await Promise.all(
-				[
-					getBattery(device.url).catch(() => undefined),
-					hasAudioCapabilities(device.url).catch(() => false),
-					checkLongRecordingSupport(device.url).catch(() => false),
-				],
-			);
+			const [batteryData, hasAudio, hasLongRecording] = await Promise.all([
+				getBattery(device.url).catch(() => undefined),
+				hasAudioCapabilities(device.url).catch(() => false),
+				checkLongRecordingSupport(device.url).catch(() => false),
+			]);
 
 			return {
 				...device,
 				host,
 				endpoint,
-				batteryPercentage: batteryPercentage?.mainBattery,
+				batteryPercentage: batteryData?.mainBattery,
+				batteryVoltage: batteryData?.voltage,
 				hasAudioCapabilities: hasAudio,
 				hasLongRecordingSupport: hasLongRecording,
 			};
@@ -537,7 +611,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 						if (device.isConnected) {
 							if (!interval) {
 								const id = setInterval(() => {
-									DevicePlugin.turnOnModem({ url: device.url, minutes: "5" });
+									DevicePlugin.turnOnModem({ url: device.url, minutes: "10" });
 								}, 300000); // Every 5 minutes
 								modemOnIntervals.set(device.id, id);
 							}
@@ -574,12 +648,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 	async function verifyDeviceConnection(url: string): Promise<boolean> {
 		try {
-			const deviceInfoResult = await Effect.runPromise(
-				Effect.retry(
-					Effect.tryPromise(() => DevicePlugin.getDeviceInfo({ url })),
-					{ times: 2, delay: 1000 },
-				),
-			).catch(() => ({ success: false }));
+			const deviceInfoResult = await DevicePlugin.getDeviceInfo({ url });
 
 			return deviceInfoResult.success;
 		} catch (error) {
@@ -628,6 +697,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 								return {
 									...device,
 									batteryPercentage: batteryInfo?.mainBattery,
+									batteryVoltage: batteryInfo?.voltage,
 									hasAudioCapabilities: hasAudio,
 								};
 							} catch (error) {
@@ -782,37 +852,59 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		]);
 	};
 
-	const handleServiceLost = async (lostDevice: { endpoint: string }) => {
+	const handleServiceLost = (lostDevice: { endpoint: string }) => {
 		const device = [...devices.values()].find(
 			(d) => d.endpoint === lostDevice.endpoint && d.isConnected,
 		);
 
 		if (device) {
-			// Check both URL and host connections before disconnecting
-			const [urlReachable, hostReachable] = await Promise.all([
+			// Immediately mark device as potentially disconnected to update UI
+			devices.set(device.id, {
+				...device,
+				isConnected: false,
+			});
+
+			// Verify connection in the background
+			Promise.any([
 				verifyDeviceConnection(device.url),
 				verifyDeviceConnection(`http://${device.host}`),
-			]);
+			])
+				.then((reachable) => {
+					if (reachable) {
+						// Device is still reachable, restore connection status
+						console.log(
+							`Device ${device.name} reported as lost but still reachable`,
+						);
+						devices.set(device.id, {
+							...device,
+							isConnected: true,
+						});
+					} else {
+						// Device is truly lost, keep disconnected status
+						internetConnectionCache.delete(device.id); // Clear cache entry
+						wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
+						modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
 
-			// Only disconnect if both connection methods fail
-			if (!urlReachable && !hostReachable) {
-				devices.set(device.id, {
-					...device,
-					isConnected: false,
-				});
-				internetConnectionCache.delete(device.id); // Clear cache entry
-				wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
-				modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
+						log.logEvent("device_lost", {
+							name: device.name,
+							saltId: device.saltId,
+							group: device.group,
+						});
+					}
+				})
+				.catch((error) => {
+					// Both connection methods failed, device is lost
+					console.error("Failed to verify device connection:", error);
+					internetConnectionCache.delete(device.id); // Clear cache entry
+					wifiInternetConnectionCache.delete(device.id); // Clear WiFi internet cache
+					modemInternetConnectionCache.delete(device.id); // Clear modem internet cache
 
-				log.logEvent("device_lost", {
-					name: device.name,
-					saltId: device.saltId,
-					group: device.group,
+					log.logEvent("device_lost", {
+						name: device.name,
+						saltId: device.saltId,
+						group: device.group,
+					});
 				});
-			} else {
-				// Device is still reachable via one of the methods
-				console.log(`Device ${device.name} reported as lost but still reachable via ${urlReachable ? 'URL' : 'host'}`);
-			}
 		}
 	};
 
@@ -890,12 +982,23 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	const handleAPConnected = (res: { status: string }) => {
 		log.logEvent("AP_connected");
 		setApState("connected");
+		// Clear the master timeout since connection succeeded
+		if (masterConnectTimeout) {
+			clearTimeout(masterConnectTimeout);
+			masterConnectTimeout = null;
+		}
 		searchDevice();
 	};
 
 	const handleAPDisconnected = (res: { status: string }) => {
 		log.logEvent("AP_disconnect");
 		setApState("disconnected");
+		// iOS requires aggressive cleanup to prevent stale connections
+		// Android can maintain discovered devices across AP changes
+		if (isIOS()) {
+			devices.clear();
+			stopDiscovery().catch(console.error);
+		}
 	};
 
 	const handleAPConnectionFailed = (res: {
@@ -904,6 +1007,11 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		canRetry: boolean;
 	}) => {
 		log.logEvent("AP_failed");
+		// Clear the master timeout since connection failed
+		if (masterConnectTimeout) {
+			clearTimeout(masterConnectTimeout);
+			masterConnectTimeout = null;
+		}
 		log.logWarning({
 			message:
 				res.error ||
@@ -920,6 +1028,12 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			warn: false,
 		});
 		setApState("disconnected");
+		// iOS requires aggressive cleanup to prevent stale connections
+		// Android can maintain discovered devices across AP changes
+		if (isIOS()) {
+			devices.clear();
+			stopDiscovery().catch(console.error);
+		}
 	};
 
 	const setupListeners = async () => {
@@ -1114,7 +1228,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 		try {
 			// Check for local network permissions before starting discovery
-			if (Capacitor.getPlatform() === "ios") {
+			if (isIOS()) {
 				const perm = await DevicePlugin.checkPermissions();
 				if (!perm.granted) {
 					console.warn(
@@ -1193,6 +1307,39 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 
 	const Authorization = "Basic YWRtaW46ZmVhdGhlcnM=";
 	const headers = { Authorization: Authorization };
+
+	// Use HTTP directly for setDeviceConfig instead of DevicePlugin
+	const postDeviceConfig = async (
+		url: string,
+		section: string,
+		config: string,
+	): Promise<{ success: boolean; status?: number; data?: string }> => {
+		try {
+			// Build query string manually so reserved characters (e.g. '+') stay intact.
+			const query = new URLSearchParams({
+				section,
+				config,
+			}).toString();
+
+			const res = await CapacitorHttp.post({
+				url: `${url}/api/config?${query}`,
+				headers: {
+					...headers,
+				},
+				webFetchExtra: { credentials: "include" },
+				connectTimeout: 5000,
+				readTimeout: 5000,
+			});
+			return {
+				success: res.status === 200,
+				status: res.status,
+				data: res.data,
+			};
+		} catch (error) {
+			console.error("postDeviceConfig error", error);
+			return { success: false };
+		}
+	};
 
 	const getRecordings = async (
 		device: ConnectedDevice,
@@ -1568,7 +1715,38 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			console.error(e);
 		}
 	};
+	type LocationUpdatePayload = {
+		deviceId: string;
+		location: { lat: number; lng: number };
+	};
 
+	const [locationUpdateQueue, setLocationUpdateQueue] = createSignal<
+		LocationUpdatePayload[]
+	>([]);
+	createEffect(
+		on(locationUpdateQueue, async (queue) => {
+			if (queue.length === 0) {
+				return; // Nothing to do
+			}
+
+			// Get the first item from the queue
+			const nextUpdate = queue[0];
+
+			try {
+				// Process the side-effect
+				await tryUpdateServerLocation(nextUpdate.deviceId, nextUpdate.location);
+			} catch (error) {
+				// The tryUpdateServerLocation already console.errors, but you could add more robust logging here
+				console.error(
+					"Failed to process server location update from queue:",
+					error,
+				);
+			} finally {
+				// IMPORTANT: Remove the processed item from the queue, regardless of success or failure
+				untrack(() => setLocationUpdateQueue((q) => q.slice(1)));
+			}
+		}),
+	);
 	const getLocationCoords = async (
 		device: DeviceId,
 	): Result<DeviceCoords<number>> => {
@@ -1599,20 +1777,55 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				timestamp: z.string(),
 			});
 
-			const res = await DevicePlugin.getDeviceLocation({ url });
+			const res = await CapacitorHttp.get({
+				url: `${url}/api/location`,
+				headers: { Authorization },
+			});
 
-			if (res.success) {
-				const location = locationSchema.safeParse(JSON.parse(res.data));
+			if (res.data) {
+				let parsedData: unknown;
+				try {
+					parsedData = JSON.parse(res.data);
+				} catch (e) {
+					log.logError({
+						message: "Invalid JSON response from device location API",
+						error: e instanceof Error ? e : new Error(String(e)),
+					});
+					return {
+						success: false,
+						message: "Invalid location data format",
+					};
+				}
+
+				const location = locationSchema.safeParse(parsedData);
 				if (!location.success) {
+					log.logWarning({
+						message: "Invalid location data from device",
+						details: `Device: ${device}, Error: ${location.error.message}`,
+					});
 					return {
 						success: false,
 						message: location.error.message,
 					};
 				}
-				tryUpdateServerLocation(device, {
-					lat: location.data.latitude,
-					lng: location.data.longitude,
-				});
+
+				// Validate that coordinates are not (0,0) which indicates unset/cleared location
+				if (location.data.latitude === 0 && location.data.longitude === 0) {
+					log.logWarning({
+						message: "Device location is cleared (0,0)",
+						details: `Device: ${device}`,
+					});
+				}
+
+				const payload: LocationUpdatePayload = {
+					deviceId: device,
+					location: {
+						lat: location.data.latitude,
+						lng: location.data.longitude,
+					},
+				};
+				setLocationUpdateQueue((q) => [...q, payload]);
+
 				return {
 					success: true,
 					data: location.data,
@@ -1620,9 +1833,13 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			}
 			return {
 				success: false,
-				message: "Could not get location",
+				message: "No location data returned from device",
 			};
 		} catch (error) {
+			log.logError({
+				message: "Could not get location",
+				error: error instanceof Error ? error : new Error(String(error)),
+			});
 			return {
 				success: false,
 				message: "Could not get location",
@@ -1630,6 +1847,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		}
 	};
 
+	// Context based resource to get the location of a device
 	const getLocationByDevice = (deviceId: DeviceId) =>
 		createResource(
 			() => [storage.savedLocations(), devices.get(deviceId)] as const,
@@ -1696,6 +1914,23 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 	);
 
 	const [locationDisabled, setLocationDisabled] = createSignal(false);
+
+	// Debounce the location update check to prevent race conditions
+	const debouncedLocationCheck = debounce(
+		async ([deviceList, perm, currentlySettingLocations]: [
+			readonly Device[],
+			string | undefined,
+			Set<string>,
+		]) => {
+			return checkDevicesNeedingLocationUpdate(
+				deviceList,
+				perm,
+				currentlySettingLocations,
+			);
+		},
+		500, // Wait 500ms after last change before checking
+	);
+
 	const [devicesLocToUpdate, { refetch: refetchDeviceLocToUpdate }] =
 		createResource(
 			() => {
@@ -1707,68 +1942,100 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				] as const;
 			},
 			async ([deviceList, perm, currentlySettingLocations]) => {
-				try {
-					const devicesToFilter = deviceList.filter(
-						({ isConnected }) => isConnected,
-					);
-					if (!devicesToFilter || devicesToFilter.length === 0 || !perm)
-						return [];
-					if (perm === "denied") return [];
-					const pos = await Geolocation.getCurrentPosition({
-						enableHighAccuracy: true,
-					}).catch((e) => {
-						console.log("Error", e);
-						if (e instanceof Error && e.message === "location disabled") {
-							setLocationDisabled(true);
-						}
-						return null;
-					});
-					if (!pos) return [];
-					setLocationDisabled(false);
-
-					const devicesToUpdate: string[] = [];
-					for (const device of devicesToFilter) {
-						if (!device.isConnected) continue;
-						// Skip if location is currently being set for this device
-						if (currentlySettingLocations.has(device.id)) {
-							continue;
-						}
-						const locationRes = await getLocationCoords(device.id);
-						if (!locationRes.success) continue;
-						const loc = locationRes.data;
-						const newLoc: [number, number] = [
-							pos.coords.latitude,
-							pos.coords.longitude,
-						];
-
-						const withinRange = isWithinRange(
-							[loc.latitude, loc.longitude],
-							newLoc,
-							UPDATE_DISTANCE_THRESHOLD_METERS,
-						);
-						if (!withinRange) {
-							devicesToUpdate.push(device.id);
-						}
-					}
-					return devicesToUpdate;
-				} catch (error) {
-					if (error instanceof Error) {
-						log.logWarning({
-							message:
-								"Could not update device locations. Check location permissions and try again.",
-							action: <GoToPermissions />,
-						});
-					} else if (typeof error === "string") {
-						log.logWarning({
-							message: "Could not update device locations",
-							details: error,
-						});
-					}
-
-					return [];
+				// Use debounced check if location is being set, otherwise check immediately
+				if (currentlySettingLocations.size > 0) {
+					return await debouncedLocationCheck([
+						deviceList,
+						perm,
+						currentlySettingLocations,
+					]);
 				}
+				return await checkDevicesNeedingLocationUpdate(
+					deviceList,
+					perm,
+					currentlySettingLocations,
+				);
 			},
 		);
+
+	const checkDevicesNeedingLocationUpdate = async (
+		deviceList: readonly Device[],
+		perm: string | undefined,
+		currentlySettingLocations: Set<string>,
+	) => {
+		try {
+			const devicesToFilter = deviceList.filter(
+				({ isConnected }) => isConnected,
+			);
+			if (!devicesToFilter || devicesToFilter.length === 0 || !perm) return [];
+			if (perm === "denied") return [];
+			const pos = await Geolocation.getCurrentPosition({
+				enableHighAccuracy: true,
+			}).catch((e) => {
+				console.log("Error", e);
+				if (e instanceof Error && e.message === "location disabled") {
+					setLocationDisabled(true);
+				}
+				return null;
+			});
+			if (!pos) return [];
+			setLocationDisabled(false);
+
+			const devicesToUpdate: string[] = [];
+			for (const device of devicesToFilter) {
+				if (!device.isConnected) continue;
+				// Skip if location is currently being set for this device
+				if (currentlySettingLocations.has(device.id)) {
+					continue;
+				}
+				const locationRes = await getLocationCoords(device.id);
+				if (!locationRes.success) {
+					// If we can't get location data, assume it needs update
+					devicesToUpdate.push(device.id);
+					continue;
+				}
+				const loc = locationRes.data;
+				const newLoc: [number, number] = [
+					pos.coords.latitude,
+					pos.coords.longitude,
+				];
+
+				// Check if device location is cleared/invalid (0,0)
+				const isLocationCleared = loc.latitude === 0 && loc.longitude === 0;
+
+				// Always prompt for update if location is (0,0)
+				if (isLocationCleared) {
+					devicesToUpdate.push(device.id);
+					continue;
+				}
+
+				const withinRange = isWithinRange(
+					[loc.latitude, loc.longitude],
+					newLoc,
+					UPDATE_DISTANCE_THRESHOLD_METERS,
+				);
+				if (!withinRange) {
+					devicesToUpdate.push(device.id);
+				}
+			}
+			return devicesToUpdate;
+		} catch (error) {
+			if (error instanceof Error) {
+				log.logWarning({
+					message:
+						"Could not update device locations. Check location permissions and try again.",
+					action: <GoToPermissions />,
+				});
+			} else if (typeof error === "string") {
+				log.logWarning({
+					message: "Could not update device locations",
+					details: error,
+				});
+			}
+
+			return [];
+		}
+	};
 
 	type DeviceLocationStatus =
 		| "loading"
@@ -1814,39 +2081,75 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			// Make fresh API calls that will update cache if data has changed
 			// These will bypass cache timeouts but won't clear existing cache first
 			const { url } = device;
-			
+
 			// Fetch fresh data in parallel
 			await Promise.allSettled([
 				// Force fresh network data by making direct API calls
-				CapacitorHttp.get({ url: `${url}/api/network/wifi`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? WifiNetwork.array().parse(JSON.parse(res.data)) : [])
-					.then(networks => {
+				CapacitorHttp.get({
+					url: `${url}/api/network/wifi`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200
+							? WifiNetwork.array().parse(JSON.parse(res.data))
+							: [],
+					)
+					.then((networks) => {
 						const processedNetworks = networks
-							.filter(network => network.SSID)
+							.filter((network) => network.SSID)
 							.reduce((acc, curr) => {
-								const found = acc.find(a => a.SSID === curr.SSID);
+								const found = acc.find((a) => a.SSID === curr.SSID);
 								if (!found) acc.push(curr);
 								return acc;
 							}, [] as WifiNetwork[]);
-						availableWifiNetworksCache.set(deviceId, { networks: processedNetworks, timestamp: Date.now() });
+						availableWifiNetworksCache.set(deviceId, {
+							networks: processedNetworks,
+							timestamp: Date.now(),
+						});
 					})
 					.catch(() => {}),
 
 				// Fresh current WiFi status
-				CapacitorHttp.get({ url: `${url}/api/network/wifi/current`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? z.object({ SSID: z.string() }).parse(JSON.parse(res.data)) : null)
-					.then(network => currentWifiNetworkCache.set(deviceId, { network, timestamp: Date.now() }))
+				CapacitorHttp.get({
+					url: `${url}/api/network/wifi/current`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200
+							? z.object({ SSID: z.string() }).parse(JSON.parse(res.data))
+							: null,
+					)
+					.then((network) =>
+						currentWifiNetworkCache.set(deviceId, {
+							network,
+							timestamp: Date.now(),
+						}),
+					)
 					.catch(() => {}),
 
 				// Fresh modem data
-				CapacitorHttp.get({ url: `${url}/api/modem`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? tc2ModemSchema.parse(res.data) : null)
-					.then(modem => modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }))
+				CapacitorHttp.get({
+					url: `${url}/api/modem`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200 ? tc2ModemSchema.parse(res.data) : null,
+					)
+					.then((modem) =>
+						modemDetailsCache.set(deviceId, { modem, timestamp: Date.now() }),
+					)
 					.catch(() => {}),
 
 				// Fresh WiFi internet connectivity
-				CapacitorHttp.get({ url: `${url}/api/wifi-check`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => {
+				CapacitorHttp.get({
+					url: `${url}/api/wifi-check`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) => {
 						let connected = false;
 						if (res.status === 200) {
 							const parsedData = JSON.parse(res.data);
@@ -1854,14 +2157,28 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 								connected = parsedData.connected;
 							}
 						}
-						wifiInternetConnectionCache.set(deviceId, { connected, timestamp: Date.now() });
+						wifiInternetConnectionCache.set(deviceId, {
+							connected,
+							timestamp: Date.now(),
+						});
 					})
 					.catch(() => {}),
 
 				// Fresh modem internet connectivity
-				CapacitorHttp.get({ url: `${url}/api/modem-check`, headers, webFetchExtra: { credentials: "include" } })
-					.then(res => res.status === 200 ? JSON.parse(res.data).connected : false)
-					.then(connected => modemInternetConnectionCache.set(deviceId, { connected, timestamp: Date.now() }))
+				CapacitorHttp.get({
+					url: `${url}/api/modem-check`,
+					headers,
+					webFetchExtra: { credentials: "include" },
+				})
+					.then((res) =>
+						res.status === 200 ? JSON.parse(res.data).connected : false,
+					)
+					.then((connected) =>
+						modemInternetConnectionCache.set(deviceId, {
+							connected,
+							timestamp: Date.now(),
+						}),
+					)
 					.catch(() => {}),
 			]);
 		} catch (error) {
@@ -1902,14 +2219,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const networks = WifiNetwork.array().parse(JSON.parse(res.data));
 			const processedNetworks = networks
 				? networks
-					.filter((network) => network.SSID)
-					.reduce((acc, curr) => {
-						const found = acc.find((a) => a.SSID === curr.SSID);
-						if (!found) {
-							acc.push(curr);
-						}
-						return acc;
-					}, [] as WifiNetwork[])
+						.filter((network) => network.SSID)
+						.reduce((acc, curr) => {
+							const found = acc.find((a) => a.SSID === curr.SSID);
+							if (!found) {
+								acc.push(curr);
+							}
+							return acc;
+						}, [] as WifiNetwork[])
 				: [];
 			availableWifiNetworksCache.set(deviceId, {
 				networks: processedNetworks,
@@ -2087,19 +2404,26 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			mainBattery: z.string(),
 			mainBatteryLow: z.string(),
 			rtcBattery: z.string(),
+			batteryPercentage: z.string().optional(), // New field from management interface
 		})
-		.transform((data) => ({
-			time: new Date(data.time),
-			mainBattery: Number(
-				interpolateVoltageToPercentage(
-					Number(data.mainBattery.replace(/\s/g, "")),
-					LimeVoltage,
-					LimePercent,
-				),
-			).toFixed(0),
-			mainBatteryLow: Number(data.mainBatteryLow),
-			rtcBattery: Number(data.rtcBattery),
-		}));
+		.transform((data) => {
+			const voltage = Number(data.mainBattery.replace(/\s/g, ""));
+
+			// Use batteryPercentage from management interface if available, otherwise calculate from voltage
+			const mainBattery = data.batteryPercentage
+				? Number(data.batteryPercentage).toFixed(0)
+				: Number(
+						interpolateVoltageToPercentage(voltage, LimeVoltage, LimePercent),
+					).toFixed(0);
+
+			return {
+				time: new Date(data.time),
+				voltage,
+				mainBattery,
+				mainBatteryLow: Number(data.mainBatteryLow),
+				rtcBattery: Number(data.rtcBattery),
+			};
+		});
 
 	const getBattery = async (url: URL) => {
 		try {
@@ -2111,6 +2435,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				},
 			});
 			if (res.status !== 200) return;
+			console.log("Battery data received:", res.data);
 			const parsedBattery = dataSchema.safeParse(JSON.parse(res.data)).data;
 			return parsedBattery;
 		} catch (e) {
@@ -2370,7 +2695,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return false;
 			const { url } = device;
-			const res = await DevicePlugin.turnOnModem({ url, minutes: "5" });
+			const res = await DevicePlugin.turnOnModem({ url, minutes: "10" });
 			if (res.success) {
 				internetConnectionCache.delete(deviceId);
 				modemDetailsCache.delete(deviceId); // Modem state changed
@@ -2533,6 +2858,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		),
 	);
 
+	let masterConnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	const connectToDeviceAP = leading(
 		debounce,
 		async () => {
@@ -2544,24 +2871,54 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			// Always start from a clean state when initiating a connection
 			setApState("loadingConnect");
 
-			const connectTimeout = setTimeout(() => {
+			// Establish master timeout - acts as ultimate safety net
+			masterConnectTimeout = setTimeout(() => {
 				if (apState() === "loadingConnect") {
+					console.log("Master timeout reached - forcing state reset");
 					setApState("default");
+					masterConnectTimeout = null;
 				}
-			}, 120000); // 2 minute timeout
+			}, 60000); // 60 second timeout
 
 			try {
 				log.logEvent("AP_connect");
 				const res = await DevicePlugin.connectToDeviceAP();
 
 				if (res.status === "connecting") {
-					console.log("AP connection process started");
+					console.log("AP connection process started - waiting for events");
+					// Add a fallback check in case the event system misses the connection
+					setTimeout(async () => {
+						if (apState() === "loadingConnect") {
+							try {
+								const checkRes = await DevicePlugin.checkIsAPConnected();
+								if (checkRes.connected) {
+									console.log(
+										"Fallback check detected connection - updating UI",
+									);
+									log.logEvent("AP_connected");
+									setApState("connected");
+									if (masterConnectTimeout) {
+										clearTimeout(masterConnectTimeout);
+										masterConnectTimeout = null;
+									}
+									searchDevice();
+								}
+							} catch (e) {
+								console.error("Fallback connection check failed:", e);
+							}
+						}
+					}, 3000); // Check after 3 seconds
 				} else if (res.status === "connected") {
+					// Immediate connection success
 					log.logEvent("AP_connected");
 					setApState("connected");
-					clearTimeout(connectTimeout);
+					if (masterConnectTimeout) {
+						clearTimeout(masterConnectTimeout);
+						masterConnectTimeout = null;
+					}
 					searchDevice();
 				} else if (res.status === "error") {
+					// Immediate connection error
 					log.logEvent("AP_failed");
 					log.logWarning({
 						message:
@@ -2569,12 +2926,18 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 							"Please try again, or connect to 'bushnet' with password 'feathers' in your wifi settings. Alternatively, set up a hotspot named 'bushnet' password: 'feathers'.",
 					});
 					setApState("default");
-					clearTimeout(connectTimeout);
+					if (masterConnectTimeout) {
+						clearTimeout(masterConnectTimeout);
+						masterConnectTimeout = null;
+					}
 				}
 			} catch (err) {
 				log.logEvent("AP_failed");
 				setApState("default");
-				clearTimeout(connectTimeout);
+				if (masterConnectTimeout) {
+					clearTimeout(masterConnectTimeout);
+					masterConnectTimeout = null;
+				}
 			}
 		},
 		800,
@@ -2584,6 +2947,14 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		try {
 			setApState("loadingDisconnect");
 
+			// iOS requires stopping discovery and clearing devices before disconnecting
+			// to prevent network errors when losing AP connection
+			// Android can maintain discovered devices across disconnections
+			if (isIOS()) {
+				await stopDiscovery();
+				devices.clear();
+			}
+
 			const disconnectTimeout = setTimeout(() => {
 				if (apState() === "loadingDisconnect") {
 					setApState("disconnected");
@@ -2591,27 +2962,31 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			}, 30000); // 30 second timeout
 
 			const res = await DevicePlugin.disconnectFromDeviceAP();
+			clearTimeout(disconnectTimeout);
 
-			if (!res.success) {
+			if (res.success) {
+				setApState("disconnected");
+				log.logEvent("AP_disconnect");
+			} else {
 				log.logWarning({
-					message: `Failed to disconnect: ${res.message}`,
+					message: `${res.message}`,
 					warn: true,
 				});
 				setApState("default");
-				clearTimeout(disconnectTimeout);
 			}
 
 			return res.success;
 		} catch (error) {
+			console.error("Error during AP disconnect:", error);
 			setApState("default");
 			return false;
 		}
 	};
 
 	const takeTestRecording = async (deviceId: DeviceId) => {
+		const device = devices.get(deviceId);
+		if (!device || !device.isConnected) return false;
 		try {
-			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
 			const { url } = device;
 			const res = await CapacitorHttp.put({
 				url: `${url}/api/camera/snapshot-recording`,
@@ -2623,13 +2998,17 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			return res.status === 200;
 		} catch (error) {
 			return false;
+		} finally {
+			setTimeout(async () => {
+				await setCurrRecs(device);
+			}, 2000);
 		}
 	};
 
 	const takeAudioRecording = async (deviceId: DeviceId) => {
+		const device = devices.get(deviceId);
+		if (!device || !device.isConnected) return false;
 		try {
-			const device = devices.get(deviceId);
-			if (!device || !device.isConnected) return false;
 			const { url } = device;
 			const res = await CapacitorHttp.put({
 				url: `${url}/api/audio/test-recording`,
@@ -2641,6 +3020,8 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			return res.status === 200;
 		} catch (error) {
 			return false;
+		} finally {
+			await setCurrRecs(device);
 		}
 	};
 
@@ -2666,7 +3047,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		try {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
-			const { url } = device;
+			const { url, name } = device;
 			const res = await CapacitorHttp.get({
 				url: `${url}/api/audio/audio-status`,
 				headers: { ...headers, "Content-Type": "application/json" },
@@ -2782,6 +3163,124 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		return DeviceCamera(url.split("http://")[1]);
 	};
 
+	// AI Control functions
+	const getAiControlConfig = async (
+		deviceId: DeviceId,
+	): Promise<AiControlConfig | null> => {
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return null;
+
+			const configRes = await getDeviceConfig(deviceId);
+			if (!configRes) return null;
+			const thermalConfig = configRes.values.thermalMotion ?? {};
+			const commsConfig = configRes.values.comms ?? {};
+
+			// Get defaults from device config
+			const commsDefaults = configRes.defaults.comms ?? {};
+			const thermalDefaults = configRes.defaults.thermalMotion ?? {};
+
+			return {
+				aiEnabled: thermalConfig.RunClassifier ?? false,
+				operatingMode:
+					commsConfig.CommsOut === "uart"
+						? "uart"
+						: commsConfig.CommsOut === "at-esl"
+							? "at-esl"
+							: "simple",
+				triggerLogic: commsConfig.TrapEnabledByDefault
+					? "deactivateOnProtected"
+					: "activateOnTarget",
+				targetSpecies: commsConfig.TrapSpecies ?? [],
+				activationDuration: commsConfig.TrapDuration ?? "1m0s",
+				protectedSpecies: commsConfig.ProtectSpecies ?? [],
+				deactivationDuration: commsConfig.ProtectDuration ?? "5m0s",
+				defaults: {
+					targetSpecies: commsDefaults.TrapSpecies ?? [],
+					activationDuration: commsDefaults.TrapDuration ?? "1m0s",
+					protectedSpecies: commsDefaults.ProtectSpecies ?? [],
+					deactivationDuration: commsDefaults.ProtectDuration ?? "5m0s",
+					triggerLogic: commsDefaults.TrapEnabledByDefault
+						? "deactivateOnProtected"
+						: "activateOnTarget",
+				},
+			};
+		} catch (error) {
+			console.error("Error getting AI control config:", error);
+			return null;
+		}
+	};
+
+	const saveAiControlConfig = async (
+		deviceId: DeviceId,
+		config: AiControlConfig,
+	) => {
+		try {
+			const device = devices.get(deviceId);
+			if (!device || !device.isConnected) return false;
+			const { url } = device;
+
+			const thermalMotionConfig = {
+				"do-tracking": config.aiEnabled,
+				"run-classifier": config.aiEnabled,
+				"tracking-events": config.aiEnabled,
+			};
+
+			const speciesToObject = (
+				speciesList: { name: string; confidence: ConfidenceValue }[],
+			) => {
+				if (!speciesList || speciesList.length === 0) return null;
+				return speciesList.reduce(
+					(obj, item) => {
+						// Translate user-friendly value back to a number for the API
+						obj[item.name] = item.confidence;
+						return obj;
+					},
+					{} as Record<string, number>,
+				);
+			};
+			const commsConfig = {
+				enable: config.aiEnabled,
+				"comms-out": config.operatingMode,
+				"trap-enabled-by-default":
+					config.triggerLogic === "deactivateOnProtected",
+				"trap-species": speciesToObject(config.targetSpecies),
+				"trap-duration": config.activationDuration,
+				"protect-species": speciesToObject(config.protectedSpecies),
+				"protect-duration": config.deactivationDuration,
+			};
+
+			// 3. Send both configs to the device (HTTP)
+			const thermalPromise = postDeviceConfig(
+				url,
+				"thermal-motion",
+				JSON.stringify(thermalMotionConfig),
+			);
+
+			const commsPromise = postDeviceConfig(
+				url,
+				"comms",
+				JSON.stringify(commsConfig),
+			);
+
+			const [thermalResult, commsResult] = await Promise.all([
+				thermalPromise,
+				commsPromise,
+			]);
+
+			if (!thermalResult.success || !commsResult.success) {
+				log.logWarning({ message: "Failed to save one or more AI settings." });
+				return false;
+			}
+
+			log.logSuccess({ message: "AI Control settings saved successfully." });
+			return true;
+		} catch (error) {
+			log.logError({ message: "Error saving AI Control settings", error });
+			return false;
+		}
+	};
+
 	const InGroupDeviceSchema = z.object({
 		success: z.boolean(),
 		messages: z.array(z.string()).optional(),
@@ -2895,7 +3394,7 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 				});
 				return [id, true];
 			}
-		} else if (res.status === 404 || res.status === 400) {
+		} else if (res.status === 404 || res.status === 400 || res.status === 500) {
 			const res = await DevicePlugin.reregisterDevice({
 				url,
 				group,
@@ -2929,13 +3428,89 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			.object({
 				StartRecording: z.string(),
 				StopRecording: z.string(),
-				PowerOn: z.string(),
-				PowerOff: z.string(),
 			})
 			.partial(),
+		// Some devices return this section as "thermalRecorder" (camelCase)
+		// while others use "thermal-recorder" (kebab-case). Accept both.
 		"thermal-recorder": z
 			.object({
 				UseLowPowerMode: z.boolean(),
+			})
+			.partial()
+			.optional(),
+		thermalRecorder: z
+			.object({
+				UseLowPowerMode: z.boolean(),
+			})
+			.partial()
+			.optional(),
+		comms: z
+			.object({
+				Enable: z.boolean(),
+				TrapEnabledByDefault: z.boolean(),
+				CommsOut: z.string(),
+				Bluetooth: z.boolean(),
+				PowerOutput: z.string(),
+				PowerUpDuration: z.number(),
+				TrapSpecies: z
+					.record(z.string(), z.number().int().min(0).max(100))
+					.transform((val) => {
+						if (!val) return [];
+						return Object.entries(val).map(([name, confidence]) => ({
+							name,
+							confidence: confidence as ConfidenceValue,
+						}));
+					})
+					.nullish(),
+				TrapDuration: z
+					.number()
+					.optional()
+					.transform((val) => {
+						if (val === undefined || val === null) return "1m0s";
+						const minutes = Math.floor(val / 60000000000);
+						const seconds = Math.floor((val % 60000000000) / 1000000000);
+						return `${minutes}m${seconds}s`;
+					}),
+				ProtectSpecies: z
+					.record(z.string(), z.number().int().min(0).max(100))
+					.transform((val) => {
+						if (!val) return [];
+						return Object.entries(val).map(([name, confidence]) => ({
+							name,
+							confidence: confidence as ConfidenceValue,
+						}));
+					})
+					.nullish(),
+				ProtectDuration: z
+					.number()
+					.optional()
+					.transform((val) => {
+						if (val === undefined || val === null) return "5m0s";
+						const minutes = Math.floor(val / 60000000000);
+						const seconds = Math.floor((val % 60000000000) / 1000000000);
+						return `${minutes}m${seconds}s`;
+					}),
+			})
+			.partial()
+			.optional(),
+		thermalMotion: z
+			.object({
+				DynamicThreshold: z.boolean(),
+				TempThreshMin: z.number(),
+				TempThreshMax: z.number(),
+				TempThresh: z.number(),
+				DeltaThresh: z.number(),
+				CountThresh: z.number(),
+				FrameCompareGap: z.number(),
+				UseOneDiffOnly: z.boolean(),
+				TriggerFrames: z.number(),
+				WarmerOnly: z.boolean(),
+				EdgePixels: z.number(),
+				Verbose: z.boolean(),
+				RunClassifier: z.boolean(),
+				TrackingEvents: z.boolean(),
+				DoTracking: z.boolean(),
+				BluetoothBeacons: z.boolean(),
 			})
 			.partial()
 			.optional(),
@@ -2946,12 +3521,65 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			windows: z.object({
 				StartRecording: z.string(),
 				StopRecording: z.string(),
-				PowerOn: z.string(),
-				PowerOff: z.string(),
 			}),
 			thermalRecorder: z
 				.object({
 					UseLowPowerMode: z.boolean(),
+				})
+				.partial(),
+			thermalMotion: z
+				.object({
+					RunClassifier: z.boolean(),
+					TrackEvents: z.boolean(),
+					DoTracking: z.boolean(),
+				})
+				.partial(),
+			comms: z
+				.object({
+					Enable: z.boolean(),
+					controlEnabled: z.boolean(),
+					CommsOut: z.enum(["uart", "simple", "at-esl", ""]),
+					TrapEnabledByDefault: z.boolean(),
+					TrapSpecies: z
+						.record(z.string(), z.number().int().min(0).max(100))
+						.transform((val) => {
+							// Convert to array of objects for easier handling
+							return Object.entries(val).map(([name, confidence]) => ({
+								name,
+								confidence: confidence as ConfidenceValue,
+							}));
+						})
+						.nullish(),
+					TrapDuration: z
+						.number()
+						.optional()
+						.transform((val) => {
+							// Convert nanoseconds to string format "XmYs"
+							if (val === undefined || val === null) return "5m0s";
+							const minutes = Math.floor(val / 60000000000);
+							const seconds = Math.floor((val % 60000000000) / 1000000000);
+							return `${minutes}m${seconds}s`;
+						}),
+					ProtectSpecies: z
+						.record(z.string(), z.number().int().min(0).max(100))
+						.transform((val) => {
+							// Convert to array of objects for easier handling
+							return Object.entries(val).map(([name, confidence]) => ({
+								name,
+								confidence: confidence as ConfidenceValue,
+							}));
+						})
+						.nullish(),
+					ProtectDuration: z
+						.number()
+						.optional()
+						.transform((val) => {
+							// Convert nanoseconds to string format "XmYs"
+							if (val === undefined || val === null) return "5m0s";
+							const minutes = Math.floor(val / 60000000000);
+							const seconds = Math.floor((val % 60000000000) / 1000000000);
+							return `${minutes}m${seconds}s`;
+						}),
 				})
 				.partial(),
 		})
@@ -2966,13 +3594,37 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		try {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
-			const { url } = device;
+			const { url, name } = device;
 			const res = await DevicePlugin.getDeviceConfig({ url });
-			if (!res.success) return null;
+			console.info(`Device ${name} config`, res);
+			if (!res.success) {
+				// Capture failure via LogsContext/Sentry without user-facing toast
+				log.logError({
+					message: `Failed to fetch config for device ${name}`,
+					error: new Error("getDeviceConfig returned unsuccessful result"),
+					details: typeof res === "object" ? JSON.stringify(res) : String(res),
+					warn: false,
+				});
+				return null;
+			}
+			log.logSuccess({
+				message: `Fetched config for device ${name}`,
+				details: res.data,
+				warn: false,
+			});
 			const config = configSchema.parse(JSON.parse(res.data));
+      console.log("Config", config)
 			return config;
 		} catch (error) {
 			console.error("Get Config Error", error);
+			const device = devices.get(deviceId);
+			const name = device?.name ?? deviceId;
+			log.logError({
+				message: `Get Config Error for device ${name}`,
+				error: error as unknown,
+				details: error instanceof Error ? error.message : String(error),
+				warn: false,
+			});
 			return null;
 		}
 	};
@@ -2986,7 +3638,25 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
 			const { url } = device;
-			const res = await DevicePlugin.updateRecordingWindow({ url, on, off });
+			// Send via HTTP using the shared config endpoint
+			const payload = {
+				"start-recording": on,
+				"stop-recording": off,
+			};
+			const res = await postDeviceConfig(
+				url,
+				"windows",
+				JSON.stringify(payload),
+			);
+			if (!res.success) {
+				log.logError({
+					message: `Failed to update recording window for ${device.name}`,
+					error: new Error("updateRecordingWindow unsuccessful"),
+					details: JSON.stringify({ on, off, status: res.status }),
+					warn: false,
+				});
+			}
+      console.log("Post Recording Window", res)
 			return res.success;
 		} catch (error) {
 			return null;
@@ -3156,12 +3826,19 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 			const device = devices.get(deviceId);
 			if (!device || !device.isConnected) return null;
 			const { url } = device;
-			const res = await DevicePlugin.setDeviceConfig({
+			const res = await postDeviceConfig(
 				url,
-				section: "thermal-recorder",
-				config: JSON.stringify({ "use-low-power-mode": enabled }),
-			});
-
+				"thermal-recorder",
+				JSON.stringify({ "use-low-power-mode": enabled }),
+			);
+			if (!res.success) {
+				log.logError({
+					message: `Failed to set low power mode for ${device.name}`,
+					error: new Error("setDeviceConfig unsuccessful"),
+					details: JSON.stringify({ enabled, status: res.status }),
+					warn: false,
+				});
+			}
 			return res.success ? enabled : !enabled;
 		} catch (error) {
 			console.error(error);
@@ -3312,6 +3989,9 @@ const [DeviceProvider, useDevice] = createContextProvider(() => {
 		setAudioRecordingSettings,
 		takeAudioRecording,
 		takeLongAudioRecording,
+		// AI Control
+		getAiControlConfig,
+		saveAiControlConfig,
 		// Update
 		checkDeviceUpdate,
 		updateDevice,

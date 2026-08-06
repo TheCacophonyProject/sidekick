@@ -1,14 +1,20 @@
 #if __has_include(<Sentry/Sentry.h>)
 #    import <Sentry/SentryDefines.h>
-#    import <Sentry/SentrySerializable.h>
-#else
+#elif __has_include(<SentryWithoutUIKit/Sentry.h>)
 #    import <SentryWithoutUIKit/SentryDefines.h>
-#    import <SentryWithoutUIKit/SentrySerializable.h>
+#else
+#    import <SentryDefines.h>
+#endif
+#if !SDK_V9
+#    import SENTRY_HEADER(SentrySerializable)
 #endif
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface SentryRequest : NSObject <SentrySerializable>
+@interface SentryRequest : NSObject
+#if !SDK_V9
+                           <SentrySerializable>
+#endif
 
 /**
  * Optional: HTTP response body size.

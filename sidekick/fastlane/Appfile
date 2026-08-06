@@ -1,2 +1,9 @@
-json_key_file("api.json") # Path to the json secret file - Follow https://docs.fastlane.tools/actions/supply/#setup to get one
-package_name("nz.org.cacophony.sidekick") # e.g. com.krausefx.app
+for_platform(:android) do
+  package_name('nz.org.cacophony.sidekick')
+  json_key_file(ENV['GOOGLE_PLAY_JSON_KEY_FILE'] || File.expand_path('api.json', __dir__))
+end
+
+for_platform(:ios) do
+  app_identifier('nz.org.cacophony.cacophony-sidekick')
+  team_id(ENV['APPLE_TEAM_ID'] || '36D3PXTZ4A')
+end

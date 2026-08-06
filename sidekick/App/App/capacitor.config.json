@@ -45,7 +45,7 @@
 		"LocalNotificationsPlugin",
 		"CAPNetworkPlugin",
 		"PreferencesPlugin",
-		"SentryCapacitor",
+		"SentryCapacitorPlugin",
 		"SavePassword",
 		"NativeSettingsPlugin"
 	]

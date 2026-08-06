@@ -166,16 +166,16 @@ class DeviceInterface(private val filePath: String): CapacitorInterface {
     fun downloadRecording(call: PluginCall) = runCatch(call) {
         getDeviceFromCall(call).flatMap { deviceApi ->
             call.validateCall<Recording>("recordingPath").flatMap { rec ->
-                deviceApi.downloadFile(rec.recordingPath).flatMap { downloadedFile ->
-                    writeToFile(filePath.toPath().resolve("recordings/${downloadedFile.filename}"), downloadedFile.content)
-                        .map {
-                            call.success(mapOf(
-                                "path" to it.toString(),
-                                "size" to downloadedFile.content.size
-                            ))
-                        }
-                        .mapLeft { HttpRequestError.create("File Write", it.toString(), "recordings/$downloadedFile.filename") }
-                }
+                val recordingsDir = filePath.toPath().resolve("recordings")
+                deviceApi.downloadFile(rec.recordingPath, recordingsDir)
+                    .map { downloadedFile ->
+                        call.success(
+                            mapOf(
+                                "path" to downloadedFile.path.toString(),
+                                "size" to downloadedFile.size
+                            )
+                        )
+                    }
             }
         }.mapLeft { error ->
             when (error) {
