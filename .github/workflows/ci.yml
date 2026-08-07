@@ -75,6 +75,7 @@ jobs:
           cp android-keystore.jks sidekick/android-keystore.jks
           mkdir -p sidekick/fastlane && cp api.json sidekick/fastlane/api.json
           rm -f keystore.properties android-keystore.jks api.json
+        working-directory: sidekick
 
 
       - name: Install Android SDK packages
