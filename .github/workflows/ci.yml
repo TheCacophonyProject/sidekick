@@ -107,4 +107,4 @@ jobs:
 
       - name: Build and Deploy with Fastlane
         working-directory: sidekick # Directory containing Fastfile
-        run: bundle exec fastlane alpha
+        run: bundle exec fastlane android
