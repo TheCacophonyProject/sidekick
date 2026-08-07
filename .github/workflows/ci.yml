@@ -3,6 +3,8 @@ name: Mobile Release
 
 on:
   push:
+    branches:
+      update-sdk2
     tags:
       - "v*.*.*"
 
@@ -18,25 +20,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - name: Extract version from tag
-      #   id: version
-      #   run: |
-      #     TAG="${GITHUB_REF##*/}"
-      #     if [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-      #       VERSION_NAME="${TAG#v}"
-      #       MIN_SDK=23
-      #       MAJOR="${BASH_REMATCH[1]}"
-      #       MINOR="${BASH_REMATCH[2]}"
-      #       PATCH="${BASH_REMATCH[3]}"
-      #       VERSION_CODE=$(( MIN_SDK * 10000000 + MAJOR * 10000 + MINOR * 100 + PATCH ))
-      #     else
-      #       echo "Unsupported tag format: $TAG" >&2
-      #       exit 1
-      #     fi
-      #     {
-      #       echo "version_name=$VERSION_NAME"
-      #       echo "version_code=$VERSION_CODE"
-      #     } >> "$GITHUB_OUTPUT"
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION_NAME="3.19.2"
+          MIN_SDK=26
+          MAJOR=3
+          MINOR=19
+          PATCH=2
+          VERSION_CODE=$(( MIN_SDK * 10000000 + MAJOR * 10000 + MINOR * 100 + PATCH ))
+          {
+            echo "version_name=$VERSION_NAME"
+            echo "version_code=$VERSION_CODE"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
