@@ -82,7 +82,10 @@ jobs:
           mkdir -p ~/.android
           cp keystore.properties ~/.android/keystore.properties
           cp android-keystore.jks ~/.android/android-keystore.jks
+          mkdir -p fastlane && cp api.json fastlane/api.json
+
         working-directory: sidekick
+
 
       - name: Cache Gradle packages
         uses: actions/cache@v3
