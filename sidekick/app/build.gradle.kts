@@ -18,7 +18,7 @@ val sdk = 36
 val minSdkVersion = 23
 val fallbackMajor = 3
 val fallbackMinor = 19
-val fallbackPatch = 2
+val fallbackPatch = 3
 val fallbackVersionName = "$fallbackMajor.$fallbackMinor.$fallbackPatch"
 val fallbackVersionCode =
     minSdkVersion * 10000000 + fallbackMajor * 10000 + fallbackMinor * 100 + fallbackPatch
